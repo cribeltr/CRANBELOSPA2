@@ -26,6 +26,26 @@ desde una URL en cualquier equipo.
 abre <https://app.netlify.com/drop> y arrastra el archivo `index.html`; te
 entrega un link público al instante.
 
+**Opción C — Desde Apps Script (la app y los datos en el mismo lugar):**
+La misma planilla que usas como “puente” puede *servir* la app, de modo que el
+link `/exec` abre el programa **ya conectado** a tu Google Sheet (escribe y lee
+solo, sin pegar ninguna URL).
+1. En tu planilla: **Extensiones → Apps Script**.
+2. Pega el contenido de `google-apps-script.gs` en `Código.gs`.
+3. Crea un archivo HTML llamado **exactamente `index`** (**+ → HTML**) y pega
+   dentro **todo** el contenido de `index.html` (reemplaza lo que traiga).
+4. **Implementar → Gestionar implementaciones → Editar (lápiz) → Nueva versión**
+   (o **Nueva implementación** la primera vez), tipo **Aplicación web**,
+   *Ejecutar como* **Yo**, *Acceso* **Cualquier persona**. Autoriza.
+5. Abre la **URL** que termina en `/exec`: es tu link a la app.
+
+> Detectado el modo Apps Script, la app oculta el campo de URL y muestra
+> “Conectado a esta planilla”: guardar/traer usan `google.script.run` (sin CORS).
+> ⚠️ *Dentro* de Apps Script el botón **Descargar Excel** puede quedar
+> bloqueado por el entorno protegido (iframe); si lo necesitas, usa la misma app
+> publicada por la Opción A o B para descargar. La sincronización con Google
+> Sheets funciona igual en los tres casos.
+
 > Es seguro publicarlo: la app no guarda datos en ningún servidor. El archivo
 > de equipos lo sube cada usuario en su navegador, y los registros quedan en el
 > navegador (localStorage) y/o en *tu* Google Sheet. La URL del Apps Script se

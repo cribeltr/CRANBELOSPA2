@@ -129,6 +129,15 @@
   const LS_SHEETS_AUTO = 'mp_sheets_auto';
   function sheetsUrl() { try { return (localStorage.getItem(LS_SHEETS_URL) || '').trim(); } catch (e) { return ''; } }
   function sheetsAuto() { try { return localStorage.getItem(LS_SHEETS_AUTO) === '1'; } catch (e) { return false; } }
+  // Si la app se sirve DESDE Apps Script, usamos google.script.run (sin URL ni CORS)
+  const GAS = (typeof google !== 'undefined' && google.script && google.script.run);
+  function gasCall(fn, arg) {
+    return new Promise((resolve, reject) => {
+      const r = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      (arg === undefined) ? r[fn]() : r[fn](arg);
+    });
+  }
+  function sheetsReady() { return GAS || !!sheetsUrl(); }
 
   // Valor de celda ExcelJS -> primitivo para enviar (fecha -> dd-mm-aaaa)
   function cellVal(v) {
@@ -306,6 +315,11 @@
   // POST al Apps Script. text/plain evita el preflight CORS; si no se puede leer
   // la respuesta, reintenta en modo no-cors (envío sin confirmación).
   async function postSheets(payloadObj) {
+    if (GAS) {
+      const j = await gasCall('appPush', payloadObj);
+      if (!j || !j.ok) throw new Error((j && j.error) || 'Error en el script');
+      return j;
+    }
     const url = sheetsUrl();
     if (!url) throw new Error('Falta la URL de la app web.');
     const body = JSON.stringify(payloadObj);
@@ -324,7 +338,7 @@
   }
 
   async function exportToSheets(silent) {
-    if (!sheetsUrl()) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
+    if (!sheetsReady()) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
     if (!state.equipos.length) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Carga primero el archivo de programación.'); return; }
     const btn = $('#sheetsSendAll'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Enviando…';
     try {
@@ -338,15 +352,15 @@
       showInline($('#sheetsStatus'), 'err', '❌ ' + (e.message || e));
     } finally { btn.textContent = orig; btn.disabled = false; }
   }
-  function autoExportSheets() { if (sheetsAuto() && sheetsUrl() && state.equipos.length) exportToSheets(true); }
+  function autoExportSheets() { if (sheetsAuto() && sheetsReady() && state.equipos.length) exportToSheets(true); }
 
   async function testSheets() {
-    const url = sheetsUrl();
-    if (!url) { showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
+    if (!sheetsReady()) { showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
     const btn = $('#sheetsTest'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Probando…';
     try {
-      const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-      const j = JSON.parse(await res.text());
+      let j;
+      if (GAS) { j = await gasCall('appPull'); }
+      else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
       showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
     } catch (e) {
       showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el envío suele funcionar; pulsa Enviar y revisa la planilla.');
@@ -355,13 +369,13 @@
 
   // Lee de Google Sheets el snapshot de datos y lo carga en la app
   async function pullFromSheets(silent) {
-    const url = sheetsUrl();
-    if (!url) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
+    if (!sheetsReady()) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
     const btn = $('#sheetsPull'); const orig = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Trayendo…'; }
     try {
-      const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-      const j = JSON.parse(await res.text());
+      let j;
+      if (GAS) { j = await gasCall('appPull'); }
+      else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
       let obj = null;
       if (j.data) { try { obj = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch (_) { obj = null; } }
       if (obj && restoreState(obj)) {
@@ -1367,6 +1381,13 @@
   // Restaurar configuración de Google Sheets
   $('#sheetsUrl').value = sheetsUrl();
   $('#sheetsAuto').checked = sheetsAuto();
+  if (GAS) {
+    // Servida desde Apps Script: conexión directa, sin URL.
+    $('#sheetsUrl').value = ''; $('#sheetsUrl').placeholder = 'Conectado a esta planilla (Apps Script) — no necesitas URL';
+    $('#sheetsUrl').disabled = true;
+    $('#sheetsSave').style.display = 'none';
+    showInline($('#sheetsStatus'), 'ok', '✓ Conectado a esta planilla (Apps Script). Usa “Enviar” y “Traer” directamente.');
+  }
 
   // Recuperar registros guardados en este navegador (persistencia entre sesiones)
   state.registros = loadRegistros();
@@ -1381,5 +1402,5 @@
       'Cargue el archivo para incluirlos al descargar.', 'info');
   }
   // Traer automáticamente lo guardado en Google Sheets (si hay URL configurada)
-  if (sheetsUrl()) pullFromSheets(true);
+  if (sheetsReady()) pullFromSheets(true);
 })();

@@ -17,13 +17,34 @@
  *      app (sección "Guardar en Google Sheets").
  *
  *  Cada hoja se REEMPLAZA con el contenido enviado (las demás hojas no se tocan).
+ *
+ *  -- OPCIONAL: servir la app DESDE aquí (el link /exec abre el programa) --
+ *   a. En el editor de Apps Script: "+" -> HTML -> nómbralo EXACTAMENTE "index".
+ *   b. Pega dentro TODO el contenido de index.html (reemplaza lo que traiga).
+ *   c. Implementar -> Nueva versión. La URL /exec abre la app ya conectada a
+ *      esta planilla (escribe y lee con google.script.run, sin pegar la URL).
+ *   Nota: dentro de Apps Script el botón "Descargar Excel" puede quedar
+ *   bloqueado por el iframe protegido; para descargar usa la app alojada aparte.
  ****************************************************************************/
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(60000);
-  try {
-    var body = JSON.parse(e.postData.contents);
+  try { return json(writeAll(JSON.parse(e.postData.contents))); }
+  catch (err) { return json({ ok: false, error: String(err) }); }
+  finally { lock.releaseLock(); }
+}
+
+// Llamado desde la app cuando se sirve DESDE Apps Script (google.script.run)
+function appPush(body) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
+  finally { lock.releaseLock(); }
+}
+function appPull() { return readAll(); }
+
+function writeAll(body) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var written = [];
 
@@ -56,12 +77,7 @@ function doPost(e) {
       try { ds.hideSheet(); } catch (e2) {}
     }
 
-    return json({ ok: true, sheets: written });
-  } catch (err) {
-    return json({ ok: false, error: String(err) });
-  } finally {
-    lock.releaseLock();
-  }
+    return { ok: true, sheets: written };
 }
 
 // Columna (1-based) cuyo encabezado (fila 1) coincide con 'header'
@@ -132,14 +148,13 @@ function sheetVals(ss, name) {
   var lr = sh.getLastRow(), lc = sh.getLastColumn();
   return (lr >= 1 && lc >= 1) ? sh.getRange(1, 1, lr, lc).getValues() : [];
 }
-function doGet(e) {
+function readAll() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Eventos');
   var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
-  // Además del snapshot, devolvemos las hojas visibles por si hay que reconstruir
-  return json({
+  return {
     ok: true, count: n, data: data,
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
@@ -147,7 +162,14 @@ function doGet(e) {
       Tareas: sheetVals(ss, 'Tareas'),
       Bitacora: sheetVals(ss, 'Bitacora')
     }
-  });
+  };
+}
+// doGet: con ?api=1 devuelve los datos (JSON); sin parámetros sirve la app.
+function doGet(e) {
+  if (e && e.parameter && e.parameter.api) return json(readAll());
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('Gestión MP 2026')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 function json(obj) {
