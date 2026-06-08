@@ -51,11 +51,14 @@ columnas:
 
 | Datos del equipo | Evento |
 |---|---|
-| Familia, ID, N° Carpeta, N° Inventario, Equipo, Servicio, Unidad, Ubicación, Procedencia, Marca, Modelo, N° Serie, Año Instalación, Vida Útil Residual, Clasificación, ENU / Baja, Frecuencia MP | Mes, N° Mes, Programa (P), Tipo de Programación, Resultado (R), Detalle del Resultado, Causal Reprog., Descripción de la Causal, Regla de Reprogramación, **Estado**, **Ejecutor** |
+| Familia, ID, N° Carpeta, N° Inventario, Equipo, Servicio, Unidad, Ubicación, Procedencia, Marca, Modelo, N° Serie, Año Instalación, Vida Útil Residual, Clasificación, ENU / Baja, Frecuencia MP, **Observación** | Mes, N° Mes, Programa (P), Tipo de Programación, Resultado (R), Detalle del Resultado, Causal Reprog., Descripción de la Causal, Regla de Reprogramación, **Estado**, **Estado Final del Equipo**, **Ejecutor** |
 
+- **Observación**: texto tal cual viene en la columna Q del equipo.
 - **Estado** se colorea automáticamente (Realizada, Reprogramada, Pendiente,
   Fuera de Servicio, No Realizada, No Ubicable, Baja, Puesta en Marcha).
-- **Ejecutor** trae un **desplegable** con los 11 ejecutores disponibles
+- **Estado Final del Equipo**: **desplegable** de llenado manual con las opciones
+  *Operativo* / *No operativo* (se colorea verde/rojo según lo elegido).
+- **Ejecutor**: **desplegable** con los 11 ejecutores disponibles
   (lista en la hoja `Catalogos`).
 
 **Hoja `Catalogos`** — fuente del desplegable de Ejecutor y diccionario de

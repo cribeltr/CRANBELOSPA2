@@ -49,6 +49,7 @@
     { key: 'clasif',           header: 'Clasificación',           w: 14, t: 's' },
     { key: 'enubaja',          header: 'ENU / Baja',              w: 11, t: 's' },
     { key: 'frecuencia',       header: 'Frecuencia MP',           w: 13, t: 's' },
+    { key: 'observacion',      header: 'Observación',             w: 44, t: 's' },
     { key: 'mes',              header: 'Mes',                     w: 12, t: 's' },
     { key: 'nMes',             header: 'N° Mes',                  w: 7,  t: 'n' },
     { key: 'programa',         header: 'Programa (P)',            w: 11, t: 's' },
@@ -59,9 +60,10 @@
     { key: 'causalDesc',       header: 'Descripción de la Causal',w: 42, t: 's' },
     { key: 'regla',            header: 'Regla de Reprogramación', w: 42, t: 's' },
     { key: 'estado',           header: 'Estado',                  w: 22, t: 's' },
+    { key: 'estadoFinal',      header: 'Estado Final del Equipo', w: 20, t: 's' },
     { key: 'ejecutor',         header: 'Ejecutor',                w: 24, t: 's' }
   ];
-  const TEXT_KEYS = new Set(['carpeta', 'inv', 'serie']); // conservar tal cual (ceros a la izq.)
+  const TEXT_KEYS = new Set(['carpeta', 'inv', 'serie', 'observacion']); // conservar tal cual (ceros a la izq. / texto)
   const NUM_KEYS = new Set(['id', 'anio', 'vur', 'nMes']);
 
   function styleHeaderRow(row) {
@@ -189,6 +191,32 @@
         errorStyle: 'warning',
         errorTitle: 'Ejecutor no válido',
         error: 'Seleccione un ejecutor de la lista.'
+      });
+    }
+
+    // Validación (desplegable) en "Estado Final del Equipo": Operativo / No operativo
+    const efLetter = ws.getColumn(COLS.findIndex(c => c.key === 'estadoFinal') + 1).letter;
+    if (lastRow >= 2) {
+      const efRange = efLetter + '2:' + efLetter + lastRow;
+      ws.dataValidations.add(efRange, {
+        type: 'list', allowBlank: true,
+        formulae: ['"' + MP.ESTADO_FINAL_OPCIONES.join(',') + '"'],
+        showErrorMessage: true,
+        errorStyle: 'warning',
+        errorTitle: 'Valor no válido',
+        error: 'Seleccione "Operativo" o "No operativo".'
+      });
+      // Coloreado automático según el valor elegido
+      ws.addConditionalFormatting({
+        ref: efRange,
+        rules: [
+          { type: 'cellIs', operator: 'equal', priority: 1, formulae: ['"Operativo"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: COLOR.realizada } },
+                     font: { color: { argb: 'FF1B7F3B' }, bold: true } } },
+          { type: 'cellIs', operator: 'equal', priority: 2, formulae: ['"No operativo"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: COLOR.fueraServicio } },
+                     font: { color: { argb: 'FFB3261E' }, bold: true } } }
+        ]
       });
     }
 

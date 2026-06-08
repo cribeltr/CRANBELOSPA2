@@ -17,11 +17,12 @@
   const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  // Columnas de datos del equipo (1-based). Se excluyen Q(17)=Observación y S(19)=Responsable MP.
+  // Columnas de datos del equipo (1-based). Se excluye S(19)=Responsable MP.
+  // Q(17)=Observación se incluye a pedido del usuario.
   const COL = {
     fam: 1, id: 2, carpeta: 3, inv: 4, equipo: 5, servicio: 6, unidad: 7,
     ubicacion: 8, procedencia: 9, marca: 10, modelo: 11, serie: 12,
-    anio: 13, vur: 14, clasif: 15, enubaja: 16, frecuencia: 18
+    anio: 13, vur: 14, clasif: 15, enubaja: 16, observacion: 17, frecuencia: 18
   };
   // PMP_2026: meses en columnas únicas T..AE (20..31)
   const pmpMonthCol = i => 20 + i;
@@ -76,6 +77,9 @@
     'Personal Externo'
   ];
 
+  // Opciones del desplegable "Estado Final del Equipo" (se llena manualmente).
+  const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo'];
+
   // ---- Helpers de lectura de celdas (ExcelJS) ----------------------------
   // Devuelve el valor MOSTRADO de la celda como texto (resuelve fórmulas con
   // su resultado en caché y conserva ceros a la izquierda guardados como texto).
@@ -113,7 +117,8 @@
       equipo: g(COL.equipo), servicio: g(COL.servicio), unidad: g(COL.unidad),
       ubicacion: g(COL.ubicacion), procedencia: g(COL.procedencia), marca: g(COL.marca),
       modelo: g(COL.modelo), serie: g(COL.serie), anio: g(COL.anio), vur: g(COL.vur),
-      clasif: g(COL.clasif), enubaja: g(COL.enubaja), frecuencia: g(COL.frecuencia)
+      clasif: g(COL.clasif), enubaja: g(COL.enubaja),
+      observacion: g(COL.observacion), frecuencia: g(COL.frecuencia)
     };
   }
 
@@ -196,7 +201,8 @@
           equipo: eq.equipo, servicio: eq.servicio, unidad: eq.unidad,
           ubicacion: eq.ubicacion, procedencia: eq.procedencia, marca: eq.marca,
           modelo: eq.modelo, serie: eq.serie, anio: eq.anio, vur: eq.vur,
-          clasif: eq.clasif, enubaja: eq.enubaja, frecuencia: eq.frecuencia,
+          clasif: eq.clasif, enubaja: eq.enubaja,
+          observacion: eq.observacion, frecuencia: eq.frecuencia,
           mes: MONTHS_FULL[i], nMes: i + 1,
           programa: pVal,
           tipoPrograma: PROG[pVal.toUpperCase()] || (pVal ? pVal : ''),
@@ -206,6 +212,7 @@
           causalDesc: cCode ? CAUSAL[cCode] : '',
           regla: reglaReprog(cCode),
           estado: estado(pVal, rVal),
+          estadoFinal: '',     // se completa con desplegable (Operativo / No operativo)
           ejecutor: ''
         });
       }
@@ -236,7 +243,7 @@
 
   return {
     HEADER_ROW, FIRST_DATA_ROW, MONTHS, MONTHS_FULL, COL,
-    PROG, CAUSAL, CAUSAL_30, CAUSAL_REINTEGRO, RESULT_TXT, EJECUTORES,
+    PROG, CAUSAL, CAUSAL_30, CAUSAL_REINTEGRO, RESULT_TXT, EJECUTORES, ESTADO_FINAL_OPCIONES,
     cellText, isEmpty, toNum, isDataRow, readEquipo,
     decodeResultado, causalCode, reglaReprog, estado,
     parseWorkbook, buildStats
