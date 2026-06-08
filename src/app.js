@@ -170,6 +170,7 @@
     $('#mFecha').value = '';
     $('#mObs').value = '';
     $('#mResultado').value = ''; $('#mEjecutor').value = ''; $('#mEstadoFinal').value = '';
+    updateEstadoFinal();
     $('#mTipo').style.display = 'none';
     $('#mFields').disabled = true;
     $('#mSave').disabled = true;
@@ -201,18 +202,34 @@
     $('#mTipo').style.display = 'block';
     $('#mTipo').innerHTML = 'Tipo de programa: <b>' + esc(code) + '</b> — ' + esc(MP.PROG[code] || code);
     $('#mFields').disabled = false;
+    updateEstadoFinal();
     updateSave();
   }
 
+  // El "Estado final del equipo" solo se solicita cuando el Resultado es "Si";
+  // en cualquier otro caso queda en blanco y deshabilitado (no obligatorio).
+  function updateEstadoFinal() {
+    const isSi = $('#mResultado').value === 'Si';
+    const sel = $('#mEstadoFinal');
+    sel.disabled = !isSi;
+    if (!isSi) sel.value = '';
+    $('#mEstadoFinalLabel').innerHTML = isSi
+      ? 'Estado final del equipo <span class="req">*</span>'
+      : 'Estado final del equipo <span class="muted">(solo si el resultado es “Si”)</span>';
+  }
+
   function updateSave() {
+    const isSi = $('#mResultado').value === 'Si';
+    const efOk = !isSi || !!$('#mEstadoFinal').value;     // obligatorio solo cuando Resultado = Si
     $('#mSave').disabled = !(state.selMonth !== null &&
-      $('#mResultado').value && $('#mEjecutor').value && $('#mEstadoFinal').value);
+      $('#mResultado').value && $('#mEjecutor').value && efOk);
   }
 
   function saveRegistro() {
     const eq = state.selEq, mi = state.selMonth;
     if (!eq || mi === null) return;
-    if (!$('#mResultado').value || !$('#mEjecutor').value || !$('#mEstadoFinal').value) {
+    const isSi = $('#mResultado').value === 'Si';
+    if (!$('#mResultado').value || !$('#mEjecutor').value || (isSi && !$('#mEstadoFinal').value)) {
       showInline($('#modalMsg'), 'err', 'Complete los campos obligatorios (*).'); return;
     }
     const p = $('#mFecha').value.split('-');
@@ -222,7 +239,7 @@
       resultado: $('#mResultado').value,
       observacion: $('#mObs').value.trim(),
       ejecutor: $('#mEjecutor').value,
-      estadoFinal: $('#mEstadoFinal').value
+      estadoFinal: isSi ? $('#mEstadoFinal').value : ''   // en blanco si el resultado no es "Si"
     });
     state.registros.push(reg);
     closeModal();
@@ -287,7 +304,8 @@
 
   $('#mFecha').addEventListener('change', onDateChange);
   $('#mFecha').addEventListener('input', onDateChange);
-  ['#mResultado', '#mEjecutor', '#mEstadoFinal'].forEach(s => $(s).addEventListener('change', updateSave));
+  $('#mResultado').addEventListener('change', () => { updateEstadoFinal(); updateSave(); });
+  ['#mEjecutor', '#mEstadoFinal'].forEach(s => $(s).addEventListener('change', updateSave));
   $('#mSave').addEventListener('click', saveRegistro);
   $('#mCancel').addEventListener('click', closeModal);
   $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) closeModal(); });

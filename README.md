@@ -32,8 +32,9 @@ Tras cargar el archivo se habilita la tarjeta **🔧 Registrar mantención**:
    programado para ese equipo, **el sistema no deja avanzar** (e indica los meses
    programados).
 4. Con un mes válido se **carga el tipo de programa** automáticamente.
-5. Complete **Resultado** (lista), **Observación** (opcional), **Ejecutor** (lista)
-   y **Estado final del equipo** (lista) y pulse **Guardar registro**.
+5. Complete **Resultado** (lista), **Observación** (opcional) y **Ejecutor** (lista).
+   El **Estado final del equipo** (lista) solo se solicita cuando el **Resultado es
+   "Si"**; en cualquier otro caso queda en blanco. Pulse **Guardar registro**.
 
 Las mantenciones registradas se acumulan en una tabla y se exportan con
 **⬇️ Descargar registro (Excel)** → `Registro_Mantenciones_AAAAMMDD.xlsx`
