@@ -18,12 +18,18 @@ function inlineScript(jsPath) {
   return '<script>\n' + js + '\n</script>';
 }
 
+// Texto a insertar dentro de un <pre> (escapa &, < y >).
+function inlineText(p) {
+  return read(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 let html = read('src/template.html');
 const replacements = {
   '<!--EXCELJS-->': inlineScript('vendor/exceljs.min.js'),
   '<!--CORE-->':    inlineScript('src/core.js'),
   '<!--OUTPUT-->':  inlineScript('src/output.js'),
-  '<!--APP-->':     inlineScript('src/app.js')
+  '<!--APP-->':     inlineScript('src/app.js'),
+  '<!--GASCRIPT-->': inlineText('google-apps-script.gs')
 };
 for (const [marker, content] of Object.entries(replacements)) {
   if (!html.includes(marker)) throw new Error('Marcador no encontrado en template: ' + marker);

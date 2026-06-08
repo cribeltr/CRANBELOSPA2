@@ -64,6 +64,85 @@
     } catch (e) { return []; }
   }
 
+  // ---- Integración con Google Sheets (Apps Script) -----------------------
+  const LS_SHEETS_URL = 'mp_sheets_url';
+  const LS_SHEETS_AUTO = 'mp_sheets_auto';
+  const SHEET_HEADERS = ['UID', 'Marca de tiempo', 'ID', 'N° Inventario', 'N° Serie', 'Equipo',
+    'Servicio', 'Unidad', 'Ubicación', 'Marca', 'Modelo', 'Mes', 'N° Mes', 'Fecha de Ejecución',
+    'Programa (P)', 'Tipo de Programación', 'Resultado (R)', 'Detalle del Resultado', 'Causal',
+    'Estado', 'Estado Final del Equipo', 'Ejecutor', 'Observación'];
+  function genUid() {
+    return (self.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : 'r' + Date.now() + Math.random().toString(16).slice(2);
+  }
+  function rowFromReg(r) {
+    if (!r.uid) r.uid = genUid();
+    const ts = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    return [r.uid, ts, r.id, r.inv, r.serie, r.equipo, r.servicio, r.unidad, r.ubicacion,
+      r.marca, r.modelo, r.mes, r.nMes, fmtDate(r.fechaEjecucion), r.programa, r.tipoPrograma,
+      r.resultado, r.detalleResultado, r.causal, r.estado, r.estadoFinal, r.ejecutor, r.observacion];
+  }
+  function sheetsUrl() { try { return (localStorage.getItem(LS_SHEETS_URL) || '').trim(); } catch (e) { return ''; } }
+  function sheetsAuto() { try { return localStorage.getItem(LS_SHEETS_AUTO) === '1'; } catch (e) { return false; } }
+
+  // Envía filas al Apps Script. text/plain evita el preflight CORS; si la lectura
+  // de la respuesta falla, reintenta en modo no-cors (envío sin confirmación).
+  async function postToSheets(rows) {
+    const url = sheetsUrl();
+    if (!url) throw new Error('Falta la URL de la app web.');
+    const payload = JSON.stringify({ headers: SHEET_HEADERS, rows: rows });
+    try {
+      const res = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload, redirect: 'follow'
+      });
+      const j = JSON.parse(await res.text());
+      if (!j.ok) throw new Error(j.error || 'Error en el script');
+      return j;
+    } catch (e) {
+      await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
+      return { ok: true, unconfirmed: true };
+    }
+  }
+
+  async function sendAllToSheets() {
+    if (!state.registros.length) { showInline($('#sheetsStatus'), 'err', 'No hay mantenciones registradas para enviar.'); return; }
+    if (!sheetsUrl()) { showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
+    const btn = $('#sheetsSendAll'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      const rows = state.registros.map(rowFromReg);
+      saveRegistros();   // por si se asignaron UID nuevos
+      const j = await postToSheets(rows);
+      showInline($('#sheetsStatus'), 'ok', j.unconfirmed
+        ? '✓ Enviado a Google Sheets (sin confirmación; revisa la planilla).'
+        : '✓ Enviado: ' + (j.added || 0) + ' nuevas, ' + (j.updated || 0) + ' actualizadas.');
+    } catch (e) {
+      showInline($('#sheetsStatus'), 'err', '❌ ' + (e.message || e));
+    } finally { btn.textContent = orig; btn.disabled = false; }
+  }
+
+  async function autoSendToSheets(reg) {
+    if (!sheetsAuto() || !sheetsUrl()) return;
+    try {
+      const j = await postToSheets([rowFromReg(reg)]);
+      saveRegistros();
+      showInline($('#sheetsStatus'), 'ok', j.unconfirmed ? '✓ Enviado a Google Sheets (sin confirmación).' : '✓ Guardado en Google Sheets.');
+    } catch (e) { showInline($('#sheetsStatus'), 'err', '❌ No se pudo guardar en Google Sheets: ' + (e.message || e)); }
+  }
+
+  async function testSheets() {
+    const url = sheetsUrl();
+    if (!url) { showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
+    const btn = $('#sheetsTest'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Probando…';
+    try {
+      const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+      const j = JSON.parse(await res.text());
+      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en la planilla: ' + (j.count != null ? j.count : '—') + '.');
+    } catch (e) {
+      showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el guardado suele funcionar; prueba registrar y revisa la planilla.');
+    } finally { btn.textContent = orig; btn.disabled = false; }
+  }
+
   // ---- Carga y parseo del archivo ----------------------------------------
   function readFile(file) {
     return new Promise((resolve, reject) => {
@@ -303,6 +382,7 @@
       ejecutor: $('#mEjecutor').value,
       estadoFinal: isSi ? $('#mEstadoFinal').value : ''   // en blanco si el resultado no es "Si"
     });
+    reg.uid = genUid();
     state.registros.push(reg);
     saveRegistros();   // persistir en el navegador
     closeModal();
@@ -311,6 +391,7 @@
     renderDiscrepancias();
     setStatus('✅ Mantención registrada: <b>' + esc(eq.equipo) + '</b> — ' + esc(reg.mes) +
       ' (' + esc(fmtDate(fecha)) + '). Quedará incluida al descargar el Excel.', 'ok');
+    autoSendToSheets(reg);   // guardar en Google Sheets si está activado
   }
 
   // ---- Comparación: registrado vs. archivo cargado -----------------------
@@ -430,7 +511,33 @@
   $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').classList.contains('show')) closeModal(); });
 
+  // Google Sheets
+  $('#sheetsSave').addEventListener('click', () => {
+    const u = $('#sheetsUrl').value.trim();
+    try { localStorage.setItem(LS_SHEETS_URL, u); } catch (e) {}
+    showInline($('#sheetsStatus'), u ? 'ok' : 'err', u ? '✓ URL guardada.' : 'URL vacía.');
+  });
+  $('#sheetsTest').addEventListener('click', testSheets);
+  $('#sheetsSendAll').addEventListener('click', sendAllToSheets);
+  $('#sheetsAuto').addEventListener('change', e => {
+    try { localStorage.setItem(LS_SHEETS_AUTO, e.target.checked ? '1' : '0'); } catch (err) {}
+    showInline($('#sheetsStatus'), 'info', e.target.checked
+      ? 'Guardado automático activado.' : 'Guardado automático desactivado.');
+  });
+  $('#copyScript').addEventListener('click', async () => {
+    const txt = $('#gsScript').textContent;
+    try { await navigator.clipboard.writeText(txt); showInline($('#sheetsStatus'), 'ok', '✓ Script copiado al portapapeles.'); }
+    catch (e) {
+      const r = document.createRange(); r.selectNodeContents($('#gsScript'));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      showInline($('#sheetsStatus'), 'info', 'Selecciona y copia el script (Ctrl+C).');
+    }
+  });
+
   initSelects();
+  // Restaurar configuración de Google Sheets
+  $('#sheetsUrl').value = sheetsUrl();
+  $('#sheetsAuto').checked = sheetsAuto();
 
   // Recuperar registros guardados en este navegador (persistencia entre sesiones)
   state.registros = loadRegistros();

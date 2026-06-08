@@ -62,6 +62,32 @@ Las mantenciones registradas se acumulan en una tabla y:
 
 ---
 
+## Guardar en Google Sheets (opcional)
+
+La sección **☁️ Guardar en Google Sheets** envía las mantenciones registradas a
+una planilla de Google mediante un **Google Apps Script** (puente). Este paso
+**sí usa internet** (los datos van a *tu* propia planilla).
+
+**Configuración (una sola vez):**
+
+1. Crea una Google Sheet y abre **Extensiones → Apps Script**.
+2. Pega el contenido de [`google-apps-script.gs`](google-apps-script.gs) (también
+   disponible con el botón *Copiar script* dentro de la app) y guarda.
+3. **Implementar → Nueva implementación → Aplicación web**: *Ejecutar como* **Yo**,
+   *Acceso* **Cualquier persona**. Autoriza y copia la **URL** (termina en `/exec`).
+4. Pega la URL en la app, pulsa **Guardar URL** y **Probar conexión**.
+
+**Uso:** marca *Guardar automáticamente cada mantención* para que cada registro
+se envíe al instante, o usa **Enviar registros a Google Sheets** para mandarlos
+todos. Cada registro lleva un **UID**: si ya existe en la planilla, se
+**actualiza** (no se duplica). Las eliminaciones locales no se propagan.
+
+> Requisitos: tu cuenta de Google debe permitir crear y publicar Apps Script.
+> El acceso "Cualquier persona" se refiere a la URL del script; tu planilla
+> sigue siendo privada (el script corre con tu permiso).
+
+---
+
 ## Qué lee del archivo
 
 - **Hoja `PMP_2026`** (programación): datos desde la fila 7, columnas **B a AE**,
@@ -150,7 +176,8 @@ src/core.js           Lectura y transformación (workbook → eventos).
 src/output.js         Construcción del Excel de salida (ExcelJS).
 src/app.js            Lógica de la interfaz (carga, resumen, descarga).
 vendor/exceljs.min.js Librería ExcelJS (incrustada para uso offline).
-build.js              Ensambla index.html a partir de lo anterior.
+google-apps-script.gs Script para el puente con Google Sheets (se pega en la Sheet).
+build.js              Ensambla index.html (incrusta también el .gs en la app).
 ```
 
 Para regenerar `index.html` tras editar `src/` o actualizar la librería:
