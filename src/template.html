@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de Eventos — Programación MP 2026</title>
+<style>
+  :root{
+    --teal:#15616d; --teal-d:#0e4651; --teal-l:#2a8a99; --accent:#ff7d00;
+    --bg:#eef3f5; --card:#ffffff; --ink:#1f2a2e; --muted:#5e7177; --line:#d6dee1;
+    --ok:#1b7f3b; --okbg:#e7f6ec; --warn:#9a6b00; --warnbg:#fff6df;
+    --err:#b3261e; --errbg:#fdecea; --info:#0b5; --infobg:#eef7ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.45}
+  header{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;
+         padding:22px 20px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px}
+  header p{margin:4px 0 0;opacity:.9;font-size:13px}
+  .wrap{max-width:980px;margin:22px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .drop{border:2px dashed var(--teal-l);border-radius:12px;padding:34px 18px;text-align:center;
+        background:#f7fbfc;transition:.15s;cursor:pointer}
+  .drop.over{background:#e7f3f5;border-color:var(--accent);transform:scale(1.005)}
+  .drop .big{font-size:16px;font-weight:600;margin-bottom:6px}
+  .drop .small{color:var(--muted);font-size:13px}
+  .btn{appearance:none;border:0;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:600;
+       cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn-primary{background:var(--teal);color:#fff;margin-top:14px}
+  .btn-primary:hover{background:var(--teal-d)}
+  .btn-accent{background:var(--accent);color:#fff;font-size:15px;padding:13px 22px}
+  .btn-accent:hover{filter:brightness(.95)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  #file{display:none}
+  #fileName{display:block;margin-top:12px;color:var(--muted);font-size:13px;min-height:18px}
+  .status{display:none;margin-top:16px;padding:12px 14px;border-radius:9px;font-size:14px}
+  .status.info{background:var(--infobg);color:#0a4a6e}
+  .status.ok{background:var(--okbg);color:var(--ok)}
+  .status.warn{background:var(--warnbg);color:var(--warn)}
+  .status.error{background:var(--errbg);color:var(--err)}
+  .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#eef3f5;border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:13px}
+  .chip b{color:var(--teal-d)}
+  .muted{color:var(--muted);font-size:13px}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:420px}
+  table.prev{border-collapse:collapse;width:100%;font-size:12.5px;white-space:nowrap}
+  table.prev th{position:sticky;top:0;background:var(--teal);color:#fff;text-align:left;padding:8px 10px;font-weight:600}
+  table.prev td{padding:6px 10px;border-top:1px solid var(--line)}
+  table.prev tr:nth-child(even) td{background:#f6f9fa}
+  details{margin-top:6px}
+  summary{cursor:pointer;font-weight:600;color:var(--teal-d);padding:6px 0}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
+  @media(max-width:680px){.legend{grid-template-columns:1fr}}
+  .legend h4{margin:0 0 6px;font-size:13px;color:var(--teal-d)}
+  .legend table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .legend td{padding:3px 6px;border-bottom:1px solid #eef1f2;vertical-align:top}
+  .legend td:first-child{font-weight:700;width:64px;color:var(--ink)}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:6px 0 0}
+  .steps li{counter-increment:s;padding:6px 0 6px 34px;position:relative;font-size:14px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:5px;width:22px;height:22px;
+        background:var(--teal);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
+  code{background:#eef3f5;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Generador de Eventos · Mantención Preventiva 2026</h1>
+  <p>Hospital Hernán Henríquez Aravena — convierte la Programación MP 2026 en un Excel con <b>una fila por evento</b>.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <ol class="steps">
+      <li>Suba el archivo <b>Programación MP 2026</b> (<code>.xlsm</code> o <code>.xlsx</code>).</li>
+      <li>El sistema lee las hojas <b>PMP_2026</b> y <b>Registro_MP-2026</b> y arma los eventos.</li>
+      <li>Descargue el Excel: una fila por equipo y mes con programación o resultado.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div id="drop" class="drop">
+      <div class="big">📂 Arrastre aquí el archivo o haga clic para seleccionarlo</div>
+      <div class="small">Formatos aceptados: .xlsm / .xlsx · El procesamiento ocurre 100% en su navegador (sus datos no se envían a ningún servidor).</div>
+      <button id="pick" class="btn btn-primary" type="button">Seleccionar archivo</button>
+      <input id="file" type="file" accept=".xlsm,.xlsx" />
+      <span id="fileName"></span>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div id="result" class="card" style="display:none"></div>
+
+  <div class="card">
+    <div class="actions">
+      <button id="download" class="btn btn-accent" type="button" disabled>⬇️ Descargar Excel (una fila por evento)</button>
+      <span class="muted">El archivo incluye las hojas <b>Eventos</b>, <b>Catalogos</b> y <b>Resumen</b>, con desplegable de Ejecutor.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>📖 Diccionario de códigos y reglas</summary>
+      <div class="legend">
+        <div>
+          <h4>Programación (columna P)</h4>
+          <table>
+            <tr><td>X</td><td>Mantención Preventiva Programada</td></tr>
+            <tr><td>R</td><td>Mantención Preventiva Reprogramada</td></tr>
+            <tr><td>RA</td><td>Reprogramada de Año Anterior</td></tr>
+            <tr><td>PM</td><td>Puesta en Marcha</td></tr>
+          </table>
+          <h4 style="margin-top:12px">Resultado (columna R)</h4>
+          <table>
+            <tr><td>Si</td><td>MP Realizada</td></tr>
+            <tr><td>C1–C8</td><td>MP Reprogramada (ver causales)</td></tr>
+            <tr><td>Si-RA</td><td>MP de Año Anterior Realizada</td></tr>
+            <tr><td>FS</td><td>Fuera de Servicio</td></tr>
+            <tr><td>No</td><td>No Realizada</td></tr>
+            <tr><td>NU</td><td>No Ubicable</td></tr>
+            <tr><td>Baja</td><td>Equipo Dado de Baja</td></tr>
+          </table>
+        </div>
+        <div>
+          <h4>Causales de reprogramación</h4>
+          <table>
+            <tr><td>C1</td><td>Imposibilidad de desocupar el equipo por indicación clínica</td></tr>
+            <tr><td>C2</td><td>Equipo en servicio técnico</td></tr>
+            <tr><td>C3</td><td>Equipo no operativo, espera repuestos/accesorios</td></tr>
+            <tr><td>C4</td><td>Equipo en préstamo a otro hospital o institución</td></tr>
+            <tr><td>C5</td><td>No disponibilidad HH funcionario SEC por carga laboral</td></tr>
+            <tr><td>C6</td><td>No disponibilidad HH servicio técnico externo</td></tr>
+            <tr><td>C7</td><td>Ausencia justificada funcionario SEC &gt; 15 días</td></tr>
+            <tr><td>C8</td><td>Contingencia hospitalaria</td></tr>
+          </table>
+          <h4 style="margin-top:12px">Reglas</h4>
+          <table>
+            <tr><td>C2·C3·C4</td><td>Sin nueva fecha; se registra en el mes real de reintegro.</td></tr>
+            <tr><td>C1·C5·C6·C7·C8</td><td>Reprogramar ≤ 30 días: origen X+causal, destino R.</td></tr>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+
+</div>
+
+<footer>Funciona sin conexión a internet · Procesamiento local en el navegador · ExcelJS</footer>
+
+<!--EXCELJS-->
+<!--CORE-->
+<!--OUTPUT-->
+<!--APP-->
+</body>
+</html>
