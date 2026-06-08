@@ -289,6 +289,52 @@
       r++;
     });
 
+    /* ---------- Hoja Correctivos --------------------------------------- */
+    const CORR_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['tipoEvento', 'Tipo de Evento', 22, 's'], ['fecha', 'Fecha', 13, 'd'],
+      ['folioSolicitud', 'Folio Solicitud', 16, 's'], ['nEnvio', 'N° Envío', 12, 's'],
+      ['folioGuia', 'Folio Guía Despacho', 18, 's'], ['empresa', 'Empresa', 22, 's'],
+      ['ejecutor', 'Ejecutor', 24, 's'], ['descripcion', 'Descripción', 44, 's'],
+      ['estadoFinal', 'Estado Final del Equipo', 20, 's']
+    ];
+    const correctivos = meta.correctivos || [];
+    const cs = wb.addWorksheet('Correctivos', { views: [{ state: 'frozen', ySplit: 1 }] });
+    cs.columns = CORR_COLS.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(cs.getRow(1));
+    const efFill = v => v === 'Operativo' ? COLOR.realizada : v === 'No operativo' ? COLOR.fueraServicio
+      : v === 'En servicio técnico' ? 'FFFFE0B2' : null;
+    correctivos.forEach((ev, idx) => {
+      const row = cs.addRow(ev);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = CORR_COLS[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+      const f = efFill(ev.estadoFinal);
+      if (f) {
+        const efCell = row.getCell(CORR_COLS.findIndex(c => c[0] === 'estadoFinal') + 1);
+        efCell.fill = solid(f); efCell.font = { size: 10, bold: true, name: 'Calibri' };
+      }
+    });
+    cs.autoFilter = { from: 'A1', to: cs.getColumn(CORR_COLS.length).letter + '1' };
+    const corrLast = correctivos.length + 1;
+    if (corrLast >= 2) {
+      const addDV = (key, formulae) => {
+        const L = cs.getColumn(CORR_COLS.findIndex(c => c[0] === key) + 1).letter;
+        cs.dataValidations.add(L + '2:' + L + corrLast, { type: 'list', allowBlank: true, formulae: formulae, showErrorMessage: true, errorStyle: 'warning' });
+      };
+      addDV('tipoEvento', ['"' + MP.CORRECTIVO_TIPOS.join(',') + '"']);
+      addDV('ejecutor', ['Catalogos!$A$2:$A$' + (MP.EJECUTORES.length + 1)]);
+      addDV('estadoFinal', ['"' + MP.ESTADO_FINAL_OPCIONES.join(',') + '"']);
+    }
+
     // Orden de hojas: Eventos primero
     wb.worksheets.forEach((w, i) => { w.orderNo = i; });
     return wb;

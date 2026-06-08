@@ -278,6 +278,32 @@
     });
   }
 
+  // ---- Eventos correctivos -----------------------------------------------
+  const CORRECTIVO_TIPOS = ['Solicitud de trabajo', 'Envío a servicio técnico', 'Recepción', 'Reporte de servicio'];
+  // Campos solicitados por cada tipo de evento correctivo (en orden)
+  const CORRECTIVO_CAMPOS = {
+    'Solicitud de trabajo': ['fecha', 'folioSolicitud', 'ejecutor', 'descripcion', 'estadoFinal'],
+    'Envío a servicio técnico': ['fecha', 'folioSolicitud', 'nEnvio', 'ejecutor', 'empresa', 'estadoFinal'],
+    'Recepción': ['fecha', 'folioGuia', 'empresa', 'estadoFinal'],
+    'Reporte de servicio': ['fecha', 'empresa', 'descripcion', 'estadoFinal']
+  };
+  const CORRECTIVO_LABELS = {
+    fecha: 'Fecha', folioSolicitud: 'Folio de la solicitud', folioGuia: 'Folio de la guía de despacho',
+    nEnvio: 'N° de envío', empresa: 'Empresa', ejecutor: 'Ejecutor', descripcion: 'Descripción',
+    estadoFinal: 'Estado final del equipo'
+  };
+  function buildCorrectivo(eq, data) {
+    data = data || {};
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
+      servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      tipoEvento: data.tipoEvento || '', fecha: data.fecha || '',
+      folioSolicitud: data.folioSolicitud || '', nEnvio: data.nEnvio || '', folioGuia: data.folioGuia || '',
+      empresa: data.empresa || '', ejecutor: data.ejecutor || '', descripcion: data.descripcion || '',
+      estadoFinal: data.estadoFinal || ''
+    };
+  }
+
   // ---- Estadísticas para hoja Resumen ------------------------------------
   function buildStats(events) {
     const byEstado = new Map();
@@ -302,6 +328,7 @@
     cellText, isEmpty, toNum, isDataRow, readEquipo,
     decodeResultado, causalCode, reglaReprog, estado,
     parseWorkbook, buildStats, makeEvent,
-    findEquipos, programmedMonths, buildRegistro
+    findEquipos, programmedMonths, buildRegistro,
+    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo
   };
 });

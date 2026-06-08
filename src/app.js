@@ -9,7 +9,7 @@
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1 };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -60,6 +60,31 @@
           const p = r.fechaEjecucion.split('-'); r.fechaEjecucion = new Date(+p[0], +p[1] - 1, +p[2]);
         } else r.fechaEjecucion = '';
         return r;
+      });
+    } catch (e) { return []; }
+  }
+
+  // ---- Persistencia de eventos correctivos -------------------------------
+  const LS_CORR = 'mp_correctivos_2026';
+  function saveCorrectivos() {
+    try {
+      const data = state.correctivos.map(c => {
+        const o = Object.assign({}, c);
+        o.fecha = (c.fecha instanceof Date) ? isoDate(c.fecha) : (c.fecha || '');
+        return o;
+      });
+      localStorage.setItem(LS_CORR, JSON.stringify(data));
+    } catch (e) { /* localStorage no disponible */ }
+  }
+  function loadCorrectivos() {
+    try {
+      const raw = localStorage.getItem(LS_CORR);
+      if (!raw) return [];
+      return JSON.parse(raw).map(o => {
+        const c = Object.assign({}, o);
+        if (typeof c.fecha === 'string' && c.fecha) { const p = c.fecha.split('-'); c.fecha = new Date(+p[0], +p[1] - 1, +p[2]); }
+        else c.fecha = '';
+        return c;
       });
     } catch (e) { return []; }
   }
@@ -125,13 +150,31 @@
       ]
     };
   }
+  // Desplegables y coloreado para la hoja Correctivos
+  function correctivosExtras() {
+    return {
+      validations: [
+        { header: 'Tipo de Evento', values: MP.CORRECTIVO_TIPOS },
+        { header: 'Ejecutor', values: MP.EJECUTORES },
+        { header: 'Estado Final del Equipo', values: MP.ESTADO_FINAL_OPCIONES }
+      ],
+      colors: [
+        { header: 'Estado Final del Equipo', rules: [
+          { value: 'Operativo', color: '#C6EFCE' },
+          { value: 'No operativo', color: '#FFC7CE' },
+          { value: 'En servicio técnico', color: '#FFE0B2' }
+        ] }
+      ]
+    };
+  }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
-    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length });
+    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos });
     return {
       sheets: wb.worksheets.map(ws => {
         const o = { name: ws.name, rows: sheetToRows(ws) };
         if (ws.name === 'Eventos') Object.assign(o, eventosExtras());
+        if (ws.name === 'Correctivos') Object.assign(o, correctivosExtras());
         return o;
       })
     };
@@ -227,6 +270,7 @@
 
       renderPreview();
       renderRegistry();
+      renderCorrectivos();
       renderDiscrepancias();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
@@ -289,7 +333,7 @@
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Generando Excel…';
     try {
-      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length });
+      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -379,14 +423,32 @@
         '<tr><td>' + esc(e.mes) + '</td><td>' + esc(e.programa) + '</td><td>' + esc(e.tipoPrograma) + '</td><td>' + esc(e.resultado) +
         '</td><td>' + esc(fmtDate(e.fechaEjecucion)) + '</td><td>' + esc(e.estado) + '</td><td>' + esc(e.ejecutor) + '</td><td>' + esc(e.estadoFinal) + '</td></tr>'
       ).join('');
-      body = '<div class="muted" style="margin:8px 0 4px">Historial 2026 — meses programados: ' +
+      body = '<div class="muted" style="margin:8px 0 4px">Historial 2026 (preventivo) — meses programados: ' +
         (pm.length ? pm.map(i => MP.MONTHS_FULL[i]).join(', ') : '(ninguno)') + '</div>' +
         '<div class="tablewrap"><table class="prev">' + h + rows + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = head + body +
-      '<div class="actions" style="margin-top:10px"><button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button></div>';
+    // Historial de eventos correctivos del equipo
+    const corr = state.correctivos.filter(c => c.id === eq.id);
+    let corrBody = '';
+    if (corr.length) {
+      const cc = ['Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Descripción', 'Estado Final'];
+      const ch = '<tr>' + cc.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+      const cr = corr.map(c =>
+        '<tr><td>' + esc(c.tipoEvento) + '</td><td>' + esc(fmtDate(c.fecha)) + '</td><td>' + esc(c.folioSolicitud || c.folioGuia) +
+        '</td><td>' + esc(c.nEnvio) + '</td><td>' + esc(c.empresa) + '</td><td>' + esc(c.ejecutor) + '</td><td>' + esc(c.descripcion) +
+        '</td><td>' + esc(c.estadoFinal) + '</td></tr>'
+      ).join('');
+      corrBody = '<div class="muted" style="margin:10px 0 4px">Eventos correctivos registrados</div>' +
+        '<div class="tablewrap"><table class="prev">' + ch + cr + '</table></div>';
+    }
+    $('#equipoDetalle').innerHTML = head + body + corrBody +
+      '<div class="actions" style="margin-top:10px">' +
+        '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
+        '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Evento correctivo</button>' +
+      '</div>';
     $('#equipoDetalle').style.display = 'block';
     $('#detRegistrar').addEventListener('click', () => openModal(eq));
+    $('#detCorrectivo').addEventListener('click', () => openCModal(eq));
   }
 
   // Botón Buscar / Enter: selecciona la primera coincidencia
@@ -407,6 +469,7 @@
       /^C[1-8]$/.test(code) ? code + ' — ' + MP.CAUSAL[code] : code + ' — ' + MP.decodeResultado(code));
     fillSelect($('#mEjecutor'), MP.EJECUTORES);
     fillSelect($('#mEstadoFinal'), MP.ESTADO_FINAL_OPCIONES);
+    fillSelect($('#cTipo'), MP.CORRECTIVO_TIPOS);
   }
 
   function openModal(eq) {
@@ -567,7 +630,98 @@
       b.addEventListener('click', () => {
         state.registros.splice(+b.dataset.del, 1);
         saveRegistros(); renderRegistry(); renderPreview(); renderDiscrepancias();
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       }));
+  }
+
+  // ---- Eventos correctivos: tabla -----------------------------------------
+  function renderCorrectivos() {
+    const wrap = $('#correctivosWrap');
+    if (!state.correctivos.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    $('#correctivosCount').textContent = state.correctivos.length;
+    const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', ''];
+    const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+    const rows = state.correctivos.map((c, i) =>
+      '<tr><td>' + (i + 1) + '</td><td>' + esc(c.id) + '</td><td>' + esc(c.equipo) + '</td><td>' + esc(c.tipoEvento) +
+      '</td><td>' + esc(fmtDate(c.fecha)) + '</td><td>' + esc(c.folioSolicitud || c.folioGuia) + '</td><td>' + esc(c.nEnvio) +
+      '</td><td>' + esc(c.empresa) + '</td><td>' + esc(c.ejecutor) + '</td><td>' + esc(c.estadoFinal) +
+      '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>'
+    ).join('');
+    const t = $('#correctivosTable');
+    t.innerHTML = head + rows;
+    t.querySelectorAll('button[data-del]').forEach(b =>
+      b.addEventListener('click', () => {
+        state.correctivos.splice(+b.dataset.del, 1);
+        saveCorrectivos(); renderCorrectivos();
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+      }));
+  }
+
+  // ---- Modal de evento correctivo -----------------------------------------
+  function cField(k, label, inner) {
+    return '<div class="field"><label for="cf_' + k + '">' + esc(label) + ' <span class="req">*</span></label>' + inner + '</div>';
+  }
+  function cSelectHTML(id, items) {
+    return '<select id="' + id + '"><option value="">— Seleccione —</option>' +
+      items.map(v => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('') + '</select>';
+  }
+  function renderCFields() {
+    const tipo = $('#cTipo').value;
+    const cont = $('#cFields');
+    if (!tipo) { cont.innerHTML = ''; updateCSave(); return; }
+    const keys = MP.CORRECTIVO_CAMPOS[tipo] || [];
+    cont.innerHTML = keys.map(k => {
+      const label = MP.CORRECTIVO_LABELS[k] || k;
+      if (k === 'ejecutor') return cField(k, label, cSelectHTML('cf_' + k, MP.EJECUTORES));
+      if (k === 'estadoFinal') return cField(k, label, cSelectHTML('cf_' + k, MP.ESTADO_FINAL_OPCIONES));
+      if (k === 'descripcion') return cField(k, label, '<textarea id="cf_' + k + '"></textarea>');
+      if (k === 'fecha') return cField(k, label, '<input id="cf_' + k + '" type="date" min="2026-01-01" max="2026-12-31">');
+      return cField(k, label, '<input id="cf_' + k + '" type="text" autocomplete="off">');
+    }).join('');
+    cont.querySelectorAll('input,select,textarea').forEach(el => {
+      el.addEventListener('input', updateCSave); el.addEventListener('change', updateCSave);
+    });
+    updateCSave();
+  }
+  function updateCSave() {
+    const tipo = $('#cTipo').value;
+    let ok = !!tipo && !!state.cEq;
+    if (ok) (MP.CORRECTIVO_CAMPOS[tipo] || []).forEach(k => {
+      const el = $('#cf_' + k); if (!el || !String(el.value).trim()) ok = false;
+    });
+    $('#cSave').disabled = !ok;
+  }
+  function openCModal(eq) {
+    state.cEq = eq;
+    $('#cmodalEq').innerHTML = '<b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · Serie: <b>' +
+      esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
+    $('#cTipo').value = '';
+    $('#cFields').innerHTML = '';
+    showInline($('#cmodalMsg'), '', '');
+    $('#cSave').disabled = true;
+    $('#cmodal').classList.add('show');
+  }
+  function closeCModal() { $('#cmodal').classList.remove('show'); state.cEq = null; }
+  function saveCorrectivo() {
+    const eq = state.cEq, tipo = $('#cTipo').value;
+    if (!eq || !tipo) return;
+    const data = { tipoEvento: tipo };
+    const keys = MP.CORRECTIVO_CAMPOS[tipo] || [];
+    for (const k of keys) {
+      const el = $('#cf_' + k); let v = el ? el.value : '';
+      if (k === 'fecha' && v) { const p = v.split('-'); v = new Date(+p[0], +p[1] - 1, +p[2]); }
+      else v = String(v).trim();
+      if (!v) { showInline($('#cmodalMsg'), 'err', 'Complete todos los campos.'); return; }
+      data[k] = v;
+    }
+    state.correctivos.push(MP.buildCorrectivo(eq, data));
+    saveCorrectivos();
+    closeCModal();
+    renderCorrectivos();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+    setStatus('✅ Evento correctivo registrado: <b>' + esc(eq.equipo) + '</b> — ' + esc(tipo) + '.', 'ok');
+    autoExportSheets();
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
@@ -628,6 +782,19 @@
   $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').classList.contains('show')) closeModal(); });
 
+  // Evento correctivo
+  $('#cTipo').addEventListener('change', renderCFields);
+  $('#cSave').addEventListener('click', saveCorrectivo);
+  $('#cCancel').addEventListener('click', closeCModal);
+  $('#cmodal').addEventListener('click', e => { if (e.target === $('#cmodal')) closeCModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#cmodal').classList.contains('show')) closeCModal(); });
+  $('#clearCorr').addEventListener('click', () => {
+    if (!state.correctivos.length) return;
+    if (!confirm('¿Eliminar los ' + state.correctivos.length + ' eventos correctivos registrados?')) return;
+    state.correctivos = []; saveCorrectivos(); renderCorrectivos();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+  });
+
   // Google Sheets
   $('#sheetsSave').addEventListener('click', () => {
     const u = $('#sheetsUrl').value.trim();
@@ -658,8 +825,10 @@
 
   // Recuperar registros guardados en este navegador (persistencia entre sesiones)
   state.registros = loadRegistros();
-  if (state.registros.length) {
-    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es) registradas guardadas en este navegador. ' +
-      'Cargue el archivo para verlas, compararlas e incluirlas al descargar.', 'info');
+  state.correctivos = loadCorrectivos();
+  renderCorrectivos();
+  if (state.registros.length || state.correctivos.length) {
+    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es) y <b>' + state.correctivos.length +
+      '</b> evento(s) correctivo(s) guardados en este navegador. Cargue el archivo para incluirlos al descargar.', 'info');
   }
 })();

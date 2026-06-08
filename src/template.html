@@ -197,6 +197,17 @@
         <table class="prev" id="registryTable"></table>
       </div>
     </div>
+
+    <div id="correctivosWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Eventos correctivos: <span class="badge" id="correctivosCount">0</span></span>
+        <button id="clearCorr" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Correctivos</b> al descargar / enviar a Google Sheets.</p>
+      <div class="tablewrap" style="margin-top:10px">
+        <table class="prev" id="correctivosTable"></table>
+      </div>
+    </div>
   </div>
 
   <div id="sheetsCard" class="card">
@@ -312,6 +323,28 @@
     <div class="modal-foot">
       <button id="mCancel" class="btn btn-ghost" type="button">Cancelar</button>
       <button id="mSave" class="btn btn-accent" type="button" disabled>Guardar registro</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de evento correctivo -->
+<div id="cmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Registrar evento correctivo</h3>
+    <div class="muted">Seleccione el tipo de evento y complete los datos.</div>
+    <div id="cmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="cTipo">Tipo de evento <span class="req">*</span></label>
+      <select id="cTipo"><option value="">— Seleccione —</option></select>
+    </div>
+
+    <div id="cFields"></div>
+    <div id="cmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="cCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="cSave" class="btn btn-accent" type="button" disabled>Guardar evento</button>
     </div>
   </div>
 </div>

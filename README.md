@@ -47,6 +47,22 @@ Las mantenciones registradas se acumulan en una tabla y:
 - también se pueden exportar por separado con **⬇️ Descargar registro (Excel)**
   → `Registro_Mantenciones_AAAAMMDD.xlsx` (mismo formato).
 
+### Eventos correctivos
+
+En la ficha del equipo, el botón **🛠️ Evento correctivo** abre un formulario que
+pide el **Tipo de evento** y, según el tipo, los campos correspondientes:
+
+| Tipo de evento | Campos |
+|---|---|
+| Solicitud de trabajo | Fecha · Folio de la solicitud · Ejecutor · Descripción · Estado final |
+| Envío a servicio técnico | Fecha · Folio de la solicitud · N° de envío · Ejecutor · Empresa · Estado final |
+| Recepción | Fecha · Folio de la guía de despacho · Empresa · Estado final |
+| Reporte de servicio | Fecha · Empresa · Descripción · Estado final |
+
+Los eventos correctivos se guardan en el navegador y se exportan en una hoja
+**`Correctivos`** (en el Excel y en Google Sheets), con desplegables de Tipo de
+evento, Ejecutor y Estado final del equipo.
+
 ### Persistencia y comparación con el archivo
 
 - Los registros se **guardan en el navegador** (localStorage): se conservan al
