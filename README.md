@@ -54,14 +54,18 @@ pide el **Tipo de evento** y, según el tipo, los campos correspondientes:
 
 | Tipo de evento | Campos |
 |---|---|
-| Solicitud de trabajo | Fecha · Folio de la solicitud · Ejecutor · Descripción · Estado final |
+| Solicitud de trabajo | Fecha · Folio de la solicitud · Ejecutor · Descripción *(opcional)* · Estado final |
 | Envío a servicio técnico | Fecha · Folio de la solicitud · N° de envío · Ejecutor · Empresa · Estado final |
 | Recepción | Fecha · Folio de la guía de despacho · Empresa · Estado final |
-| Reporte de servicio | Fecha · Empresa · Descripción · Estado final |
+| Reporte de servicio | Fecha · Empresa · Descripción *(opcional)* · Estado final |
 
 Los eventos correctivos se guardan en el navegador y se exportan en una hoja
 **`Correctivos`** (en el Excel y en Google Sheets), con desplegables de Tipo de
 evento, Ejecutor y Estado final del equipo.
+
+> Ambas tablas (mantenciones registradas y eventos correctivos) tienen un
+> **filtro de texto** para buscar por equipo, serie, inventario, mes, ejecutor,
+> tipo de evento, empresa o estado.
 
 ### Persistencia y comparación con el archivo
 

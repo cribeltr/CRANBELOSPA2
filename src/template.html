@@ -110,6 +110,8 @@
     max-height:300px;font-size:12px;line-height:1.4;font-family:Consolas,"Courier New",monospace;white-space:pre;margin:10px 0 0}
   .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink)}
   .chk input{width:auto}
+  .filter{margin-top:10px}
+  .nomatch{padding:10px 12px;color:var(--muted);font-size:13px}
   .suggest{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--line);
     border-radius:0 0 9px 9px;box-shadow:0 10px 24px rgba(0,0,0,.14);max-height:300px;overflow:auto;display:none}
   .suggest.show{display:block}
@@ -193,7 +195,8 @@
         </span>
       </div>
       <p class="muted" style="margin:8px 0 0">Tus registros se guardan en este navegador y se mantienen aunque vuelvas a cargar el archivo.</p>
-      <div class="tablewrap" style="margin-top:10px">
+      <input id="registryFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, mes, ejecutor, estado…" />
+      <div class="tablewrap" style="margin-top:8px">
         <table class="prev" id="registryTable"></table>
       </div>
     </div>
@@ -204,7 +207,8 @@
         <button id="clearCorr" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
       </div>
       <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Correctivos</b> al descargar / enviar a Google Sheets.</p>
-      <div class="tablewrap" style="margin-top:10px">
+      <input id="correctivosFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, tipo de evento, empresa, ejecutor, estado…" />
+      <div class="tablewrap" style="margin-top:8px">
         <table class="prev" id="correctivosTable"></table>
       </div>
     </div>

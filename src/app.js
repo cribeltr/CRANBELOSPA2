@@ -607,11 +607,15 @@
     const wrap = $('#registryWrap');
     if (!state.registros.length) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
-    $('#registryCount').textContent = state.registros.length;
+    const term = ($('#registryFilter') ? $('#registryFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Serie / Inv', 'Mes', 'Fecha', 'Programa', 'Resultado', 'Ejecutor', 'Estado Final', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
-    const rows = state.registros.map((e, i) =>
-      '<tr>' +
+    let shown = 0;
+    const rows = state.registros.map((e, i) => {
+      const hay = [e.id, e.equipo, e.serie, e.inv, e.mes, fmtDate(e.fechaEjecucion), e.programa, e.resultado, e.ejecutor, e.estadoFinal, e.estado].join(' ').toLowerCase();
+      if (term && hay.indexOf(term) === -1) return '';
+      shown++;
+      return '<tr>' +
         '<td>' + (i + 1) + '</td>' +
         '<td>' + esc(e.id) + '</td>' +
         '<td>' + esc(e.equipo) + '</td>' +
@@ -623,9 +627,11 @@
         '<td>' + esc(e.ejecutor) + '</td>' +
         '<td>' + esc(e.estadoFinal) + '</td>' +
         '<td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td>' +
-      '</tr>').join('');
+      '</tr>';
+    }).join('');
+    $('#registryCount').textContent = term ? (shown + ' / ' + state.registros.length) : state.registros.length;
     const t = $('#registryTable');
-    t.innerHTML = head + rows;
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="11" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.registros.splice(+b.dataset.del, 1);
@@ -639,17 +645,22 @@
     const wrap = $('#correctivosWrap');
     if (!state.correctivos.length) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
-    $('#correctivosCount').textContent = state.correctivos.length;
+    const term = ($('#correctivosFilter') ? $('#correctivosFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
-    const rows = state.correctivos.map((c, i) =>
-      '<tr><td>' + (i + 1) + '</td><td>' + esc(c.id) + '</td><td>' + esc(c.equipo) + '</td><td>' + esc(c.tipoEvento) +
-      '</td><td>' + esc(fmtDate(c.fecha)) + '</td><td>' + esc(c.folioSolicitud || c.folioGuia) + '</td><td>' + esc(c.nEnvio) +
-      '</td><td>' + esc(c.empresa) + '</td><td>' + esc(c.ejecutor) + '</td><td>' + esc(c.estadoFinal) +
-      '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>'
-    ).join('');
+    let shown = 0;
+    const rows = state.correctivos.map((c, i) => {
+      const hay = [c.id, c.equipo, c.serie, c.inv, c.tipoEvento, fmtDate(c.fecha), c.folioSolicitud, c.folioGuia, c.nEnvio, c.empresa, c.ejecutor, c.descripcion, c.estadoFinal].join(' ').toLowerCase();
+      if (term && hay.indexOf(term) === -1) return '';
+      shown++;
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(c.id) + '</td><td>' + esc(c.equipo) + '</td><td>' + esc(c.tipoEvento) +
+        '</td><td>' + esc(fmtDate(c.fecha)) + '</td><td>' + esc(c.folioSolicitud || c.folioGuia) + '</td><td>' + esc(c.nEnvio) +
+        '</td><td>' + esc(c.empresa) + '</td><td>' + esc(c.ejecutor) + '</td><td>' + esc(c.estadoFinal) +
+        '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
+    }).join('');
+    $('#correctivosCount').textContent = term ? (shown + ' / ' + state.correctivos.length) : state.correctivos.length;
     const t = $('#correctivosTable');
-    t.innerHTML = head + rows;
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="11" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.correctivos.splice(+b.dataset.del, 1);
@@ -659,8 +670,10 @@
   }
 
   // ---- Modal de evento correctivo -----------------------------------------
+  const CORR_OPCIONALES = new Set(['descripcion']);   // campos no obligatorios
   function cField(k, label, inner) {
-    return '<div class="field"><label for="cf_' + k + '">' + esc(label) + ' <span class="req">*</span></label>' + inner + '</div>';
+    const tag = CORR_OPCIONALES.has(k) ? '<span class="muted">(opcional)</span>' : '<span class="req">*</span>';
+    return '<div class="field"><label for="cf_' + k + '">' + esc(label) + ' ' + tag + '</label>' + inner + '</div>';
   }
   function cSelectHTML(id, items) {
     return '<select id="' + id + '"><option value="">— Seleccione —</option>' +
@@ -688,6 +701,7 @@
     const tipo = $('#cTipo').value;
     let ok = !!tipo && !!state.cEq;
     if (ok) (MP.CORRECTIVO_CAMPOS[tipo] || []).forEach(k => {
+      if (CORR_OPCIONALES.has(k)) return;
       const el = $('#cf_' + k); if (!el || !String(el.value).trim()) ok = false;
     });
     $('#cSave').disabled = !ok;
@@ -712,7 +726,7 @@
       const el = $('#cf_' + k); let v = el ? el.value : '';
       if (k === 'fecha' && v) { const p = v.split('-'); v = new Date(+p[0], +p[1] - 1, +p[2]); }
       else v = String(v).trim();
-      if (!v) { showInline($('#cmodalMsg'), 'err', 'Complete todos los campos.'); return; }
+      if (!v && !CORR_OPCIONALES.has(k)) { showInline($('#cmodalMsg'), 'err', 'Complete los campos obligatorios (*).'); return; }
       data[k] = v;
     }
     state.correctivos.push(MP.buildCorrectivo(eq, data));
@@ -744,6 +758,8 @@
     saveRegistros(); renderRegistry(); renderPreview(); renderDiscrepancias();
     setStatus('Registros eliminados.', 'info');
   });
+  $('#registryFilter').addEventListener('input', renderRegistry);
+  $('#correctivosFilter').addEventListener('input', renderCorrectivos);
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(ev =>
