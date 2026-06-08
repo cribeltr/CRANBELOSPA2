@@ -30,6 +30,40 @@
     s.style.display = msg ? 'block' : 'none';
   }
 
+  // ---- Persistencia de registros + clave estable -------------------------
+  const LS_KEY = 'mp_registros_2026';
+  function isoDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  // Identidad estable del evento: Inventario > Serie > ID, más el mes.
+  function keyOf(e) {
+    const inv = (e.inv != null ? String(e.inv) : '').trim();
+    const ser = (e.serie != null ? String(e.serie) : '').trim();
+    const base = inv ? 'I:' + inv.toLowerCase() : ser ? 'S:' + ser.toLowerCase() : 'ID:' + e.id;
+    return base + '|' + e.nMes;
+  }
+  function saveRegistros() {
+    try {
+      const data = state.registros.map(r => {
+        const o = Object.assign({}, r);
+        o.fechaEjecucion = (r.fechaEjecucion instanceof Date) ? isoDate(r.fechaEjecucion) : '';
+        return o;
+      });
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+    } catch (e) { /* localStorage no disponible (p. ej. algunos navegadores en file://) */ }
+  }
+  function loadRegistros() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return [];
+      return JSON.parse(raw).map(o => {
+        const r = Object.assign({}, o);
+        if (typeof r.fechaEjecucion === 'string' && r.fechaEjecucion) {
+          const p = r.fechaEjecucion.split('-'); r.fechaEjecucion = new Date(+p[0], +p[1] - 1, +p[2]);
+        } else r.fechaEjecucion = '';
+        return r;
+      });
+    } catch (e) { return []; }
+  }
+
   // ---- Carga y parseo del archivo ----------------------------------------
   function readFile(file) {
     return new Promise((resolve, reject) => {
@@ -66,10 +100,11 @@
       const parsed = MP.parseWorkbook(wb);
       state.equipos = parsed.equipos;
       state.events = parsed.events;
-      state.registros = [];                       // archivo nuevo -> reiniciar registros
+      // Los registros previos se CONSERVAN (persistencia) y se comparan con el archivo.
 
       renderPreview();
       renderRegistry();
+      renderDiscrepancias();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
       resetSearch();
@@ -91,9 +126,9 @@
     if (!state.registros.length) return state.events;
     const out = state.events.map(e => Object.assign({}, e));
     const idxByKey = new Map();
-    out.forEach((e, i) => idxByKey.set(e.id + '|' + e.nMes, i));
+    out.forEach((e, i) => idxByKey.set(keyOf(e), i));
     for (const reg of state.registros) {
-      const key = reg.id + '|' + reg.nMes;
+      const key = keyOf(reg);
       const merged = Object.assign({}, reg);
       if (idxByKey.has(key)) {
         const i = idxByKey.get(key);
@@ -269,11 +304,56 @@
       estadoFinal: isSi ? $('#mEstadoFinal').value : ''   // en blanco si el resultado no es "Si"
     });
     state.registros.push(reg);
+    saveRegistros();   // persistir en el navegador
     closeModal();
     renderRegistry();
     renderPreview();   // reflejar el registro en la vista previa y en el Excel masivo
+    renderDiscrepancias();
     setStatus('✅ Mantención registrada: <b>' + esc(eq.equipo) + '</b> — ' + esc(reg.mes) +
       ' (' + esc(fmtDate(fecha)) + '). Quedará incluida al descargar el Excel.', 'ok');
+  }
+
+  // ---- Comparación: registrado vs. archivo cargado -----------------------
+  function compareRegistros() {
+    const map = new Map();
+    state.events.forEach(e => { const k = keyOf(e); if (!map.has(k)) map.set(k, e); });
+    const diffs = []; let iguales = 0;
+    state.registros.forEach(r => {
+      const ev = map.get(keyOf(r));
+      const regRes = r.resultado || '';
+      if (!ev) { diffs.push({ r: r, tipo: 'nf' }); return; }
+      const fileRes = ev.resultado || '';
+      if (fileRes === regRes) { iguales++; return; }
+      diffs.push({ r: r, tipo: fileRes ? 'dif' : 'vacio', archivo: fileRes });
+    });
+    return { diffs, iguales };
+  }
+
+  function renderDiscrepancias() {
+    const card = $('#discrepanciasCard'), box = $('#discrepancias');
+    if (!state.registros.length || !state.events.length) { card.style.display = 'none'; return; }
+    const { diffs, iguales } = compareRegistros();
+    card.style.display = 'block';
+    if (!diffs.length) {
+      box.innerHTML = '<div class="inline-msg ok show">✔ Tus ' + state.registros.length +
+        ' mantención(es) registradas coinciden con el archivo cargado.</div>';
+      return;
+    }
+    const rows = diffs.map(d => {
+      let txt, cls;
+      if (d.tipo === 'nf') { txt = 'No encontrado en el archivo'; cls = 'warn'; }
+      else if (d.tipo === 'vacio') { txt = '<i>(vacío en el archivo)</i>'; cls = 'warn'; }
+      else { txt = '<b>' + esc(d.archivo) + '</b>'; cls = 'err'; }
+      return '<tr class="' + cls + '"><td>' + esc(d.r.id) + '</td><td>' + esc(d.r.equipo) +
+        '</td><td>' + esc(d.r.serie || d.r.inv) + '</td><td>' + esc(d.r.mes) +
+        '</td><td><b>' + esc(d.r.resultado) + '</b></td><td>' + txt + '</td></tr>';
+    }).join('');
+    box.innerHTML =
+      '<div class="disc-head">⚠️ ' + diffs.length + ' diferencia(s) entre lo registrado y el archivo' +
+        (iguales ? ' · ' + iguales + ' coincidente(s)' : '') + '</div>' +
+      '<div class="muted" style="margin-bottom:8px">Al descargar, <b>prevalece lo registrado</b> en el programa. Revise si debe corregir el registro o el archivo.</div>' +
+      '<div class="tablewrap"><table class="prev"><tr><th>ID</th><th>Equipo</th><th>Serie/Inv</th>' +
+        '<th>Mes</th><th>Registrado</th><th>En el archivo</th></tr>' + rows + '</table></div>';
   }
 
   // ---- Tabla de registros -------------------------------------------------
@@ -301,7 +381,10 @@
     const t = $('#registryTable');
     t.innerHTML = head + rows;
     t.querySelectorAll('button[data-del]').forEach(b =>
-      b.addEventListener('click', () => { state.registros.splice(+b.dataset.del, 1); renderRegistry(); renderPreview(); }));
+      b.addEventListener('click', () => {
+        state.registros.splice(+b.dataset.del, 1);
+        saveRegistros(); renderRegistry(); renderPreview(); renderDiscrepancias();
+      }));
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
@@ -315,6 +398,13 @@
   $('#downloadReg').addEventListener('click', () => {
     if (!state.registros.length) return;
     downloadWorkbook(state.registros, 'Registro_Mantenciones_' + stamp() + '.xlsx', $('#downloadReg'));
+  });
+  $('#clearReg').addEventListener('click', () => {
+    if (!state.registros.length) return;
+    if (!confirm('¿Eliminar las ' + state.registros.length + ' mantenciones registradas? Esta acción no se puede deshacer.')) return;
+    state.registros = [];
+    saveRegistros(); renderRegistry(); renderPreview(); renderDiscrepancias();
+    setStatus('Registros eliminados.', 'info');
   });
 
   const drop = $('#drop');
@@ -340,4 +430,11 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').classList.contains('show')) closeModal(); });
 
   initSelects();
+
+  // Recuperar registros guardados en este navegador (persistencia entre sesiones)
+  state.registros = loadRegistros();
+  if (state.registros.length) {
+    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es) registradas guardadas en este navegador. ' +
+      'Cargue el archivo para verlas, compararlas e incluirlas al descargar.', 'info');
+  }
 })();

@@ -44,8 +44,21 @@ Las mantenciones registradas se acumulan en una tabla y:
 - también se pueden exportar por separado con **⬇️ Descargar registro (Excel)**
   → `Registro_Mantenciones_AAAAMMDD.xlsx` (mismo formato).
 
-> Al cargar un archivo nuevo, la lista de registros se reinicia. Descargue antes
-> de cambiar de archivo si desea conservarlos.
+### Persistencia y comparación con el archivo
+
+- Los registros se **guardan en el navegador** (localStorage): se conservan al
+  recargar la página y **al volver a subir el archivo** (no se pierden).
+- Al cargar el archivo, el sistema **compara** cada mantención registrada con el
+  resultado del archivo para el mismo equipo y mes, y muestra un panel
+  **🔍 Comparación: registrado vs. archivo** con las diferencias (por ejemplo,
+  registraste `C2` pero el archivo trae `C3`, o está vacío, o el equipo/mes no
+  aparece). Al descargar, **prevalece lo registrado** en el programa.
+- El botón **🗑️ Limpiar** borra todos los registros guardados.
+
+> Nota: la persistencia depende del navegador. Algunos navegadores no guardan
+> datos al abrir el archivo con `file://`; en ese caso los registros se mantienen
+> durante la sesión (incluso al re-subir el archivo) pero no tras cerrar la
+> pestaña. Use **Descargar registro** para conservar una copia.
 
 ---
 
