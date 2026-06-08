@@ -356,9 +356,19 @@
   function renderDetalle(eq) {
     const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
     const pm = MP.programmedMonths(eq);
-    const head = '<div class="eqbox"><b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · ' + esc(eq.marca) + ' ' + esc(eq.modelo) +
-      '<br>Serie: <b>' + esc(eq.serie || '—') + '</b> · Inventario: <b>' + esc(eq.inv || '—') + '</b>' +
-      '<br>' + esc(eq.servicio) + ' · ' + esc(eq.unidad) + (eq.ubicacion ? ' · ' + esc(eq.ubicacion) : '') + '</div>';
+    const val = v => (v !== null && v !== undefined && String(v).trim() !== '') ? esc(v) : '—';
+    const fields = [
+      ['Familia', eq.familia], ['ID', eq.id], ['N° Carpeta', eq.carpeta], ['N° Inventario', eq.inv],
+      ['Equipo', eq.equipo], ['Servicio', eq.servicio], ['Unidad', eq.unidad], ['Ubicación', eq.ubicacion],
+      ['Procedencia', eq.procedencia], ['Marca', eq.marca], ['Modelo', eq.modelo], ['N° Serie', eq.serie],
+      ['Año Instalación', eq.anio], ['Vida Útil Residual', eq.vur], ['Clasificación', eq.clasif],
+      ['ENU / Baja', eq.enubaja], ['Frecuencia MP', eq.frecuencia]
+    ];
+    const grid = '<div class="ficha">' + fields.map(f =>
+      '<div class="fi"><span class="k">' + esc(f[0]) + '</span><span class="v">' + val(f[1]) + '</span></div>').join('') + '</div>';
+    const obs = (eq.observacion && String(eq.observacion).trim())
+      ? '<div class="fi-obs"><span class="k">Observación</span><span class="vv">' + esc(eq.observacion) + '</span></div>' : '';
+    const head = '<div class="section-title" style="font-size:14px">📋 Datos del equipo</div>' + grid + obs;
     let body;
     if (!hist.length) {
       body = '<div class="muted">Este equipo no tiene meses programados ni resultados en 2026.</div>';

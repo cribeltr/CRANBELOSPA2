@@ -119,6 +119,14 @@
   .sg-item b{color:var(--teal-d)}
   .sg-item .meta{color:var(--muted);font-size:12px;margin-top:1px}
   .sg-empty{padding:10px 12px;color:var(--muted);font-size:13px}
+  .ficha{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin:8px 0}
+  @media(max-width:560px){.ficha{grid-template-columns:1fr}}
+  .fi{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted #e3e9eb;padding:4px 0;font-size:13px}
+  .fi .k{color:var(--muted)}
+  .fi .v{font-weight:600;text-align:right;word-break:break-word}
+  .fi-obs{margin:8px 0;font-size:13px;background:#f1f7f8;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .fi-obs .k{color:var(--muted);display:block;margin-bottom:2px}
+  .fi-obs .vv{font-weight:600}
 </style>
 </head>
 <body>
@@ -1460,9 +1468,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function renderDetalle(eq) {
     const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
     const pm = MP.programmedMonths(eq);
-    const head = '<div class="eqbox"><b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · ' + esc(eq.marca) + ' ' + esc(eq.modelo) +
-      '<br>Serie: <b>' + esc(eq.serie || '—') + '</b> · Inventario: <b>' + esc(eq.inv || '—') + '</b>' +
-      '<br>' + esc(eq.servicio) + ' · ' + esc(eq.unidad) + (eq.ubicacion ? ' · ' + esc(eq.ubicacion) : '') + '</div>';
+    const val = v => (v !== null && v !== undefined && String(v).trim() !== '') ? esc(v) : '—';
+    const fields = [
+      ['Familia', eq.familia], ['ID', eq.id], ['N° Carpeta', eq.carpeta], ['N° Inventario', eq.inv],
+      ['Equipo', eq.equipo], ['Servicio', eq.servicio], ['Unidad', eq.unidad], ['Ubicación', eq.ubicacion],
+      ['Procedencia', eq.procedencia], ['Marca', eq.marca], ['Modelo', eq.modelo], ['N° Serie', eq.serie],
+      ['Año Instalación', eq.anio], ['Vida Útil Residual', eq.vur], ['Clasificación', eq.clasif],
+      ['ENU / Baja', eq.enubaja], ['Frecuencia MP', eq.frecuencia]
+    ];
+    const grid = '<div class="ficha">' + fields.map(f =>
+      '<div class="fi"><span class="k">' + esc(f[0]) + '</span><span class="v">' + val(f[1]) + '</span></div>').join('') + '</div>';
+    const obs = (eq.observacion && String(eq.observacion).trim())
+      ? '<div class="fi-obs"><span class="k">Observación</span><span class="vv">' + esc(eq.observacion) + '</span></div>' : '';
+    const head = '<div class="section-title" style="font-size:14px">📋 Datos del equipo</div>' + grid + obs;
     let body;
     if (!hist.length) {
       body = '<div class="muted">Este equipo no tiene meses programados ni resultados en 2026.</div>';

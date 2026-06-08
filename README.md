@@ -28,8 +28,9 @@ Tras cargar el archivo se habilita la tarjeta **🔧 Registrar mantención**:
 
 1. **Escriba** el N° de Serie o N° de Inventario: aparecen **sugerencias en vivo**
    (use ↑/↓ y Enter, o haga clic).
-2. **Elija** el equipo: se muestra su **historial 2026** (programa/resultado por
-   mes) y un botón **🔧 Registrar mantención preventiva** que abre la nueva vista.
+2. **Elija** el equipo: se muestra su **ficha completa** (todos los datos del
+   equipo), su **historial 2026** (programa/resultado por mes) y un botón
+   **🔧 Registrar mantención preventiva** que abre la nueva vista.
 3. Ingrese la **fecha de ejecución**. Si el mes **no coincide** con un mes
    programado para ese equipo, **el sistema no deja avanzar** (e indica los meses
    programados).

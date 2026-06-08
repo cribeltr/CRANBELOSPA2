@@ -119,6 +119,14 @@
   .sg-item b{color:var(--teal-d)}
   .sg-item .meta{color:var(--muted);font-size:12px;margin-top:1px}
   .sg-empty{padding:10px 12px;color:var(--muted);font-size:13px}
+  .ficha{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin:8px 0}
+  @media(max-width:560px){.ficha{grid-template-columns:1fr}}
+  .fi{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted #e3e9eb;padding:4px 0;font-size:13px}
+  .fi .k{color:var(--muted)}
+  .fi .v{font-weight:600;text-align:right;word-break:break-word}
+  .fi-obs{margin:8px 0;font-size:13px;background:#f1f7f8;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .fi-obs .k{color:var(--muted);display:block;margin-bottom:2px}
+  .fi-obs .vv{font-weight:600}
 </style>
 </head>
 <body>
