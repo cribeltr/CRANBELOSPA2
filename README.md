@@ -9,6 +9,30 @@ ningún servidor y la herramienta funciona **sin conexión a internet**.
 
 ---
 
+## Publicar como link (sin instalar nada)
+
+El `index.html` es autocontenido, así que basta con **alojarlo** para abrirlo
+desde una URL en cualquier equipo.
+
+**Opción A — GitHub Pages (este repositorio, gratis):**
+1. Fusiona el PR a la rama `main` (o usa la rama actual).
+2. En GitHub: **Settings → Pages → Source: “Deploy from a branch” → Branch:
+   `main` → Folder: `/ (root)` → Save**.
+3. En ~1 minuto queda disponible en:
+   `https://cribeltr.github.io/CRANBELOSPA2/` (la URL exacta aparece en esa
+   misma pantalla).
+
+**Opción B — Netlify Drop (1 minuto, sin configurar nada):**
+abre <https://app.netlify.com/drop> y arrastra el archivo `index.html`; te
+entrega un link público al instante.
+
+> Es seguro publicarlo: la app no guarda datos en ningún servidor. El archivo
+> de equipos lo sube cada usuario en su navegador, y los registros quedan en el
+> navegador (localStorage) y/o en *tu* Google Sheet. La URL del Apps Script se
+> guarda solo en el navegador de cada quien (no va en el HTML).
+
+---
+
 ## Uso rápido
 
 1. Abra **`index.html`** con un navegador moderno (Chrome, Edge o Firefox) — basta
