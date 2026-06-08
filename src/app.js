@@ -66,8 +66,10 @@
       const parsed = MP.parseWorkbook(wb);
       state.equipos = parsed.equipos;
       state.events = parsed.events;
+      state.registros = [];                       // archivo nuevo -> reiniciar registros
 
-      renderPreview(parsed.events);
+      renderPreview();
+      renderRegistry();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
       resetSearch();
@@ -82,7 +84,32 @@
     }
   }
 
-  function renderPreview(ev) {
+  // Eventos del archivo + las mantenciones registradas superpuestas en la fila
+  // del mismo equipo y mes (la última registrada prevalece). Se calcula al
+  // momento de descargar/previsualizar, por lo que eliminar un registro se refleja.
+  function consolidatedEvents() {
+    if (!state.registros.length) return state.events;
+    const out = state.events.map(e => Object.assign({}, e));
+    const idxByKey = new Map();
+    out.forEach((e, i) => idxByKey.set(e.id + '|' + e.nMes, i));
+    for (const reg of state.registros) {
+      const key = reg.id + '|' + reg.nMes;
+      const merged = Object.assign({}, reg);
+      if (idxByKey.has(key)) {
+        const i = idxByKey.get(key);
+        if (!merged.observacion) merged.observacion = out[i].observacion; // conservar observación original
+        out[i] = merged;
+      } else {
+        idxByKey.set(key, out.length);
+        out.push(merged);
+      }
+    }
+    out.sort((a, b) => (MP.toNum(a.id) - MP.toNum(b.id)) || (a.nMes - b.nMes));
+    return out;
+  }
+
+  function renderPreview() {
+    const ev = consolidatedEvents();
     const stats = MP.buildStats(ev);
     const estados = [...stats.byEstado.entries()].sort((a, b) => b[1] - a[1]);
     const chips = estados.map(([k, v]) =>
@@ -244,8 +271,9 @@
     state.registros.push(reg);
     closeModal();
     renderRegistry();
+    renderPreview();   // reflejar el registro en la vista previa y en el Excel masivo
     setStatus('✅ Mantención registrada: <b>' + esc(eq.equipo) + '</b> — ' + esc(reg.mes) +
-      ' (' + esc(fmtDate(fecha)) + ').', 'ok');
+      ' (' + esc(fmtDate(fecha)) + '). Quedará incluida al descargar el Excel.', 'ok');
   }
 
   // ---- Tabla de registros -------------------------------------------------
@@ -273,7 +301,7 @@
     const t = $('#registryTable');
     t.innerHTML = head + rows;
     t.querySelectorAll('button[data-del]').forEach(b =>
-      b.addEventListener('click', () => { state.registros.splice(+b.dataset.del, 1); renderRegistry(); }));
+      b.addEventListener('click', () => { state.registros.splice(+b.dataset.del, 1); renderRegistry(); renderPreview(); }));
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
@@ -283,7 +311,7 @@
     if (f) { $('#fileName').textContent = f.name; handleFile(f); }
   });
   $('#download').addEventListener('click', () =>
-    downloadWorkbook(state.events, 'Eventos_MP_2026_' + stamp() + '.xlsx', $('#download')));
+    downloadWorkbook(consolidatedEvents(), 'Eventos_MP_2026_' + stamp() + '.xlsx', $('#download')));
   $('#downloadReg').addEventListener('click', () => {
     if (!state.registros.length) return;
     downloadWorkbook(state.registros, 'Registro_Mantenciones_' + stamp() + '.xlsx', $('#downloadReg'));

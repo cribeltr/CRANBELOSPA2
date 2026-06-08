@@ -36,9 +36,16 @@ Tras cargar el archivo se habilita la tarjeta **🔧 Registrar mantención**:
    El **Estado final del equipo** (lista) solo se solicita cuando el **Resultado es
    "Si"**; en cualquier otro caso queda en blanco. Pulse **Guardar registro**.
 
-Las mantenciones registradas se acumulan en una tabla y se exportan con
-**⬇️ Descargar registro (Excel)** → `Registro_Mantenciones_AAAAMMDD.xlsx`
-(mismo formato que el Excel masivo).
+Las mantenciones registradas se acumulan en una tabla y:
+
+- se **consolidan en el Excel masivo**: al pulsar *Descargar Excel (una fila por
+  evento)*, cada registro **actualiza la fila** de su equipo y mes (resultado,
+  fecha, ejecutor, estado final y observación); y
+- también se pueden exportar por separado con **⬇️ Descargar registro (Excel)**
+  → `Registro_Mantenciones_AAAAMMDD.xlsx` (mismo formato).
+
+> Al cargar un archivo nuevo, la lista de registros se reinicia. Descargue antes
+> de cambiar de archivo si desea conservarlos.
 
 ---
 
