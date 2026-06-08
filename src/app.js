@@ -102,19 +102,24 @@
         { header: 'Ejecutor', values: MP.EJECUTORES }
       ],
       colors: [
-        { header: 'Estado', rules: [
-          { mode: 'startsWith', value: 'Realizada', color: '#C6EFCE' },
-          { mode: 'equals', value: 'Reprogramada', color: '#FCE4A6' },
-          { mode: 'equals', value: 'Puesta en Marcha', color: '#DDEBF7' },
-          { mode: 'equals', value: 'Fuera de Servicio', color: '#FFC7CE' },
-          { mode: 'equals', value: 'No Realizada', color: '#FFC7CE' },
-          { mode: 'equals', value: 'No Ubicable', color: '#E4DFEC' },
-          { mode: 'equals', value: 'Baja', color: '#D9D9D9' },
-          { mode: 'startsWith', value: 'Pendiente', color: '#FFF2CC' }
-        ] },
+        // Estado Final colorea su propia celda (mayor prioridad que la fila)
         { header: 'Estado Final del Equipo', rules: [
-          { mode: 'equals', value: 'Operativo', color: '#C6EFCE' },
-          { mode: 'equals', value: 'No operativo', color: '#FFC7CE' }
+          { value: 'Operativo', color: '#C6EFCE' },
+          { value: 'No operativo', color: '#FFC7CE' }
+        ] },
+        // Estado colorea TODA la fila (formato condicional por fórmula)
+        { header: 'Estado', wholeRow: true, rules: [
+          { value: 'Realizada', color: '#C6EFCE' },
+          { value: 'Realizada (Año Anterior)', color: '#C6EFCE' },
+          { value: 'Reprogramada', color: '#FCE4A6' },
+          { value: 'Puesta en Marcha', color: '#DDEBF7' },
+          { value: 'Fuera de Servicio', color: '#FFC7CE' },
+          { value: 'No Realizada', color: '#FFC7CE' },
+          { value: 'No Ubicable', color: '#E4DFEC' },
+          { value: 'Baja', color: '#D9D9D9' },
+          { value: 'Pendiente', color: '#FFF2CC' },
+          { value: 'Pendiente (Reprogramada)', color: '#FFF2CC' },
+          { value: 'Pendiente (Año Anterior)', color: '#FFF2CC' }
         ] }
       ]
     };

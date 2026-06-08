@@ -85,8 +85,9 @@ Cada hoja se **reemplaza** con el contenido enviado; las demás hojas de la
 planilla no se tocan.
 
 En la hoja `Eventos` el script aplica además **desplegables** (Resultado,
-Estado Final del Equipo y Ejecutor) y el **coloreado por Estado** (y Operativo /
-No operativo), igual que el Excel.
+Estado Final del Equipo y Ejecutor) y el **coloreado por Estado de toda la fila**
+(formato condicional por fórmula), más el color verde/rojo en la celda
+*Estado Final del Equipo*.
 
 > Requisitos: tu cuenta de Google debe permitir crear y publicar Apps Script.
 > El acceso "Cualquier persona" se refiere a la URL del script; tu planilla

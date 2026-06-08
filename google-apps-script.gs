@@ -81,21 +81,40 @@ function applyValidations(sh, validations) {
   });
 }
 
-// Coloreado por valor (formato condicional) en las columnas indicadas
+// Número de columna -> letra (1 -> A, 27 -> AA)
+function columnToLetter(col) {
+  var s = '';
+  while (col > 0) { var m = (col - 1) % 26; s = String.fromCharCode(65 + m) + s; col = Math.floor((col - 1) / 26); }
+  return s;
+}
+
+// Coloreado por valor (formato condicional). Si la regla es wholeRow, colorea
+// TODA la fila usando una fórmula que mira la columna del encabezado indicado.
 function applyColors(sh, colors) {
   if (!colors) return;
   var n = sh.getLastRow() - 1;
   if (n < 1) return;
+  var lastCol = sh.getLastColumn();
   var rules = [];
   colors.forEach(function (cf) {
     var c = colByHeader(sh, cf.header);
     if (!c) return;
-    var rng = sh.getRange(2, c, n, 1);
-    (cf.rules || []).forEach(function (r) {
-      var b = SpreadsheetApp.newConditionalFormatRule().setBackground(r.color).setRanges([rng]);
-      b = (r.mode === 'startsWith') ? b.whenTextStartsWith(r.value) : b.whenTextEqualTo(r.value);
-      rules.push(b.build());
-    });
+    if (cf.wholeRow) {
+      var rowRange = sh.getRange(2, 1, n, lastCol);    // todas las columnas, filas de datos
+      var colL = columnToLetter(c);
+      (cf.rules || []).forEach(function (r) {
+        var formula = '=$' + colL + '2="' + r.value + '"';
+        rules.push(SpreadsheetApp.newConditionalFormatRule()
+          .whenFormulaSatisfied(formula).setBackground(r.color).setRanges([rowRange]).build());
+      });
+    } else {
+      var rng = sh.getRange(2, c, n, 1);
+      (cf.rules || []).forEach(function (r) {
+        var b = SpreadsheetApp.newConditionalFormatRule().setBackground(r.color).setRanges([rng]);
+        b = (r.mode === 'startsWith') ? b.whenTextStartsWith(r.value) : b.whenTextEqualTo(r.value);
+        rules.push(b.build());
+      });
+    }
   });
   if (rules.length) sh.setConditionalFormatRules(rules);
 }
