@@ -223,7 +223,7 @@
         showErrorMessage: true,
         errorStyle: 'warning',
         errorTitle: 'Valor no válido',
-        error: 'Seleccione "Operativo" o "No operativo".'
+        error: 'Seleccione "Operativo", "No operativo" o "En servicio técnico".'
       });
       // Coloreado automático según el valor elegido
       ws.addConditionalFormatting({
@@ -234,7 +234,10 @@
                      font: { color: { argb: 'FF1B7F3B' }, bold: true } } },
           { type: 'cellIs', operator: 'equal', priority: 2, formulae: ['"No operativo"'],
             style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: COLOR.fueraServicio } },
-                     font: { color: { argb: 'FFB3261E' }, bold: true } } }
+                     font: { color: { argb: 'FFB3261E' }, bold: true } } },
+          { type: 'cellIs', operator: 'equal', priority: 3, formulae: ['"En servicio técnico"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFFE0B2' } },
+                     font: { color: { argb: 'FF8A5A00' }, bold: true } } }
         ]
       });
     }

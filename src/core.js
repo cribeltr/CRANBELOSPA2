@@ -78,7 +78,7 @@
   ];
 
   // Opciones del desplegable "Estado Final del Equipo" (se llena manualmente).
-  const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo'];
+  const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo', 'En servicio técnico'];
 
   // Opciones del desplegable "Resultado (R)".
   const RESULTADO_OPCIONES = ['Si', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'Si-RA', 'FS', 'No', 'NU', 'Baja'];

@@ -105,7 +105,8 @@
         // Estado Final colorea su propia celda (mayor prioridad que la fila)
         { header: 'Estado Final del Equipo', rules: [
           { value: 'Operativo', color: '#C6EFCE' },
-          { value: 'No operativo', color: '#FFC7CE' }
+          { value: 'No operativo', color: '#FFC7CE' },
+          { value: 'En servicio técnico', color: '#FFE0B2' }
         ] },
         // Estado colorea TODA la fila (formato condicional por fórmula)
         { header: 'Estado', wholeRow: true, rules: [

@@ -571,7 +571,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   ];
 
   // Opciones del desplegable "Estado Final del Equipo" (se llena manualmente).
-  const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo'];
+  const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo', 'En servicio técnico'];
 
   // Opciones del desplegable "Resultado (R)".
   const RESULTADO_OPCIONES = ['Si', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'Si-RA', 'FS', 'No', 'NU', 'Baja'];
@@ -1026,7 +1026,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         showErrorMessage: true,
         errorStyle: 'warning',
         errorTitle: 'Valor no válido',
-        error: 'Seleccione "Operativo" o "No operativo".'
+        error: 'Seleccione "Operativo", "No operativo" o "En servicio técnico".'
       });
       // Coloreado automático según el valor elegido
       ws.addConditionalFormatting({
@@ -1037,7 +1037,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                      font: { color: { argb: 'FF1B7F3B' }, bold: true } } },
           { type: 'cellIs', operator: 'equal', priority: 2, formulae: ['"No operativo"'],
             style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: COLOR.fueraServicio } },
-                     font: { color: { argb: 'FFB3261E' }, bold: true } } }
+                     font: { color: { argb: 'FFB3261E' }, bold: true } } },
+          { type: 'cellIs', operator: 'equal', priority: 3, formulae: ['"En servicio técnico"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFFE0B2' } },
+                     font: { color: { argb: 'FF8A5A00' }, bold: true } } }
         ]
       });
     }
@@ -1206,7 +1209,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         // Estado Final colorea su propia celda (mayor prioridad que la fila)
         { header: 'Estado Final del Equipo', rules: [
           { value: 'Operativo', color: '#C6EFCE' },
-          { value: 'No operativo', color: '#FFC7CE' }
+          { value: 'No operativo', color: '#FFC7CE' },
+          { value: 'En servicio técnico', color: '#FFE0B2' }
         ] },
         // Estado colorea TODA la fila (formato condicional por fórmula)
         { header: 'Estado', wholeRow: true, rules: [

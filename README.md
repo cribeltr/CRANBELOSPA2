@@ -137,7 +137,7 @@ columnas:
 - **Estado** se colorea automáticamente (Realizada, Reprogramada, Pendiente,
   Fuera de Servicio, No Realizada, No Ubicable, Baja, Puesta en Marcha).
 - **Estado Final del Equipo**: **desplegable** de llenado manual con las opciones
-  *Operativo* / *No operativo* (se colorea verde/rojo según lo elegido).
+  *Operativo* / *No operativo* / *En servicio técnico* (se colorea según lo elegido).
 - **Ejecutor**: **desplegable** con los 11 ejecutores disponibles
   (lista en la hoja `Catalogos`).
 
