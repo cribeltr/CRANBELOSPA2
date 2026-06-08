@@ -49,6 +49,13 @@ function doPost(e) {
       written.push(name);
     });
 
+    // Snapshot de datos de la app (para poder LEERLOS al reabrir el programa)
+    if (body.data !== undefined && body.data !== null) {
+      var ds = ss.getSheetByName('_datos') || ss.insertSheet('_datos');
+      ds.getRange(1, 1).setValue(typeof body.data === 'string' ? body.data : JSON.stringify(body.data));
+      try { ds.hideSheet(); } catch (e2) {}
+    }
+
     return json({ ok: true, sheets: written });
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -123,7 +130,9 @@ function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Eventos');
   var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
-  return json({ ok: true, count: n });
+  var ds = ss.getSheetByName('_datos');
+  var data = ds ? ds.getRange(1, 1).getValue() : '';
+  return json({ ok: true, count: n, data: data });
 }
 
 function json(obj) {

@@ -227,8 +227,43 @@
         if (ws.name === 'Correctivos') Object.assign(o, correctivosExtras());
         if (ws.name === 'Pendientes') Object.assign(o, pendientesExtras());
         return o;
-      })
+      }),
+      data: serializeState()   // snapshot para poder LEER al reabrir
     };
+  }
+
+  // Snapshot serializable de lo registrado (fechas -> ISO)
+  function serializeState() {
+    const sd = d => (d instanceof Date) ? isoDate(d) : (d || '');
+    return {
+      registros: state.registros.map(r => Object.assign({}, r, { fechaEjecucion: sd(r.fechaEjecucion) })),
+      correctivos: state.correctivos.map(c => Object.assign({}, c, { fecha: sd(c.fecha) })),
+      pendientes: state.pendientes.map(p => Object.assign({}, p, {
+        fechaCompromiso: sd(p.fechaCompromiso),
+        actualizaciones: (p.actualizaciones || []).map(a => ({ fecha: sd(a.fecha), texto: a.texto || '' })),
+        tareas: (p.tareas || []).map(t => ({ texto: t.texto || '', hecha: !!t.hecha }))
+      }))
+    };
+  }
+  // Revive un snapshot y reemplaza el estado local
+  function restoreState(obj) {
+    if (!obj) return false;
+    let any = false;
+    if (Array.isArray(obj.registros)) {
+      state.registros = obj.registros.map(o => Object.assign({}, o, { fechaEjecucion: reviveDate(o.fechaEjecucion) })); any = true;
+    }
+    if (Array.isArray(obj.correctivos)) {
+      state.correctivos = obj.correctivos.map(o => Object.assign({}, o, { fecha: reviveDate(o.fecha) })); any = true;
+    }
+    if (Array.isArray(obj.pendientes)) {
+      state.pendientes = obj.pendientes.map(o => Object.assign({}, o, {
+        fechaCompromiso: reviveDate(o.fechaCompromiso),
+        estado: o.estado || 'Abierto',
+        actualizaciones: (o.actualizaciones || []).map(a => ({ fecha: reviveDate(a.fecha), texto: a.texto || '' })),
+        tareas: (o.tareas || []).map(t => ({ texto: t.texto || '', hecha: !!t.hecha }))
+      })); any = true;
+    }
+    return any;
   }
 
   // POST al Apps Script. text/plain evita el preflight CORS; si no se puede leer
@@ -279,6 +314,40 @@
     } catch (e) {
       showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el envío suele funcionar; pulsa Enviar y revisa la planilla.');
     } finally { btn.textContent = orig; btn.disabled = false; }
+  }
+
+  // Lee de Google Sheets el snapshot de datos y lo carga en la app
+  async function pullFromSheets(silent) {
+    const url = sheetsUrl();
+    if (!url) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
+    const btn = $('#sheetsPull'); const orig = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Trayendo…'; }
+    try {
+      const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+      const j = JSON.parse(await res.text());
+      let obj = null;
+      if (j.data) { try { obj = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch (_) { obj = null; } }
+      if (obj && restoreState(obj)) {
+        saveRegistros(); saveCorrectivos(); savePendientes();
+        renderRegistry(); renderCorrectivos(); renderPendientes();
+        if (state.events.length) { renderPreview(); renderDiscrepancias(); }
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+        revealRegistrarIfData();
+        showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + state.registros.length +
+          ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.');
+      } else if (!silent) {
+        showInline($('#sheetsStatus'), 'info', 'La planilla aún no tiene datos guardados por la app.');
+      }
+    } catch (e) {
+      if (!silent) showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo leer de Google Sheets (puede ser CORS): ' + (e.message || e));
+    } finally { if (btn) { btn.textContent = orig; btn.disabled = false; } }
+  }
+  // Muestra la tarjeta de registro si hay datos (registros/correctivos) aunque no se haya cargado el archivo
+  function revealRegistrarIfData() {
+    if (state.registros.length || state.correctivos.length) {
+      $('#registrar').style.display = 'block';
+      $('#registrarHint').style.display = 'none';
+    }
   }
 
   // ---- Carga y parseo del archivo ----------------------------------------
@@ -1177,6 +1246,7 @@
   });
   $('#sheetsTest').addEventListener('click', testSheets);
   $('#sheetsSendAll').addEventListener('click', () => exportToSheets(false));
+  $('#sheetsPull').addEventListener('click', () => pullFromSheets(false));
   $('#sheetsAuto').addEventListener('change', e => {
     try { localStorage.setItem(LS_SHEETS_AUTO, e.target.checked ? '1' : '0'); } catch (err) {}
     showInline($('#sheetsStatus'), 'info', e.target.checked
@@ -1203,9 +1273,12 @@
   state.pendientes = loadPendientes();
   renderCorrectivos();
   renderPendientes();
+  revealRegistrarIfData();
   if (state.registros.length || state.correctivos.length || state.pendientes.length) {
     setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es), <b>' + state.correctivos.length +
-      '</b> correctivo(s) y <b>' + state.pendientes.length + '</b> pendiente(s) guardados en este navegador. ' +
+      '</b> correctivo(s) y <b>' + state.pendientes.length + '</b> pendiente(s) guardados. ' +
       'Cargue el archivo para incluirlos al descargar.', 'info');
   }
+  // Traer automáticamente lo guardado en Google Sheets (si hay URL configurada)
+  if (sheetsUrl()) pullFromSheets(true);
 })();
