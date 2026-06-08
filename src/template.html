@@ -110,6 +110,15 @@
     max-height:300px;font-size:12px;line-height:1.4;font-family:Consolas,"Courier New",monospace;white-space:pre;margin:10px 0 0}
   .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink)}
   .chk input{width:auto}
+  .suggest{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--line);
+    border-radius:0 0 9px 9px;box-shadow:0 10px 24px rgba(0,0,0,.14);max-height:300px;overflow:auto;display:none}
+  .suggest.show{display:block}
+  .sg-item{padding:8px 12px;cursor:pointer;font-size:13px;border-top:1px solid #eef1f2}
+  .sg-item:first-child{border-top:0}
+  .sg-item:hover,.sg-item.active{background:#e7f3f5}
+  .sg-item b{color:var(--teal-d)}
+  .sg-item .meta{color:var(--muted);font-size:12px;margin-top:1px}
+  .sg-empty{padding:10px 12px;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -158,13 +167,14 @@
     <p class="section-title">🔧 Registrar mantención</p>
     <p class="muted" style="margin:0 0 12px">Busque un equipo por su <b>N° de Serie</b> o <b>N° de Inventario</b> y registre una mantención ejecutada.</p>
     <div class="row">
-      <div class="grow">
-        <input id="searchInput" type="text" placeholder="Ingrese N° de Serie o N° de Inventario…" autocomplete="off" />
+      <div class="grow" style="position:relative">
+        <input id="searchInput" type="text" placeholder="Escriba N° de Serie o N° de Inventario… (sugerencias automáticas)" autocomplete="off" />
+        <div id="suggest" class="suggest"></div>
       </div>
       <button id="searchBtn" class="btn btn-primary" type="button" style="margin-top:0">Buscar</button>
     </div>
     <div id="searchMsg" class="inline-msg"></div>
-    <div id="searchResults" class="reslist"></div>
+    <div id="equipoDetalle" style="display:none;margin-top:12px"></div>
 
     <div id="registryWrap" style="display:none;margin-top:18px">
       <div class="actions" style="justify-content:space-between">

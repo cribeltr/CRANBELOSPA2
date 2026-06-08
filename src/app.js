@@ -9,7 +9,7 @@
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], searchResults: [], selEq: null, selMonth: null };
+  const state = { equipos: [], events: [], registros: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1 };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -304,30 +304,86 @@
     }
   }
 
-  // ---- Búsqueda de equipos -----------------------------------------------
+  // ---- Búsqueda con sugerencias en vivo + historial ----------------------
   function resetSearch() {
     $('#searchInput').value = '';
-    $('#searchResults').innerHTML = '';
+    hideSuggest();
+    $('#equipoDetalle').style.display = 'none';
+    $('#equipoDetalle').innerHTML = '';
     showInline($('#searchMsg'), '', '');
+    state.selDetalleEq = null;
+  }
+  function hideSuggest() { const s = $('#suggest'); s.classList.remove('show'); s.innerHTML = ''; state.sgActive = -1; }
+
+  // Sugerencias mientras se escribe (serie o inventario)
+  function renderSuggest() {
+    const q = $('#searchInput').value;
+    if (!q.trim()) { hideSuggest(); return; }
+    const results = MP.findEquipos(state.equipos, q).slice(0, 8);
+    state.searchResults = results; state.sgActive = -1;
+    const s = $('#suggest');
+    if (!results.length) {
+      s.innerHTML = '<div class="sg-empty">Sin coincidencias para "' + esc(q) + '".</div>';
+      s.classList.add('show'); return;
+    }
+    s.innerHTML = results.map((e, i) =>
+      '<div class="sg-item" data-idx="' + i + '"><b>' + esc(e.equipo) + '</b> · ' + esc(e.marca) + ' ' + esc(e.modelo) +
+        '<div class="meta">Serie: ' + esc(e.serie || '—') + ' · Inv: ' + esc(e.inv || '—') + ' · ' + esc(e.servicio) + '</div></div>'
+    ).join('');
+    s.classList.add('show');
+    s.querySelectorAll('.sg-item').forEach(it =>
+      it.addEventListener('mousedown', ev => { ev.preventDefault(); selectEquipo(state.searchResults[+it.dataset.idx]); }));
+  }
+  function moveActive(d) {
+    const items = $('#suggest').querySelectorAll('.sg-item');
+    if (!items.length) return;
+    state.sgActive = (state.sgActive + d + items.length) % items.length;
+    items.forEach((it, i) => it.classList.toggle('active', i === state.sgActive));
   }
 
+  // Al elegir un equipo: mostrar su historial + botón Registrar
+  function selectEquipo(eq) {
+    if (!eq) return;
+    state.selDetalleEq = eq;
+    $('#searchInput').value = (eq.serie && String(eq.serie).trim()) ? eq.serie : eq.inv;
+    hideSuggest();
+    showInline($('#searchMsg'), '', '');
+    renderDetalle(eq);
+    $('#equipoDetalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function renderDetalle(eq) {
+    const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
+    const pm = MP.programmedMonths(eq);
+    const head = '<div class="eqbox"><b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · ' + esc(eq.marca) + ' ' + esc(eq.modelo) +
+      '<br>Serie: <b>' + esc(eq.serie || '—') + '</b> · Inventario: <b>' + esc(eq.inv || '—') + '</b>' +
+      '<br>' + esc(eq.servicio) + ' · ' + esc(eq.unidad) + (eq.ubicacion ? ' · ' + esc(eq.ubicacion) : '') + '</div>';
+    let body;
+    if (!hist.length) {
+      body = '<div class="muted">Este equipo no tiene meses programados ni resultados en 2026.</div>';
+    } else {
+      const cols = ['Mes', 'Programa', 'Tipo', 'Resultado', 'Fecha', 'Estado', 'Ejecutor', 'Estado Final'];
+      const h = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+      const rows = hist.map(e =>
+        '<tr><td>' + esc(e.mes) + '</td><td>' + esc(e.programa) + '</td><td>' + esc(e.tipoPrograma) + '</td><td>' + esc(e.resultado) +
+        '</td><td>' + esc(fmtDate(e.fechaEjecucion)) + '</td><td>' + esc(e.estado) + '</td><td>' + esc(e.ejecutor) + '</td><td>' + esc(e.estadoFinal) + '</td></tr>'
+      ).join('');
+      body = '<div class="muted" style="margin:8px 0 4px">Historial 2026 — meses programados: ' +
+        (pm.length ? pm.map(i => MP.MONTHS_FULL[i]).join(', ') : '(ninguno)') + '</div>' +
+        '<div class="tablewrap"><table class="prev">' + h + rows + '</table></div>';
+    }
+    $('#equipoDetalle').innerHTML = head + body +
+      '<div class="actions" style="margin-top:10px"><button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button></div>';
+    $('#equipoDetalle').style.display = 'block';
+    $('#detRegistrar').addEventListener('click', () => openModal(eq));
+  }
+
+  // Botón Buscar / Enter: selecciona la primera coincidencia
   function doSearch() {
-    const q = $('#searchInput').value;
-    const results = MP.findEquipos(state.equipos, q);
-    state.searchResults = results;
-    const box = $('#searchResults');
-    if (!q.trim()) { showInline($('#searchMsg'), 'err', 'Ingrese un N° de Serie o N° de Inventario.'); box.innerHTML = ''; return; }
-    if (!results.length) { showInline($('#searchMsg'), 'err', 'Sin coincidencias para "' + esc(q) + '".'); box.innerHTML = ''; return; }
-    showInline($('#searchMsg'), 'ok', results.length + ' equipo(s) encontrado(s).');
-    box.innerHTML = results.map((e, i) =>
-      '<div class="resitem">' +
-        '<div class="info"><b>' + esc(e.equipo) + '</b> · ' + esc(e.marca) + ' ' + esc(e.modelo) +
-          '<div class="meta">Serie: ' + esc(e.serie || '—') + ' · Inv: ' + esc(e.inv || '—') +
-          ' · ' + esc(e.servicio) + ' · ' + esc(e.unidad) + '</div></div>' +
-        '<button class="btn btn-primary btn-sm" data-idx="' + i + '">Registrar mantención</button>' +
-      '</div>').join('');
-    box.querySelectorAll('button[data-idx]').forEach(b =>
-      b.addEventListener('click', () => openModal(state.searchResults[+b.dataset.idx])));
+    if (!$('#searchInput').value.trim()) { showInline($('#searchMsg'), 'err', 'Escriba un N° de Serie o N° de Inventario.'); return; }
+    const results = MP.findEquipos(state.equipos, $('#searchInput').value);
+    if (!results.length) { showInline($('#searchMsg'), 'err', 'Sin coincidencias.'); return; }
+    selectEquipo(results[0]);
   }
 
   // ---- Modal de registro --------------------------------------------------
@@ -431,6 +487,7 @@
     renderRegistry();
     renderPreview();   // reflejar el registro en la vista previa y en el Excel masivo
     renderDiscrepancias();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);   // refrescar historial visible
     setStatus('✅ Mantención registrada: <b>' + esc(eq.equipo) + '</b> — ' + esc(reg.mes) +
       ' (' + esc(fmtDate(fecha)) + '). Quedará incluida al descargar el Excel.', 'ok');
     autoExportSheets();   // actualizar Google Sheets si está activado
@@ -542,7 +599,22 @@
   });
 
   $('#searchBtn').addEventListener('click', doSearch);
-  $('#searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  let sgTimer = null;
+  $('#searchInput').addEventListener('input', () => { clearTimeout(sgTimer); sgTimer = setTimeout(renderSuggest, 120); });
+  $('#searchInput').addEventListener('focus', () => { if ($('#searchInput').value.trim()) renderSuggest(); });
+  $('#searchInput').addEventListener('keydown', e => {
+    const open = $('#suggest').classList.contains('show');
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) renderSuggest(); else moveActive(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (open && state.sgActive >= 0 && state.searchResults[state.sgActive]) selectEquipo(state.searchResults[state.sgActive]);
+      else doSearch();
+    } else if (e.key === 'Escape') { hideSuggest(); }
+  });
+  document.addEventListener('click', e => {
+    if (!$('#suggest').contains(e.target) && e.target !== $('#searchInput')) hideSuggest();
+  });
 
   $('#mFecha').addEventListener('change', onDateChange);
   $('#mFecha').addEventListener('input', onDateChange);
