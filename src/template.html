@@ -211,6 +211,21 @@
   .titem input{width:auto}
   .aitem{font-size:13px;padding:5px 0;border-bottom:1px dotted #eef1f2}
   .aitem .af{font-weight:700;color:var(--teal-d);margin-right:6px}
+  /* triple foco */
+  .pviews{display:flex;gap:6px;flex-wrap:wrap;background:#eef3f5;border-radius:10px;padding:4px;width:fit-content}
+  .pview{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .pview.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .pview-panel{display:none}
+  .pview-panel.active{display:block}
+  .pitem{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .pitem:hover{border-color:var(--teal-l);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .pitem .pnum{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+  .pitem .pbody{flex:1;font-size:12.5px}
+  .pitem .pe{font-weight:700;color:var(--teal-d)}
+  .pitem .pf{font-weight:700;margin-top:2px}.pitem .pf .venc{color:#b3261e}
+  .pitem .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
+  .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
 </style>
 </head>
 <body>
@@ -311,10 +326,25 @@
   </section>
 
   <section class="tabpanel" id="tab-pendientes">
-    <div class="card" id="eisenhowerCard" style="display:none">
-      <p class="section-title">📌 Gestión de pendientes — Matriz de Eisenhower</p>
-      <p class="muted" style="margin:0 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días = urgente). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico = importante). Dentro de cada cuadrante van ordenados por fecha.</p>
-      <div id="eisenhower" class="eisen"></div>
+    <div class="card" id="pendManageCard" style="display:none">
+      <p class="section-title">📌 Gestión de pendientes — triple foco</p>
+      <div class="pviews">
+        <button class="pview active" type="button" data-pview="matriz">🧭 Matriz Eisenhower</button>
+        <button class="pview" type="button" data-pview="ivy">📋 Ivy Lee (Top 6)</button>
+        <button class="pview" type="button" data-pview="sapo">🐸 Cómete el sapo</button>
+      </div>
+      <div id="view-matriz" class="pview-panel active">
+        <p class="muted" style="margin:8px 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico). Ordenados por fecha dentro de cada cuadrante.</p>
+        <div id="eisenhower" class="eisen"></div>
+      </div>
+      <div id="view-ivy" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Los <b>6 pendientes</b> más prioritarios para hoy, en orden. Enfócate en el <b>#1</b> hasta terminarlo, luego sigue.</p>
+        <div id="ivy"></div>
+      </div>
+      <div id="view-sapo" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Tu <b>“sapo”</b> es lo más prioritario: hazlo <b>primero</b>. Luego el resto, en orden.</p>
+        <div id="sapo"></div>
+      </div>
     </div>
     <div class="card" id="pendNone">📌 No hay pendientes registrados. Regístralos desde la <b>ficha del equipo</b> (pestaña 🔧 Registrar).</div>
     <div class="card" id="pendTableCard" style="display:none">

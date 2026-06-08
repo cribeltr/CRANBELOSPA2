@@ -1011,13 +1011,62 @@
     if (s === 'En progreso') return 'background:#DDEBF7;color:#0a4a6e';
     return 'background:#FFF2CC;color:#7a5b00'; // Abierto
   }
-  // Tablero Eisenhower (4 cuadrantes, ordenados por fecha de compromiso).
-  // Los pendientes "Resuelto" no aparecen en el tablero.
-  function renderEisenhower() {
-    const card = $('#eisenhowerCard');
-    if (!state.pendientes.length) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
+  function dueInfo(f) {
+    if (!(f instanceof Date)) return '';
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = Math.round((f.getTime() - today.getTime()) / 86400000);
+    if (d < 0) return '<span class="venc">vencido hace ' + (-d) + ' día(s)</span>';
+    if (d === 0) return '<span class="venc">vence hoy</span>';
+    return 'en ' + d + ' día(s)';
+  }
+  // Prioridad para Ivy Lee / Sapo: importante(2) + urgente(1), luego fecha asc.
+  function pendPrioritized() {
+    const list = state.pendientes.map((p, i) => ({ p, i })).filter(x => x.p.estado !== 'Resuelto');
+    const score = x => { const c = clasifPendiente(x.p); return (c.importante ? 2 : 0) + (c.urgente ? 1 : 0); };
+    const ft = f => (f instanceof Date) ? f.getTime() : Infinity;
+    list.sort((a, b) => score(b) - score(a) || ft(a.p.fechaCompromiso) - ft(b.p.fechaCompromiso));
+    return list;
+  }
+  function pItemHTML(p, i, num) {
+    return '<div class="pitem" data-pi="' + i + '" title="Clic para gestionar"><div class="pnum">' + num + '</div><div class="pbody">' +
+      '<div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
+      '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dueInfo(p.fechaCompromiso) + '</div>' +
+      '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · ' + esc(p.observacion || '') + '</div>' +
+      '<div style="margin-top:3px"><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span></div>' +
+      '</div></div>';
+  }
+  function wireOpenG(cont) {
+    cont.querySelectorAll('[data-pi]').forEach(el =>
+      el.addEventListener('click', () => openGModal(state.pendientes[+el.dataset.pi])));
+  }
+  function renderIvy() {
+    const list = pendPrioritized().slice(0, 6);
+    const cont = $('#ivy');
+    cont.innerHTML = list.length ? list.map(({ p, i }, n) => pItemHTML(p, i, n + 1)).join('')
+      : '<div class="muted">No hay pendientes activos. 🎉</div>';
+    wireOpenG(cont);
+  }
+  function renderSapo() {
+    const list = pendPrioritized();
+    const cont = $('#sapo');
+    if (!list.length) { cont.innerHTML = '<div class="muted">No hay pendientes activos. 🎉</div>'; return; }
+    const sapo = list[0], rest = list.slice(1);
+    cont.innerHTML =
+      '<div class="sapocard" data-pi="' + sapo.i + '">🐸 <b>El sapo de hoy</b> — hazlo primero<div style="margin-top:6px">' +
+        '<b style="color:var(--teal-d)">' + esc(sapo.p.equipo) + '</b> (ID ' + esc(sapo.p.id) + ') · 📅 ' + esc(fmtDate(sapo.p.fechaCompromiso)) + ' · ' + dueInfo(sapo.p.fechaCompromiso) +
+        '<div class="muted" style="margin-top:2px">Ejec.: ' + esc(sapo.p.respEjecucion || '—') + (sapo.p.observacion ? ' · ' + esc(sapo.p.observacion) : '') + '</div></div></div>' +
+      (rest.length ? '<div class="muted" style="margin:10px 0 4px">Luego, en orden:</div>' + rest.map(({ p, i }, n) => pItemHTML(p, i, n + 2)).join('') : '');
+    wireOpenG(cont);
+  }
+  function renderPendManage() {
+    const has = state.pendientes.length > 0;
+    $('#pendManageCard').style.display = has ? 'block' : 'none';
+    if (!has) return;
+    renderEisenhower(); renderIvy(); renderSapo();
+  }
+  // Tablero Eisenhower (4 cuadrantes). Los pendientes "Resuelto" no aparecen.
+  function renderEisenhower() {
+    if (!state.pendientes.length) return;
     const quads = { 'Hacer ya': [], 'Planificar': [], 'Delegar': [], 'Posponer': [] };
     let resueltos = 0;
     state.pendientes.forEach((p, i) => {
@@ -1032,20 +1081,13 @@
       'Delegar': ['q3', '🟡 Delegar', 'Urgente, no importante'],
       'Posponer': ['q4', '⚪ Posponer', 'Ni urgente ni importante']
     };
-    const dayInfo = f => {
-      if (!(f instanceof Date)) return '';
-      const d = Math.round((f.getTime() - today.getTime()) / 86400000);
-      if (d < 0) return '<span class="venc">vencido hace ' + (-d) + ' día(s)</span>';
-      if (d === 0) return '<span class="venc">vence hoy</span>';
-      return 'en ' + d + ' día(s)';
-    };
     $('#eisenhower').innerHTML = Object.keys(meta).map(k => {
       const m = meta[k], items = quads[k];
       const body = items.length ? items.map(({ p, i }) => {
         const tr = tareasResumen(p);
         return '<div class="pcard" data-pi="' + i + '" title="Clic para gestionar">' +
           '<div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
-          '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dayInfo(p.fechaCompromiso) + '</div>' +
+          '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dueInfo(p.fechaCompromiso) + '</div>' +
           '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · Adm.: ' + esc(p.respAdministrativo || '—') + '</div>' +
           (p.observacion ? '<div class="pm">' + esc(p.observacion) + '</div>' : '') +
           '<div style="margin-top:4px"><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span>' +
@@ -1060,7 +1102,7 @@
   }
 
   function renderPendientes() {
-    renderEisenhower();
+    renderPendManage();
     const has = state.pendientes.length > 0;
     $('#pendTableCard').style.display = has ? 'block' : 'none';
     $('#pendNone').style.display = has ? 'none' : 'block';
@@ -1187,6 +1229,13 @@
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+  }));
+
+  // Selector de vista de pendientes (triple foco)
+  document.querySelectorAll('.pview').forEach(btn => btn.addEventListener('click', () => {
+    const v = btn.dataset.pview;
+    document.querySelectorAll('.pview').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.pview-panel').forEach(p => p.classList.toggle('active', p.id === 'view-' + v));
   }));
 
   $('#pick').addEventListener('click', () => $('#file').click());

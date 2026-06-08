@@ -211,6 +211,21 @@
   .titem input{width:auto}
   .aitem{font-size:13px;padding:5px 0;border-bottom:1px dotted #eef1f2}
   .aitem .af{font-weight:700;color:var(--teal-d);margin-right:6px}
+  /* triple foco */
+  .pviews{display:flex;gap:6px;flex-wrap:wrap;background:#eef3f5;border-radius:10px;padding:4px;width:fit-content}
+  .pview{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .pview.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .pview-panel{display:none}
+  .pview-panel.active{display:block}
+  .pitem{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .pitem:hover{border-color:var(--teal-l);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .pitem .pnum{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+  .pitem .pbody{flex:1;font-size:12.5px}
+  .pitem .pe{font-weight:700;color:var(--teal-d)}
+  .pitem .pf{font-weight:700;margin-top:2px}.pitem .pf .venc{color:#b3261e}
+  .pitem .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
+  .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
 </style>
 </head>
 <body>
@@ -311,10 +326,25 @@
   </section>
 
   <section class="tabpanel" id="tab-pendientes">
-    <div class="card" id="eisenhowerCard" style="display:none">
-      <p class="section-title">📌 Gestión de pendientes — Matriz de Eisenhower</p>
-      <p class="muted" style="margin:0 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días = urgente). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico = importante). Dentro de cada cuadrante van ordenados por fecha.</p>
-      <div id="eisenhower" class="eisen"></div>
+    <div class="card" id="pendManageCard" style="display:none">
+      <p class="section-title">📌 Gestión de pendientes — triple foco</p>
+      <div class="pviews">
+        <button class="pview active" type="button" data-pview="matriz">🧭 Matriz Eisenhower</button>
+        <button class="pview" type="button" data-pview="ivy">📋 Ivy Lee (Top 6)</button>
+        <button class="pview" type="button" data-pview="sapo">🐸 Cómete el sapo</button>
+      </div>
+      <div id="view-matriz" class="pview-panel active">
+        <p class="muted" style="margin:8px 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico). Ordenados por fecha dentro de cada cuadrante.</p>
+        <div id="eisenhower" class="eisen"></div>
+      </div>
+      <div id="view-ivy" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Los <b>6 pendientes</b> más prioritarios para hoy, en orden. Enfócate en el <b>#1</b> hasta terminarlo, luego sigue.</p>
+        <div id="ivy"></div>
+      </div>
+      <div id="view-sapo" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Tu <b>“sapo”</b> es lo más prioritario: hazlo <b>primero</b>. Luego el resto, en orden.</p>
+        <div id="sapo"></div>
+      </div>
     </div>
     <div class="card" id="pendNone">📌 No hay pendientes registrados. Regístralos desde la <b>ficha del equipo</b> (pestaña 🔧 Registrar).</div>
     <div class="card" id="pendTableCard" style="display:none">
@@ -2559,13 +2589,62 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (s === 'En progreso') return 'background:#DDEBF7;color:#0a4a6e';
     return 'background:#FFF2CC;color:#7a5b00'; // Abierto
   }
-  // Tablero Eisenhower (4 cuadrantes, ordenados por fecha de compromiso).
-  // Los pendientes "Resuelto" no aparecen en el tablero.
-  function renderEisenhower() {
-    const card = $('#eisenhowerCard');
-    if (!state.pendientes.length) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
+  function dueInfo(f) {
+    if (!(f instanceof Date)) return '';
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = Math.round((f.getTime() - today.getTime()) / 86400000);
+    if (d < 0) return '<span class="venc">vencido hace ' + (-d) + ' día(s)</span>';
+    if (d === 0) return '<span class="venc">vence hoy</span>';
+    return 'en ' + d + ' día(s)';
+  }
+  // Prioridad para Ivy Lee / Sapo: importante(2) + urgente(1), luego fecha asc.
+  function pendPrioritized() {
+    const list = state.pendientes.map((p, i) => ({ p, i })).filter(x => x.p.estado !== 'Resuelto');
+    const score = x => { const c = clasifPendiente(x.p); return (c.importante ? 2 : 0) + (c.urgente ? 1 : 0); };
+    const ft = f => (f instanceof Date) ? f.getTime() : Infinity;
+    list.sort((a, b) => score(b) - score(a) || ft(a.p.fechaCompromiso) - ft(b.p.fechaCompromiso));
+    return list;
+  }
+  function pItemHTML(p, i, num) {
+    return '<div class="pitem" data-pi="' + i + '" title="Clic para gestionar"><div class="pnum">' + num + '</div><div class="pbody">' +
+      '<div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
+      '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dueInfo(p.fechaCompromiso) + '</div>' +
+      '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · ' + esc(p.observacion || '') + '</div>' +
+      '<div style="margin-top:3px"><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span></div>' +
+      '</div></div>';
+  }
+  function wireOpenG(cont) {
+    cont.querySelectorAll('[data-pi]').forEach(el =>
+      el.addEventListener('click', () => openGModal(state.pendientes[+el.dataset.pi])));
+  }
+  function renderIvy() {
+    const list = pendPrioritized().slice(0, 6);
+    const cont = $('#ivy');
+    cont.innerHTML = list.length ? list.map(({ p, i }, n) => pItemHTML(p, i, n + 1)).join('')
+      : '<div class="muted">No hay pendientes activos. 🎉</div>';
+    wireOpenG(cont);
+  }
+  function renderSapo() {
+    const list = pendPrioritized();
+    const cont = $('#sapo');
+    if (!list.length) { cont.innerHTML = '<div class="muted">No hay pendientes activos. 🎉</div>'; return; }
+    const sapo = list[0], rest = list.slice(1);
+    cont.innerHTML =
+      '<div class="sapocard" data-pi="' + sapo.i + '">🐸 <b>El sapo de hoy</b> — hazlo primero<div style="margin-top:6px">' +
+        '<b style="color:var(--teal-d)">' + esc(sapo.p.equipo) + '</b> (ID ' + esc(sapo.p.id) + ') · 📅 ' + esc(fmtDate(sapo.p.fechaCompromiso)) + ' · ' + dueInfo(sapo.p.fechaCompromiso) +
+        '<div class="muted" style="margin-top:2px">Ejec.: ' + esc(sapo.p.respEjecucion || '—') + (sapo.p.observacion ? ' · ' + esc(sapo.p.observacion) : '') + '</div></div></div>' +
+      (rest.length ? '<div class="muted" style="margin:10px 0 4px">Luego, en orden:</div>' + rest.map(({ p, i }, n) => pItemHTML(p, i, n + 2)).join('') : '');
+    wireOpenG(cont);
+  }
+  function renderPendManage() {
+    const has = state.pendientes.length > 0;
+    $('#pendManageCard').style.display = has ? 'block' : 'none';
+    if (!has) return;
+    renderEisenhower(); renderIvy(); renderSapo();
+  }
+  // Tablero Eisenhower (4 cuadrantes). Los pendientes "Resuelto" no aparecen.
+  function renderEisenhower() {
+    if (!state.pendientes.length) return;
     const quads = { 'Hacer ya': [], 'Planificar': [], 'Delegar': [], 'Posponer': [] };
     let resueltos = 0;
     state.pendientes.forEach((p, i) => {
@@ -2580,20 +2659,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       'Delegar': ['q3', '🟡 Delegar', 'Urgente, no importante'],
       'Posponer': ['q4', '⚪ Posponer', 'Ni urgente ni importante']
     };
-    const dayInfo = f => {
-      if (!(f instanceof Date)) return '';
-      const d = Math.round((f.getTime() - today.getTime()) / 86400000);
-      if (d < 0) return '<span class="venc">vencido hace ' + (-d) + ' día(s)</span>';
-      if (d === 0) return '<span class="venc">vence hoy</span>';
-      return 'en ' + d + ' día(s)';
-    };
     $('#eisenhower').innerHTML = Object.keys(meta).map(k => {
       const m = meta[k], items = quads[k];
       const body = items.length ? items.map(({ p, i }) => {
         const tr = tareasResumen(p);
         return '<div class="pcard" data-pi="' + i + '" title="Clic para gestionar">' +
           '<div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
-          '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dayInfo(p.fechaCompromiso) + '</div>' +
+          '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dueInfo(p.fechaCompromiso) + '</div>' +
           '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · Adm.: ' + esc(p.respAdministrativo || '—') + '</div>' +
           (p.observacion ? '<div class="pm">' + esc(p.observacion) + '</div>' : '') +
           '<div style="margin-top:4px"><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span>' +
@@ -2608,7 +2680,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   function renderPendientes() {
-    renderEisenhower();
+    renderPendManage();
     const has = state.pendientes.length > 0;
     $('#pendTableCard').style.display = has ? 'block' : 'none';
     $('#pendNone').style.display = has ? 'none' : 'block';
@@ -2735,6 +2807,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+  }));
+
+  // Selector de vista de pendientes (triple foco)
+  document.querySelectorAll('.pview').forEach(btn => btn.addEventListener('click', () => {
+    const v = btn.dataset.pview;
+    document.querySelectorAll('.pview').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.pview-panel').forEach(p => p.classList.toggle('active', p.id === 'view-' + v));
   }));
 
   $('#pick').addEventListener('click', () => $('#file').click());
