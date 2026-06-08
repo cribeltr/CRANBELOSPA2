@@ -343,6 +343,9 @@
       ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
       ['respEjecucion', 'Responsable de Ejecución', 26, 's'],
       ['observacion', 'Observación', 50, 's'],
+      ['estado', 'Estado', 13, 's'],
+      ['tareasResumen', 'Tareas (hechas/total)', 18, 's'],
+      ['ultimaAct', 'Última actualización', 46, 's'],
       ['cuadrante', 'Cuadrante (Eisenhower)', 18, 's'],
       ['urgencia', 'Urgencia', 12, 's'],
       ['importancia', 'Importancia', 13, 's']

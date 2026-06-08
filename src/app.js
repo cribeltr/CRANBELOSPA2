@@ -9,7 +9,7 @@
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -99,19 +99,24 @@
       const data = state.pendientes.map(p => {
         const o = Object.assign({}, p);
         o.fechaCompromiso = (p.fechaCompromiso instanceof Date) ? isoDate(p.fechaCompromiso) : (p.fechaCompromiso || '');
+        o.actualizaciones = (p.actualizaciones || []).map(a => ({ fecha: (a.fecha instanceof Date) ? isoDate(a.fecha) : (a.fecha || ''), texto: a.texto || '' }));
+        o.tareas = (p.tareas || []).map(t => ({ texto: t.texto || '', hecha: !!t.hecha }));
         return o;
       });
       localStorage.setItem(LS_PEND, JSON.stringify(data));
     } catch (e) { /* localStorage no disponible */ }
   }
+  function reviveDate(s) { if (typeof s === 'string' && s) { const x = s.split('-'); return new Date(+x[0], +x[1] - 1, +x[2]); } return ''; }
   function loadPendientes() {
     try {
       const raw = localStorage.getItem(LS_PEND);
       if (!raw) return [];
       return JSON.parse(raw).map(o => {
         const p = Object.assign({}, o);
-        if (typeof p.fechaCompromiso === 'string' && p.fechaCompromiso) { const x = p.fechaCompromiso.split('-'); p.fechaCompromiso = new Date(+x[0], +x[1] - 1, +x[2]); }
-        else p.fechaCompromiso = '';
+        p.fechaCompromiso = reviveDate(p.fechaCompromiso);
+        p.estado = p.estado || 'Abierto';
+        p.actualizaciones = (p.actualizaciones || []).map(a => ({ fecha: reviveDate(a.fecha), texto: a.texto || '' }));
+        p.tareas = (p.tareas || []).map(t => ({ texto: t.texto || '', hecha: !!t.hecha }));
         return p;
       });
     } catch (e) { return []; }
@@ -200,7 +205,15 @@
     return {
       validations: [
         { header: 'Responsable Administrativo', values: MP.EJECUTORES },
-        { header: 'Responsable de Ejecución', values: MP.EJECUTORES }
+        { header: 'Responsable de Ejecución', values: MP.EJECUTORES },
+        { header: 'Estado', values: MP.ESTADO_PENDIENTE_OPCIONES }
+      ],
+      colors: [
+        { header: 'Estado', rules: [
+          { value: 'Abierto', color: '#FFF2CC' },
+          { value: 'En progreso', color: '#DDEBF7' },
+          { value: 'Resuelto', color: '#C6EFCE' }
+        ] }
       ]
     };
   }
@@ -569,6 +582,7 @@
     fillSelect($('#cTipo'), MP.CORRECTIVO_TIPOS);
     fillSelect($('#pRespAdmin'), MP.EJECUTORES);
     fillSelect($('#pRespEjec'), MP.EJECUTORES);
+    fillSelect($('#gEstado'), MP.ESTADO_PENDIENTE_OPCIONES);
   }
 
   function openModal(eq) {
@@ -852,26 +866,45 @@
     return { urgente, importante, cuadrante };
   }
   // Pendientes con su clasificación, para exportar
+  function tareasResumen(p) { const t = p.tareas || []; return t.length ? (t.filter(x => x.hecha).length + '/' + t.length) : ''; }
+  function ultimaActTexto(p) {
+    const a = p.actualizaciones || []; if (!a.length) return '';
+    const last = a[a.length - 1];
+    return (last.fecha ? fmtDate(last.fecha) + ': ' : '') + (last.texto || '');
+  }
   function decoratedPendientes() {
     return state.pendientes.map(p => {
       const c = clasifPendiente(p);
       return Object.assign({}, p, {
+        estado: p.estado || 'Abierto',
+        tareasResumen: tareasResumen(p),
+        ultimaAct: ultimaActTexto(p),
         cuadrante: c.cuadrante,
         urgencia: c.urgente ? 'Urgente' : 'No urgente',
         importancia: c.importante ? 'Importante' : 'No importante'
       });
     });
   }
-  // Tablero Eisenhower (4 cuadrantes, ordenados por fecha de compromiso)
+  function estadoPendStyle(s) {
+    if (s === 'Resuelto') return 'background:#C6EFCE;color:#136b30';
+    if (s === 'En progreso') return 'background:#DDEBF7;color:#0a4a6e';
+    return 'background:#FFF2CC;color:#7a5b00'; // Abierto
+  }
+  // Tablero Eisenhower (4 cuadrantes, ordenados por fecha de compromiso).
+  // Los pendientes "Resuelto" no aparecen en el tablero.
   function renderEisenhower() {
     const card = $('#eisenhowerCard');
     if (!state.pendientes.length) { card.style.display = 'none'; return; }
     card.style.display = 'block';
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const quads = { 'Hacer ya': [], 'Planificar': [], 'Delegar': [], 'Posponer': [] };
-    state.pendientes.forEach(p => quads[clasifPendiente(p).cuadrante].push(p));
+    let resueltos = 0;
+    state.pendientes.forEach((p, i) => {
+      if (p.estado === 'Resuelto') { resueltos++; return; }
+      quads[clasifPendiente(p).cuadrante].push({ p, i });
+    });
     const ft = f => (f instanceof Date) ? f.getTime() : Infinity;
-    Object.keys(quads).forEach(k => quads[k].sort((a, b) => ft(a.fechaCompromiso) - ft(b.fechaCompromiso)));
+    Object.keys(quads).forEach(k => quads[k].sort((a, b) => ft(a.p.fechaCompromiso) - ft(b.p.fechaCompromiso)));
     const meta = {
       'Hacer ya': ['q1', '🔴 Hacer ya', 'Urgente + Importante'],
       'Planificar': ['q2', '🔵 Planificar', 'Importante, no urgente'],
@@ -887,15 +920,22 @@
     };
     $('#eisenhower').innerHTML = Object.keys(meta).map(k => {
       const m = meta[k], items = quads[k];
-      const body = items.length ? items.map(p =>
-        '<div class="pcard"><div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
-        '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dayInfo(p.fechaCompromiso) + '</div>' +
-        '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · Adm.: ' + esc(p.respAdministrativo || '—') + '</div>' +
-        (p.observacion ? '<div class="pm">' + esc(p.observacion) + '</div>' : '') +
-        '</div>').join('') : '<div class="empty">— sin pendientes —</div>';
+      const body = items.length ? items.map(({ p, i }) => {
+        const tr = tareasResumen(p);
+        return '<div class="pcard" data-pi="' + i + '" title="Clic para gestionar">' +
+          '<div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
+          '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dayInfo(p.fechaCompromiso) + '</div>' +
+          '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · Adm.: ' + esc(p.respAdministrativo || '—') + '</div>' +
+          (p.observacion ? '<div class="pm">' + esc(p.observacion) + '</div>' : '') +
+          '<div style="margin-top:4px"><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span>' +
+          (tr ? ' <span class="pill" style="background:#eef3f5;color:#333">✓ ' + tr + '</span>' : '') + '</div>' +
+          '</div>';
+      }).join('') : '<div class="empty">— sin pendientes —</div>';
       return '<div class="quad ' + m[0] + '"><h4>' + m[1] + ' <span class="qcount">' + items.length + '</span></h4>' +
         '<div class="qsub muted">' + m[2] + '</div>' + body + '</div>';
-    }).join('');
+    }).join('') + (resueltos ? '<div class="muted" style="grid-column:1/-1;margin-top:4px">✔ ' + resueltos + ' pendiente(s) resuelto(s) (ocultos del tablero; visibles en la tabla).</div>' : '');
+    $('#eisenhower').querySelectorAll('.pcard[data-pi]').forEach(el =>
+      el.addEventListener('click', () => openGModal(state.pendientes[+el.dataset.pi])));
   }
 
   function renderPendientes() {
@@ -905,20 +945,25 @@
     $('#pendNone').style.display = has ? 'none' : 'block';
     if (!has) return;
     const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
-    const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación', ''];
+    const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', '', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.pendientes.map((p, i) => {
-      const hay = [p.id, p.equipo, p.serie, p.inv, fmtDate(p.fechaCompromiso), p.respAdministrativo, p.respEjecucion, p.observacion].join(' ').toLowerCase();
+      const hay = [p.id, p.equipo, p.serie, p.inv, fmtDate(p.fechaCompromiso), p.estado, p.respAdministrativo, p.respEjecucion, p.observacion].join(' ').toLowerCase();
       if (term && hay.indexOf(term) === -1) return '';
       shown++;
+      const tr = tareasResumen(p);
       return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.id) + '</td><td>' + esc(p.equipo) + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) +
-        '</td><td>' + esc(p.respAdministrativo) + '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) +
-        '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
+        '</td><td><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span></td><td>' + esc(tr || '—') +
+        '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) +
+        '</td><td><button class="btn btn-ghost btn-sm" title="Gestionar" data-gest="' + i + '">⚙️ Gestionar</button></td>' +
+        '<td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
     }).join('');
     $('#pendientesCount').textContent = term ? (shown + ' / ' + state.pendientes.length) : state.pendientes.length;
     const t = $('#pendientesTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="8" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="10" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.querySelectorAll('button[data-gest]').forEach(b =>
+      b.addEventListener('click', () => openGModal(state.pendientes[+b.dataset.gest])));
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.pendientes.splice(+b.dataset.del, 1);
@@ -960,6 +1005,58 @@
     if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
     setStatus('✅ Pendiente registrado: <b>' + esc(eq.equipo) + '</b>.', 'ok');
     autoExportSheets();
+  }
+
+  // ---- Gestión de un pendiente (estado, bitácora, tareas) ----------------
+  function gPersist() { savePendientes(); renderPendientes(); if (state.selDetalleEq) renderDetalle(state.selDetalleEq); autoExportSheets(); }
+  function openGModal(p) {
+    state.gPend = p;
+    renderGModal();
+    $('#gmodal').classList.add('show');
+  }
+  function closeGModal() { $('#gmodal').classList.remove('show'); state.gPend = null; }
+  function renderGModal() {
+    const p = state.gPend; if (!p) return;
+    $('#gmodalEq').innerHTML = '<b>' + esc(p.equipo) + '</b> (ID ' + esc(p.id) + ') · Inv: <b>' + esc(p.inv || '—') +
+      '</b><br>📅 Compromiso: <b>' + esc(fmtDate(p.fechaCompromiso)) + '</b> · Ejec.: ' + esc(p.respEjecucion || '—') +
+      ' · Adm.: ' + esc(p.respAdministrativo || '—') + (p.observacion ? '<br>' + esc(p.observacion) : '');
+    // Estado
+    $('#gEstado').value = p.estado || 'Abierto';
+    // Tareas
+    const tareas = p.tareas || [];
+    const hechas = tareas.filter(t => t.hecha).length;
+    $('#gTareaResumen').textContent = tareas.length ? ('(' + hechas + '/' + tareas.length + ' hechas)') : '';
+    $('#gTareaLista').innerHTML = tareas.length ? tareas.map((t, i) =>
+      '<div class="titem"><label><input type="checkbox" data-tg="' + i + '"' + (t.hecha ? ' checked' : '') + '> <span' +
+      (t.hecha ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>' + esc(t.texto) + '</span></label>' +
+      '<button class="btn btn-del" title="Eliminar tarea" data-td="' + i + '">✕</button></div>').join('')
+      : '<div class="muted" style="font-size:12.5px">Sin tareas.</div>';
+    // Bitácora (más reciente primero)
+    const acts = (p.actualizaciones || []).slice().reverse();
+    $('#gActLista').innerHTML = acts.length ? acts.map(a =>
+      '<div class="aitem"><span class="af">' + esc(fmtDate(a.fecha)) + '</span> ' + esc(a.texto) + '</div>').join('')
+      : '<div class="muted" style="font-size:12.5px">Sin actualizaciones.</div>';
+    // wire
+    $('#gTareaLista').querySelectorAll('input[data-tg]').forEach(c =>
+      c.addEventListener('change', () => { p.tareas[+c.dataset.tg].hecha = c.checked; gPersist(); renderGModal(); }));
+    $('#gTareaLista').querySelectorAll('button[data-td]').forEach(b =>
+      b.addEventListener('click', () => { p.tareas.splice(+b.dataset.td, 1); gPersist(); renderGModal(); }));
+  }
+  function gAddTarea() {
+    const p = state.gPend; const txt = $('#gTareaTexto').value.trim();
+    if (!p || !txt) return;
+    (p.tareas = p.tareas || []).push({ texto: txt, hecha: false });
+    $('#gTareaTexto').value = '';
+    gPersist(); renderGModal();
+  }
+  function gAddAct() {
+    const p = state.gPend; const txt = $('#gActTexto').value.trim();
+    if (!p || !txt) return;
+    const fv = $('#gActFecha').value;
+    const fecha = fv ? (function () { const x = fv.split('-'); return new Date(+x[0], +x[1] - 1, +x[2]); })() : new Date();
+    (p.actualizaciones = p.actualizaciones || []).push({ fecha, texto: txt });
+    $('#gActTexto').value = '';
+    gPersist(); renderGModal();
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
@@ -1056,6 +1153,15 @@
   $('#pmodal').addEventListener('click', e => { if (e.target === $('#pmodal')) closePModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#pmodal').classList.contains('show')) closePModal(); });
   $('#pendientesFilter').addEventListener('input', renderPendientes);
+  // Gestión de pendientes
+  $('#gEstado').addEventListener('change', () => { if (state.gPend) { state.gPend.estado = $('#gEstado').value; gPersist(); renderGModal(); } });
+  $('#gTareaAdd').addEventListener('click', gAddTarea);
+  $('#gTareaTexto').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); gAddTarea(); } });
+  $('#gActAdd').addEventListener('click', gAddAct);
+  $('#gClose').addEventListener('click', closeGModal);
+  $('#gCerrar').addEventListener('click', closeGModal);
+  $('#gmodal').addEventListener('click', e => { if (e.target === $('#gmodal')) closeGModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#gmodal').classList.contains('show')) closeGModal(); });
   $('#clearPend').addEventListener('click', () => {
     if (!state.pendientes.length) return;
     if (!confirm('¿Eliminar los ' + state.pendientes.length + ' pendientes registrados?')) return;

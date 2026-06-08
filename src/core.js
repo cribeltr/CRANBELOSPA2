@@ -83,6 +83,9 @@
   // Opciones del desplegable "Resultado (R)".
   const RESULTADO_OPCIONES = ['Si', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'Si-RA', 'FS', 'No', 'NU', 'Baja'];
 
+  // Estados de un pendiente (ciclo de vida).
+  const ESTADO_PENDIENTE_OPCIONES = ['Abierto', 'En progreso', 'Resuelto'];
+
   // ---- Helpers de lectura de celdas (ExcelJS) ----------------------------
   // Devuelve el valor MOSTRADO de la celda como texto (resuelve fórmulas con
   // su resultado en caché y conserva ceros a la izquierda guardados como texto).
@@ -313,7 +316,10 @@
       fechaCompromiso: data.fechaCompromiso || '',
       respAdministrativo: data.respAdministrativo || '',
       respEjecucion: data.respEjecucion || '',
-      observacion: data.observacion || ''
+      observacion: data.observacion || '',
+      estado: data.estado || 'Abierto',
+      actualizaciones: data.actualizaciones || [],   // [{fecha, texto}]
+      tareas: data.tareas || []                       // [{texto, hecha}]
     };
   }
 
@@ -342,6 +348,7 @@
     decodeResultado, causalCode, reglaReprog, estado,
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
-    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente
+    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente,
+    ESTADO_PENDIENTE_OPCIONES
   };
 });
