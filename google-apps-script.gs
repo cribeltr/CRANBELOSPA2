@@ -25,12 +25,22 @@
  *      esta planilla (escribe y lee con google.script.run, sin pegar la URL).
  *   Nota: dentro de Apps Script el botón "Descargar Excel" puede quedar
  *   bloqueado por el iframe protegido; para descargar usa la app alojada aparte.
+ *
+ *  -- Subir archivos a Drive (opcional) --
+ *   La app puede subir archivos del equipo a tu Drive: crea la carpeta
+ *   "MP 2026 - Archivos" con una subcarpeta por equipo y agrega el ENLACE a la
+ *   hoja "Archivos". La PRIMERA vez pedirá un permiso adicional de Drive: vuelve
+ *   a "Implementar -> Nueva versión" y autoriza cuando lo solicite.
  ****************************************************************************/
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(60000);
-  try { return json(writeAll(JSON.parse(e.postData.contents))); }
+  try {
+    var body = JSON.parse(e.postData.contents);
+    if (body && body.action === 'upload') return json(uploadArchivo(body));   // subir archivo a Drive
+    return json(writeAll(body));
+  }
   catch (err) { return json({ ok: false, error: String(err) }); }
   finally { lock.releaseLock(); }
 }
@@ -43,6 +53,66 @@ function appPush(body) {
   finally { lock.releaseLock(); }
 }
 function appPull() { return readAll(); }
+// Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
+function appUpload(body) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try { return uploadArchivo(typeof body === 'string' ? JSON.parse(body) : body); }
+  finally { lock.releaseLock(); }
+}
+
+/* ------------------------- Subida de archivos a Drive -------------------------
+ *  Crea (si no existe) la carpeta raíz "MP 2026 - Archivos" y, dentro, una
+ *  subcarpeta por equipo. Guarda el archivo, lo comparte como "cualquiera con el
+ *  enlace puede ver" y agrega una fila con el ENLACE a la hoja "Archivos".
+ *  payload: { equipoId, equipo, inv, serie, servicio, categoria, nombre, mime, dataBase64 }
+ *  Requiere autorización de Drive (al implementar pedirá el permiso una vez).
+ * ----------------------------------------------------------------------------- */
+var ARCHIVOS_ROOT = 'MP 2026 - Archivos';
+
+function getOrCreateFolder(parent, name) {
+  var it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+function sanitizeName(s) { return String(s == null ? '' : s).replace(/[\\/:*?"<>|]/g, '-').trim() || 'Equipo'; }
+
+function uploadArchivo(p) {
+  if (!p || !p.dataBase64) return { ok: false, error: 'Sin datos de archivo.' };
+  var root = getOrCreateFolder(DriveApp.getRootFolder(), ARCHIVOS_ROOT);
+  var carpetaEquipo = sanitizeName(
+    (p.equipoId ? p.equipoId + ' - ' : '') + (p.equipo || 'Equipo') +
+    (p.inv ? ' (Inv ' + p.inv + ')' : (p.serie ? ' (Serie ' + p.serie + ')' : ''))
+  );
+  var folder = getOrCreateFolder(root, carpetaEquipo);
+
+  var nombre = sanitizeName(p.nombre || 'archivo');
+  var bytes = Utilities.base64Decode(p.dataBase64);
+  var blob = Utilities.newBlob(bytes, p.mime || 'application/octet-stream', nombre);
+  var file = folder.createFile(blob);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e2) {}
+  var url = file.getUrl();
+
+  // Registrar el enlace en la hoja "Archivos"
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Archivos');
+  if (!sh) {
+    sh = ss.insertSheet('Archivos');
+    sh.getRange(1, 1, 1, 9).setValues([[
+      'ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Nombre del archivo', 'Enlace', 'Fecha de carga'
+    ]]);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+  }
+  var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Santiago', 'yyyy-MM-dd HH:mm');
+  // Guardar el ENLACE como texto (Google Sheets lo hace clicable automáticamente)
+  // y además legible al volver a leer la hoja (round-trip de doble vía).
+  sh.appendRow([
+    p.equipoId || '', p.inv || '', p.serie || '', p.equipo || '', p.servicio || '',
+    p.categoria || '', nombre, url, fecha
+  ]);
+
+  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', fecha: fecha };
+}
 
 function writeAll(body) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -160,7 +230,8 @@ function readAll() {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
       Tareas: sheetVals(ss, 'Tareas'),
-      Bitacora: sheetVals(ss, 'Bitacora')
+      Bitacora: sheetVals(ss, 'Bitacora'),
+      Archivos: sheetVals(ss, 'Archivos')
     }
   };
 }

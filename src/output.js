@@ -426,6 +426,27 @@
     simpleSheet(wb, MP, 'Tareas', TAREA_COLS, tareasRows);
     simpleSheet(wb, MP, 'Bitacora', BIT_COLS, bitRows);
 
+    /* ---------- Hoja Archivos (enlaces a Drive) ------------------------ */
+    const ARCH_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['categoria', 'Categoría', 18, 's'], ['nombre', 'Nombre del archivo', 30, 's'],
+      ['enlace', 'Enlace', 48, 's'], ['fecha', 'Fecha de carga', 16, 's']
+    ];
+    const archivos = meta.archivos || [];
+    const ash = simpleSheet(wb, MP, 'Archivos', ARCH_COLS, archivos.map(a => ({
+      id: a.id, inv: a.inv, serie: a.serie, equipo: a.equipo, servicio: a.servicio,
+      categoria: a.categoria, nombre: a.nombre, enlace: a.enlace, fecha: a.fecha
+    })));
+    // Convertir la columna Enlace en hipervínculo clicable
+    const enlCol = ARCH_COLS.findIndex(c => c[0] === 'enlace') + 1;
+    archivos.forEach((a, i) => {
+      if (!a.enlace) return;
+      const cell = ash.getRow(i + 2).getCell(enlCol);
+      cell.value = { text: a.nombre || a.enlace, hyperlink: a.enlace };
+      cell.font = { size: 10, name: 'Calibri', color: { argb: 'FF0B61A4' }, underline: true };
+    });
+
     // Orden de hojas: Eventos primero
     wb.worksheets.forEach((w, i) => { w.orderNo = i; });
     return wb;

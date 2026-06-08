@@ -226,6 +226,75 @@
   .pitem .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
   .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
   .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
+  /* ===================== Panel lateral (sidebar) ===================== */
+  .wrap{max-width:1240px}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .sidebar{flex:0 0 232px;position:sticky;top:12px;align-self:flex-start;
+    background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:14px;padding:10px;box-shadow:var(--shadow);transition:flex-basis .18s ease}
+  .content{flex:1 1 auto;min-width:0}
+  .side-toggle{appearance:none;border:1px solid var(--line);background:#f3f8f9;color:var(--teal-d);
+    border-radius:9px;width:100%;height:34px;cursor:pointer;font-size:14px;font-weight:700;margin-bottom:8px;
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 10px}
+  .side-toggle:hover{background:#e7f1f3}
+  .sidenav{display:flex;flex-direction:column;gap:3px}
+  .navgrp{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+    padding:10px 8px 4px;margin-top:4px;border-top:1px solid var(--line)}
+  .navgrp:first-of-type{border-top:0;margin-top:0}
+  .sidebar .tab,.invcat{appearance:none;border:0;background:transparent;color:var(--ink);font-weight:600;font-size:13.5px;
+    width:100%;text-align:left;padding:9px 10px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:10px}
+  .sidebar .tab:hover,.invcat:hover{background:#eef6f8;color:var(--teal-d)}
+  .sidebar .tab.active{background:var(--teal);color:#fff}
+  .invcat.active{background:#e7f1f3;color:var(--teal-d)}
+  .sidebar .tab .ico,.invcat .ico{flex:0 0 auto;width:20px;text-align:center;font-size:15px}
+  .sidebar .tab .lbl,.invcat .lbl{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navcount{flex:0 0 auto;font-style:normal;font-size:11px;font-weight:800;background:#eef3f5;color:var(--teal-d);
+    border-radius:20px;padding:1px 8px;min-width:20px;text-align:center}
+  .sidebar .tab.active .navcount{background:rgba(255,255,255,.25);color:#fff}
+  .navcount:empty{display:none}
+  /* Contraído: solo íconos */
+  .layout.collapsed .sidebar{flex-basis:60px}
+  .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:none}
+  .layout.collapsed .sidebar .tab,.layout.collapsed .invcat{justify-content:center;padding:10px 6px}
+  .layout.collapsed .sidebar .ico{width:auto}
+  .layout.collapsed .side-toggle{justify-content:center;padding:0}
+  .layout.collapsed .side-toggle .lbl{display:none}
+  @media(max-width:880px){
+    .layout{flex-direction:column}
+    .sidebar{position:static;flex-basis:auto;width:100%}
+    .sidenav{flex-direction:row;flex-wrap:wrap}
+    .sidebar .tab,.invcat{width:auto}
+    .navgrp{width:100%;border-top:0;padding:6px 8px 2px}
+    .side-toggle{display:none}
+    .layout.collapsed .sidebar{flex-basis:auto}
+    .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:initial}
+  }
+  /* Tabla de inventario: filas clicables, estado coloreado */
+  table.prev tr.clik{cursor:pointer}
+  table.prev tr.clik:hover td{background:#e7f3f5 !important}
+  .estpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .est-op{background:#C6EFCE;color:#136b30}.est-no{background:#FFC7CE;color:#b3261e}
+  .est-st{background:#FFE0B2;color:#8a5a00}.est-baja{background:#D9D9D9;color:#444}.est-na{background:#eef3f5;color:#5e7177}
+  /* Resumen: celdas-botón clicables */
+  .rcell{appearance:none;border:0;background:transparent;color:var(--teal-d);font-weight:800;font-size:13px;
+    cursor:pointer;padding:3px 9px;border-radius:7px;min-width:34px}
+  .rcell:hover{background:#e7f3f5}
+  .rcell.zero{color:var(--muted);font-weight:600;cursor:default}
+  .rcell.zero:hover{background:transparent}
+  .rcell.active{background:var(--teal);color:#fff}
+  table.prev td.mescell{font-weight:700;color:var(--ink)}
+  .drillhead{font-weight:700;color:var(--teal-d);margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* Archivos en la ficha del equipo */
+  .arch-sec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .arch-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+  .arch-item{display:flex;align-items:center;gap:8px;font-size:13px;background:#f7fbfc;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .arch-item a{color:#0b61a4;font-weight:600;text-decoration:none;word-break:break-all}
+  .arch-item a:hover{text-decoration:underline}
+  .arch-item .ac{flex:0 0 auto;font-size:11px;font-weight:700;background:#eef3f5;color:var(--teal-d);border-radius:20px;padding:1px 8px}
+  .arch-item .am{color:var(--muted);font-size:11.5px;margin-left:auto}
+  .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
+  .arch-up .fld{min-width:150px}
+  .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -236,13 +305,27 @@
 
 <div class="wrap">
 
-  <nav class="tabs" role="tablist" aria-label="Secciones">
-    <button class="tab active" type="button" data-tab="cargar">📂 Cargar y generar</button>
-    <button class="tab" type="button" data-tab="registrar">🔧 Registrar</button>
-    <button class="tab" type="button" data-tab="pendientes">📌 Pendientes</button>
-    <button class="tab" type="button" data-tab="sheets">☁️ Google Sheets</button>
-    <button class="tab" type="button" data-tab="ayuda">📖 Ayuda</button>
-  </nav>
+  <div class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
+    <button class="side-toggle" id="sideToggle" type="button" title="Contraer/expandir panel" aria-label="Contraer panel"><span class="ico">⮜</span></button>
+    <nav class="sidenav" role="tablist" aria-label="Secciones">
+      <div class="navgrp">General</div>
+      <button class="tab active" type="button" data-tab="cargar"><span class="ico">📂</span><span class="lbl">Cargar y generar</span></button>
+      <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
+      <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
+      <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
+      <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
+      <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
+      <div class="navgrp">Inventario por estado</div>
+      <button class="invcat active" type="button" data-cat="todos"><span class="ico">📋</span><span class="lbl">Todos</span><em class="navcount" id="catTodos"></em></button>
+      <button class="invcat" type="button" data-cat="Operativo"><span class="ico">🟢</span><span class="lbl">Operativos</span><em class="navcount" id="catOperativo"></em></button>
+      <button class="invcat" type="button" data-cat="No operativo"><span class="ico">🔴</span><span class="lbl">No operativos</span><em class="navcount" id="catNoOp"></em></button>
+      <button class="invcat" type="button" data-cat="En servicio técnico"><span class="ico">🛠️</span><span class="lbl">En servicio técnico</span><em class="navcount" id="catST"></em></button>
+      <button class="invcat" type="button" data-cat="Baja"><span class="ico">⚫</span><span class="lbl">Baja</span><em class="navcount" id="catBaja"></em></button>
+      <button class="invcat" type="button" data-cat="pendientes"><span class="ico">📎</span><span class="lbl">Con pendientes</span><em class="navcount" id="catPend"></em></button>
+    </nav>
+  </aside>
+  <div class="content">
 
   <section class="tabpanel active" id="tab-cargar">
   <div class="card" id="card-cargar">
@@ -360,6 +443,29 @@
     </div>
   </section>
 
+  <section class="tabpanel" id="tab-resumen">
+    <div class="card" id="resumenHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el resumen mensual.</div>
+    <div class="card" id="resumenCard" style="display:none">
+      <p class="section-title">📊 Resumen mensual de mantenciones</p>
+      <p class="muted" style="margin:0 0 12px">Programadas, realizadas y pendientes por mes. <b>Haz clic en cualquier número</b> para ver la lista de equipos de ese grupo; luego clic en un equipo para ver su detalle.</p>
+      <div class="tablewrap"><table class="prev" id="resumenTable"></table></div>
+      <div id="resumenDrill" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-inventario">
+    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el inventario.</div>
+    <div class="card" id="inventarioCard" style="display:none">
+      <div class="actions" style="justify-content:space-between;align-items:flex-start">
+        <span class="section-title" id="inventarioTitle" style="font-size:15px">📋 Inventario</span>
+        <span class="badge" id="inventarioCount">0</span>
+      </div>
+      <p class="muted" style="margin:6px 0 0">Todas las columnas del equipo + estado actual (según el último evento), fecha de última actualización y pendientes asociados. <b>Clic en una fila</b> para ver el detalle.</p>
+      <input id="inventarioFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, servicio, marca, modelo…" />
+      <div class="tablewrap" style="margin-top:8px;max-height:560px"><table class="prev" id="inventarioTable"></table></div>
+    </div>
+  </section>
+
   <section class="tabpanel" id="tab-sheets">
   <div id="sheetsCard" class="card">
     <p class="section-title">☁️ Guardar en Google Sheets</p>
@@ -438,6 +544,9 @@
     </details>
   </div>
   </section>
+
+  </div><!-- /.content -->
+  </div><!-- /.layout -->
 
   <div id="status" class="status"></div>
 </div>

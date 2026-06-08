@@ -9,7 +9,7 @@
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], archivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null, invFilter: 'todos', resSel: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -122,6 +122,11 @@
     } catch (e) { return []; }
   }
 
+  // ---- Persistencia de archivos (enlaces a Drive) ------------------------
+  const LS_ARCH = 'mp_archivos_2026';
+  function saveArchivos() { try { localStorage.setItem(LS_ARCH, JSON.stringify(state.archivos)); } catch (e) { } }
+  function loadArchivos() { try { const r = localStorage.getItem(LS_ARCH); return r ? JSON.parse(r) : []; } catch (e) { return []; } }
+
   // ---- Integración con Google Sheets (Apps Script) -----------------------
   // Exporta las MISMAS hojas que el Excel (Eventos, Catalogos, Resumen),
   // reusando el mismo constructor; reemplaza el contenido en la planilla.
@@ -228,9 +233,11 @@
   }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
-    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes() });
+    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes(), archivos: state.archivos });
     return {
-      sheets: wb.worksheets.map(ws => {
+      // La hoja "Archivos" la gestiona el propio Apps Script al subir cada
+      // archivo; no la sobrescribimos en el envío masivo para no perder enlaces.
+      sheets: wb.worksheets.filter(ws => ws.name !== 'Archivos').map(ws => {
         const o = { name: ws.name, rows: sheetToRows(ws) };
         if (ws.name === 'Eventos') Object.assign(o, eventosExtras());
         if (ws.name === 'Correctivos') Object.assign(o, correctivosExtras());
@@ -311,6 +318,14 @@
     pend.forEach(p => { if (cnt[p.id] === 1) { p.tareas = tById[p.id] || []; p.actualizaciones = bById[p.id] || []; } });
     return { correctivos: corr, pendientes: pend };
   }
+  // Archivos (enlaces a Drive) leídos de la hoja "Archivos"
+  function archivosFromTabla(grid) {
+    return rowsToObjs(grid).map(o => ({
+      id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']),
+      equipo: o['Equipo'] || '', servicio: o['Servicio'] || '', categoria: o['Categoría'] || '',
+      nombre: o['Nombre del archivo'] || '', enlace: o['Enlace'] || '', fecha: o['Fecha de carga'] || ''
+    })).filter(a => a.enlace);
+  }
 
   // POST al Apps Script. text/plain evita el preflight CORS; si no se puede leer
   // la respuesta, reintenta en modo no-cors (envío sin confirmación).
@@ -335,6 +350,36 @@
       await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body });
       return { ok: true, unconfirmed: true };
     }
+  }
+
+  // Lee un archivo como base64 (sin el prefijo data:)
+  function readFileB64(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => { const s = String(fr.result); const i = s.indexOf(','); resolve(i >= 0 ? s.slice(i + 1) : s); };
+      fr.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+      fr.readAsDataURL(file);
+    });
+  }
+  // Sube un archivo a Drive (vía Apps Script) y registra el enlace en la hoja "Archivos"
+  async function uploadArchivoFile(eq, file, categoria) {
+    const dataBase64 = await readFileB64(file);
+    const payload = {
+      action: 'upload', equipoId: eq.id, equipo: eq.equipo, inv: eq.inv, serie: eq.serie,
+      servicio: eq.servicio, categoria: categoria || '', nombre: file.name, mime: file.type || 'application/octet-stream', dataBase64
+    };
+    let j;
+    if (GAS) { j = await gasCall('appUpload', payload); }
+    else {
+      const url = sheetsUrl();
+      if (!url) throw new Error('Conecta Google Sheets (Apps Script) para subir archivos.');
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), redirect: 'follow' });
+      j = JSON.parse(await res.text());
+    }
+    if (!j || !j.ok) throw new Error((j && j.error) || 'No se pudo subir el archivo.');
+    state.archivos.push({ id: eq.id, inv: eq.inv, serie: eq.serie, equipo: eq.equipo, servicio: eq.servicio, categoria: categoria || '', nombre: j.name || file.name, enlace: j.url, fecha: j.fecha || '' });
+    saveArchivos();
+    return j;
   }
 
   async function exportToSheets(silent) {
@@ -376,6 +421,8 @@
       let j;
       if (GAS) { j = await gasCall('appPull'); }
       else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
+      // Archivos: siempre desde la hoja "Archivos" (la gestiona Apps Script)
+      if (j.tablas && j.tablas.Archivos) { state.archivos = archivosFromTabla(j.tablas.Archivos); saveArchivos(); }
       let obj = null;
       if (j.data) { try { obj = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch (_) { obj = null; } }
       if (obj && restoreState(obj)) {
@@ -383,21 +430,24 @@
         renderRegistry(); renderCorrectivos(); renderPendientes();
         if (state.events.length) { renderPreview(); renderDiscrepancias(); }
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
-        revealRegistrarIfData();
+        revealRegistrarIfData(); touch();
         showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + state.registros.length +
-          ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.');
+          ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.' +
+          (state.archivos.length ? ', ' + state.archivos.length + ' archivo(s).' : ''));
       } else if (j.tablas) {
         // Sin snapshot _datos: reconstruir correctivos y pendientes desde las hojas visibles
         const rec = reconstructFromTablas(j.tablas);
-        if (rec.correctivos.length || rec.pendientes.length) {
+        if (rec.correctivos.length || rec.pendientes.length || state.archivos.length) {
           state.correctivos = rec.correctivos; state.pendientes = rec.pendientes;
           saveCorrectivos(); savePendientes();
           renderCorrectivos(); renderPendientes();
           if (state.events.length) { renderPreview(); renderDiscrepancias(); }
           if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
-          revealRegistrarIfData();
+          revealRegistrarIfData(); touch();
           showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + rec.correctivos.length +
-            ' correctivo(s) y ' + rec.pendientes.length + ' pendiente(s). (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
+            ' correctivo(s), ' + rec.pendientes.length + ' pendiente(s)' +
+            (state.archivos.length ? ' y ' + state.archivos.length + ' archivo(s)' : '') +
+            '. (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
         } else if (!silent) {
           showInline($('#sheetsStatus'), 'info', 'La planilla no tiene datos de la app para traer.');
         }
@@ -532,13 +582,14 @@
         ev.length.toLocaleString('es-CL') + ' eventos):</div>' +
       '<div class="tablewrap"><table class="prev">' + head + rows + '</table></div>';
     $('#result').style.display = 'block';
+    touch();
   }
 
   async function downloadWorkbook(events, fname, btn) {
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Generando Excel…';
     try {
-      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes() });
+      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes(), archivos: state.archivos });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -622,6 +673,222 @@
     return best;
   }
 
+  // ===== Estado actual del equipo · panel lateral · inventario · resumen ===
+  function equipoMap() { const m = new Map(); state.equipos.forEach(eq => m.set(eq.id, eq)); return m; }
+  function eventsByEquipo() {
+    const m = new Map();
+    consolidatedEvents().forEach(e => { let a = m.get(e.id); if (!a) { a = []; m.set(e.id, a); } a.push(e); });
+    return m;
+  }
+  // Categoría de estado del equipo según su último evento (con estado final),
+  // o "Baja" si algún evento lo marca como dado de baja.
+  function categoriaFrom(eq, evs) {
+    const baja = (evs || []).some(e => e.estado === 'Baja' || /^\s*baja\s*$/i.test(String(e.resultado || ''))) || /baja/i.test(String(eq.enubaja || ''));
+    if (baja) return 'Baja';
+    const ef = estadoFinalActual(eq.id);
+    return ef ? ef.ef : 'Sin estado';
+  }
+  // Fecha de la última actividad registrada del equipo (mant./correctivo/pendiente)
+  function ultimaActualizacion(eqId) {
+    let best = null;
+    const consider = d => { if (d instanceof Date && (!best || d.getTime() > best.getTime())) best = d; };
+    state.registros.forEach(r => { if (r.id === eqId) consider(r.fechaEjecucion); });
+    state.correctivos.forEach(c => { if (c.id === eqId) consider(c.fecha); });
+    state.pendientes.forEach(p => { if (p.id === eqId) { consider(p.fechaCompromiso); (p.actualizaciones || []).forEach(a => consider(a.fecha)); } });
+    return best;
+  }
+  function pendAbiertosDe(eqId) { return state.pendientes.filter(p => p.id === eqId && p.estado !== 'Resuelto').length; }
+  function estCatClass(cat) {
+    return cat === 'Operativo' ? 'est-op' : cat === 'No operativo' ? 'est-no'
+      : cat === 'En servicio técnico' ? 'est-st' : cat === 'Baja' ? 'est-baja' : 'est-na';
+  }
+
+  // ---- Navegación entre vistas (panel lateral) ---------------------------
+  function panelActive(id) { const p = $('#tab-' + id); return !!(p && p.classList.contains('active')); }
+  function setActivePanel(panelId) { document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === panelId)); }
+  function goTab(id) {
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+    document.querySelectorAll('.invcat').forEach(b => b.classList.remove('active'));
+    setActivePanel('tab-' + id);
+    if (id === 'resumen') renderResumen();
+    if (id === 'inventario') renderInventario();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
+  }
+  function goInventario(cat) {
+    state.invFilter = cat || 'todos';
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.invcat').forEach(b => b.classList.toggle('active', b.dataset.cat === state.invFilter));
+    setActivePanel('tab-inventario');
+    renderInventario();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
+  }
+  function verDetalle(eq) { if (!eq) return; goTab('registrar'); selectEquipo(eq); }
+
+  // ---- Contadores del panel lateral --------------------------------------
+  function setCount(sel, v) { const el = $(sel); if (el) el.textContent = (v === '' || v == null) ? '' : String(v); }
+  function renderSidebarCounts() {
+    const nP = state.pendientes.filter(p => p.estado !== 'Resuelto').length;
+    setCount('#navPendCount', nP || '');
+    if (!state.equipos.length) { ['#catTodos', '#catOperativo', '#catNoOp', '#catST', '#catBaja', '#catPend'].forEach(s => setCount(s, '')); return; }
+    const map = eventsByEquipo();
+    const pendIds = new Set(state.pendientes.filter(p => p.estado !== 'Resuelto').map(p => p.id));
+    let op = 0, no = 0, st = 0, baja = 0, cp = 0;
+    state.equipos.forEach(eq => {
+      const cat = categoriaFrom(eq, map.get(eq.id));
+      if (cat === 'Operativo') op++; else if (cat === 'No operativo') no++;
+      else if (cat === 'En servicio técnico') st++; else if (cat === 'Baja') baja++;
+      if (pendIds.has(eq.id)) cp++;
+    });
+    setCount('#catTodos', state.equipos.length); setCount('#catOperativo', op); setCount('#catNoOp', no);
+    setCount('#catST', st); setCount('#catBaja', baja); setCount('#catPend', cp);
+  }
+  // Re-render de las vistas derivadas tras cualquier cambio de datos
+  function touch() {
+    renderSidebarCounts();
+    if (panelActive('inventario')) renderInventario();
+    if (panelActive('resumen')) renderResumen();
+  }
+
+  // ---- Vista Inventario ---------------------------------------------------
+  const INV_CAT_LABEL = { todos: '📋 Inventario — Todos', 'Operativo': '🟢 Operativos', 'No operativo': '🔴 No operativos', 'En servicio técnico': '🛠️ En servicio técnico', 'Baja': '⚫ Baja', pendientes: '📎 Con pendientes' };
+  function renderInventario() {
+    const hint = $('#inventarioHint'), card = $('#inventarioCard');
+    if (!state.equipos.length) { if (hint) hint.style.display = 'block'; if (card) card.style.display = 'none'; return; }
+    if (hint) hint.style.display = 'none'; if (card) card.style.display = 'block';
+    const cat = state.invFilter || 'todos';
+    $('#inventarioTitle').textContent = INV_CAT_LABEL[cat] || ('📋 Inventario — ' + cat);
+    const map = eventsByEquipo();
+    const pendIds = new Set(state.pendientes.filter(p => p.estado !== 'Resuelto').map(p => p.id));
+    const term = ($('#inventarioFilter') ? $('#inventarioFilter').value : '').trim().toLowerCase();
+    const cols = ['Familia', 'ID', 'N° Carpeta', 'N° Inventario', 'Equipo', 'Servicio', 'Unidad', 'Ubicación', 'Procedencia', 'Marca', 'Modelo', 'N° Serie', 'Año', 'VUR', 'Clasificación', 'ENU/Baja', 'Frecuencia', 'Observación', 'Estado actual', 'Última actualización', 'Pendientes'];
+    const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+    let shown = 0;
+    const rows = state.equipos.map((eq, i) => {
+      const c = categoriaFrom(eq, map.get(eq.id));
+      if (cat === 'pendientes') { if (!pendIds.has(eq.id)) return ''; }
+      else if (cat !== 'todos') { if (c !== cat) return ''; }
+      if (term) {
+        const hay = [eq.familia, eq.id, eq.carpeta, eq.inv, eq.equipo, eq.servicio, eq.unidad, eq.ubicacion, eq.marca, eq.modelo, eq.serie, c].join(' ').toLowerCase();
+        if (hay.indexOf(term) === -1) return '';
+      }
+      shown++;
+      const ua = ultimaActualizacion(eq.id), np = pendAbiertosDe(eq.id);
+      const v = x => (x != null && String(x).trim() !== '') ? esc(x) : '—';
+      return '<tr class="clik" data-eq="' + i + '">' +
+        '<td>' + v(eq.familia) + '</td><td>' + v(eq.id) + '</td><td>' + v(eq.carpeta) + '</td><td>' + v(eq.inv) + '</td>' +
+        '<td>' + v(eq.equipo) + '</td><td>' + v(eq.servicio) + '</td><td>' + v(eq.unidad) + '</td><td>' + v(eq.ubicacion) + '</td>' +
+        '<td>' + v(eq.procedencia) + '</td><td>' + v(eq.marca) + '</td><td>' + v(eq.modelo) + '</td><td>' + v(eq.serie) + '</td>' +
+        '<td>' + v(eq.anio) + '</td><td>' + v(eq.vur) + '</td><td>' + v(eq.clasif) + '</td><td>' + v(eq.enubaja) + '</td>' +
+        '<td>' + v(eq.frecuencia) + '</td><td>' + v(eq.observacion) + '</td>' +
+        '<td><span class="estpill ' + estCatClass(c) + '">' + esc(c) + '</span></td>' +
+        '<td>' + (ua ? esc(fmtDate(ua)) : '—') + '</td>' +
+        '<td>' + (np ? '<b style="color:#7a5b00">Sí (' + np + ')</b>' : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+    $('#inventarioCount').textContent = shown + (shown !== state.equipos.length ? ' / ' + state.equipos.length : '');
+    const t = $('#inventarioTable');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="' + cols.length + '" class="nomatch">Sin equipos en esta vista.</td></tr>');
+    t.querySelectorAll('tr.clik').forEach(tr => tr.addEventListener('click', () => verDetalle(state.equipos[+tr.dataset.eq])));
+  }
+
+  // ---- Vista Resumen mensual (con desglose clicable) ---------------------
+  function monthlyAgg() {
+    const ev = consolidatedEvents();
+    const m = MP.MONTHS_FULL.map(() => ({ prog: [], real: [], pend: [] }));
+    ev.forEach(e => {
+      const b = m[e.nMes - 1]; if (!b) return;
+      if (e.programa) b.prog.push(e);
+      if (e.estado && e.estado.indexOf('Realizada') === 0) b.real.push(e);
+      else if (e.estado && e.estado.indexOf('Pendiente') === 0) b.pend.push(e);
+    });
+    return m;
+  }
+  function renderResumen() {
+    const hint = $('#resumenHint'), card = $('#resumenCard');
+    if (!state.events.length) { if (hint) hint.style.display = 'block'; if (card) card.style.display = 'none'; return; }
+    if (hint) hint.style.display = 'none'; if (card) card.style.display = 'block';
+    const m = monthlyAgg();
+    const cell = (mi, metric, arr) => arr.length
+      ? '<button class="rcell' + (state.resSel && state.resSel.mi === mi && state.resSel.metric === metric ? ' active' : '') + '" data-mi="' + mi + '" data-metric="' + metric + '">' + arr.length + '</button>'
+      : '<span class="rcell zero">0</span>';
+    const tot = { prog: 0, real: 0, pend: 0 };
+    const body = m.map((x, mi) => {
+      tot.prog += x.prog.length; tot.real += x.real.length; tot.pend += x.pend.length;
+      return '<tr><td class="mescell">' + esc(MP.MONTHS_FULL[mi]) + '</td>' +
+        '<td>' + cell(mi, 'prog', x.prog) + '</td><td>' + cell(mi, 'real', x.real) + '</td><td>' + cell(mi, 'pend', x.pend) + '</td></tr>';
+    }).join('');
+    const head = '<tr><th>Mes</th><th>Programadas</th><th>Realizadas</th><th>Pendientes</th></tr>';
+    const totRow = '<tr><td class="mescell">Total</td><td><b>' + tot.prog + '</b></td><td><b>' + tot.real + '</b></td><td><b>' + tot.pend + '</b></td></tr>';
+    $('#resumenTable').innerHTML = head + body + totRow;
+    $('#resumenTable').querySelectorAll('.rcell[data-mi]').forEach(b =>
+      b.addEventListener('click', () => { state.resSel = { mi: +b.dataset.mi, metric: b.dataset.metric }; renderResumen(); }));
+    renderResumenDrill();
+  }
+  function renderResumenDrill() {
+    const box = $('#resumenDrill'); if (!box) return;
+    const sel = state.resSel;
+    if (!sel) { box.innerHTML = '<div class="muted">Haz clic en un número de la tabla para ver la lista de equipos de ese grupo.</div>'; return; }
+    const m = monthlyAgg()[sel.mi];
+    const arr = (m ? m[sel.metric] : []) || [];
+    const label = sel.metric === 'prog' ? 'Programadas' : sel.metric === 'real' ? 'Realizadas' : 'Pendientes';
+    const emap = equipoMap();
+    const head = '<tr><th>ID</th><th>Equipo</th><th>Servicio</th><th>Programa</th><th>Resultado</th><th>Fecha</th><th>Estado</th></tr>';
+    const rows = arr.map((e, i) => '<tr class="clik" data-ei="' + i + '"><td>' + esc(e.id) + '</td><td>' + esc(e.equipo) +
+      '</td><td>' + esc(e.servicio) + '</td><td>' + esc(e.programa) + '</td><td>' + esc(e.resultado) +
+      '</td><td>' + esc(fmtDate(e.fechaEjecucion)) + '</td><td><span class="pill" style="' + estadoStyle(e.estado) + '">' + esc(e.estado) + '</span></td></tr>').join('');
+    box.innerHTML = '<div class="drillhead">' + esc(MP.MONTHS_FULL[sel.mi]) + ' · ' + label + ' <span class="badge">' + arr.length + '</span>' +
+      '<button class="btn btn-ghost btn-sm" id="resClear" type="button" style="margin-left:auto">✕ Cerrar</button></div>' +
+      (arr.length ? '<div class="tablewrap"><table class="prev">' + head + rows + '</table></div>' : '<div class="muted">Sin equipos.</div>');
+    const rc = $('#resClear'); if (rc) rc.addEventListener('click', () => { state.resSel = null; renderResumen(); });
+    box.querySelectorAll('tr.clik').forEach(tr => tr.addEventListener('click', () => {
+      const e = arr[+tr.dataset.ei]; const eq = emap.get(e.id) || state.equipos.find(q => q.id === e.id); if (eq) verDetalle(eq);
+    }));
+  }
+
+  // ---- Archivos adjuntos del equipo (enlaces a Drive) --------------------
+  function archivosDe(eq) {
+    const idn = sid(eq.id), invn = sid(eq.inv), sern = sid(eq.serie);
+    return state.archivos.filter(a => (idn && sid(a.id) === idn) || (invn && sid(a.inv) === invn) || (sern && sid(a.serie) === sern));
+  }
+  function archivosSectionHTML(eq) {
+    const list = archivosDe(eq);
+    const items = list.length ? list.map(a =>
+      '<div class="arch-item"><span class="ac">' + esc(a.categoria || 'Archivo') + '</span>' +
+      '<a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
+      '<span class="am">' + esc(a.fecha || '') + '</span></div>').join('')
+      : '<div class="muted" style="font-size:12.5px">Sin archivos adjuntos.</div>';
+    let form;
+    if (sheetsReady()) {
+      form = '<div class="arch-up">' +
+        '<div class="fld"><label>Categoría</label><select id="archCat">' + MP.ARCHIVO_CATEGORIAS.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('') + '</select></div>' +
+        '<div class="fld" style="flex:1"><label>Archivo</label><input id="archFile" type="file"></div>' +
+        '<button id="archUp" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬆️ Subir a Drive</button>' +
+        '</div><div id="archMsg" class="inline-msg"></div>';
+    } else {
+      form = '<div class="muted" style="font-size:12.5px;margin-top:6px">📎 Para subir archivos a Drive, conéctate primero en <b>☁️ Google Sheets</b> (o abre la app desde Apps Script).</div>';
+    }
+    return '<div class="arch-sec"><div class="section-title" style="font-size:14px">📎 Archivos del equipo (Drive)</div>' +
+      '<div class="arch-list">' + items + '</div>' + form + '</div>';
+  }
+  function wireArchivos(eq) {
+    const up = $('#archUp'); if (!up) return;
+    up.addEventListener('click', async () => {
+      const fi = $('#archFile'); const f = fi && fi.files && fi.files[0];
+      if (!f) { showInline($('#archMsg'), 'err', 'Selecciona un archivo.'); return; }
+      const cat = $('#archCat') ? $('#archCat').value : '';
+      up.disabled = true; const orig = up.textContent; up.textContent = 'Subiendo…';
+      showInline($('#archMsg'), 'info', 'Subiendo a Drive… (puede tardar unos segundos)');
+      try {
+        const j = await uploadArchivoFile(eq, f, cat);
+        setStatus('✅ Archivo subido a Drive: <b>' + esc(j.name || f.name) + '</b>.', 'ok');
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+      } catch (e) {
+        showInline($('#archMsg'), 'err', '❌ ' + (e.message || e));
+        up.disabled = false; up.textContent = orig;
+      }
+    });
+  }
+
   function renderDetalle(eq) {
     const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
     const pm = MP.programmedMonths(eq);
@@ -684,7 +951,7 @@
       pendBody = '<div class="muted" style="margin:10px 0 4px">Pendientes registrados</div>' +
         '<div class="tablewrap"><table class="prev">' + ph + pr + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody +
+    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody + archivosSectionHTML(eq) +
       '<div class="actions" style="margin-top:10px">' +
         '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
         '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Registrar evento correctivo</button>' +
@@ -694,6 +961,7 @@
     $('#detRegistrar').addEventListener('click', () => openModal(eq));
     $('#detCorrectivo').addEventListener('click', () => openCModal(eq));
     $('#detPendiente').addEventListener('click', () => openPModal(eq));
+    wireArchivos(eq);
   }
 
   // Botón Buscar / Enter: selecciona la primera coincidencia
@@ -891,7 +1159,7 @@
   // ---- Eventos correctivos: tabla -----------------------------------------
   function renderCorrectivos() {
     const wrap = $('#correctivosWrap');
-    if (!state.correctivos.length) { wrap.style.display = 'none'; return; }
+    if (!state.correctivos.length) { wrap.style.display = 'none'; touch(); return; }
     wrap.style.display = 'block';
     const term = ($('#correctivosFilter') ? $('#correctivosFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', ''];
@@ -915,6 +1183,7 @@
         saveCorrectivos(); renderCorrectivos();
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       }));
+    touch();
   }
 
   // ---- Modal de evento correctivo -----------------------------------------
@@ -1120,7 +1389,7 @@
     const has = state.pendientes.length > 0;
     $('#pendTableCard').style.display = has ? 'block' : 'none';
     $('#pendNone').style.display = has ? 'none' : 'block';
-    if (!has) return;
+    if (!has) { touch(); return; }
     const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', '', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
@@ -1147,6 +1416,7 @@
         savePendientes(); renderPendientes();
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       }));
+    touch();
   }
 
   // ---- Modal de pendiente -------------------------------------------------
@@ -1237,13 +1507,17 @@
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
-  // Pestañas
-  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
-    const id = btn.dataset.tab;
-    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
-  }));
+  // Navegación del panel lateral (vistas + inventario por estado)
+  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => goTab(btn.dataset.tab)));
+  document.querySelectorAll('.invcat').forEach(btn => btn.addEventListener('click', () => goInventario(btn.dataset.cat)));
+  const LS_SIDE = 'mp_sidebar_collapsed';
+  function applySidebar() { try { $('#layout').classList.toggle('collapsed', localStorage.getItem(LS_SIDE) === '1'); } catch (e) { } }
+  $('#sideToggle').addEventListener('click', () => {
+    const c = !$('#layout').classList.contains('collapsed');
+    $('#layout').classList.toggle('collapsed', c);
+    try { localStorage.setItem(LS_SIDE, c ? '1' : '0'); } catch (e) { }
+  });
+  applySidebar();
 
   // Selector de vista de pendientes (triple foco)
   document.querySelectorAll('.pview').forEach(btn => btn.addEventListener('click', () => {
@@ -1273,6 +1547,7 @@
   });
   $('#registryFilter').addEventListener('input', renderRegistry);
   $('#correctivosFilter').addEventListener('input', renderCorrectivos);
+  $('#inventarioFilter').addEventListener('input', renderInventario);
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(ev =>
@@ -1393,8 +1668,10 @@
   state.registros = loadRegistros();
   state.correctivos = loadCorrectivos();
   state.pendientes = loadPendientes();
+  state.archivos = loadArchivos();
   renderCorrectivos();
   renderPendientes();
+  renderSidebarCounts();
   revealRegistrarIfData();
   if (state.registros.length || state.correctivos.length || state.pendientes.length) {
     setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es), <b>' + state.correctivos.length +

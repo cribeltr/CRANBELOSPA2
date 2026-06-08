@@ -86,6 +86,12 @@
   // Estados de un pendiente (ciclo de vida).
   const ESTADO_PENDIENTE_OPCIONES = ['Abierto', 'En progreso', 'Resuelto'];
 
+  // Categorías para clasificar archivos adjuntos del equipo.
+  const ARCHIVO_CATEGORIAS = ['Informe de servicio', 'Foto', 'Guía de despacho', 'Cotización', 'Manual', 'Orden de trabajo', 'Otro'];
+
+  // Estado actual del equipo según su último evento (para el panel/inventario).
+  const ESTADO_EQUIPO_CATS = ['Operativo', 'No operativo', 'En servicio técnico', 'Baja'];
+
   // ---- Helpers de lectura de celdas (ExcelJS) ----------------------------
   // Devuelve el valor MOSTRADO de la celda como texto (resuelve fórmulas con
   // su resultado en caché y conserva ceros a la izquierda guardados como texto).
@@ -349,6 +355,6 @@
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
     CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente,
-    ESTADO_PENDIENTE_OPCIONES
+    ESTADO_PENDIENTE_OPCIONES, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
   };
 });

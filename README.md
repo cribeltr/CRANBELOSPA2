@@ -66,9 +66,38 @@ Se descarga `Eventos_MP_2026_AAAAMMDD.xlsx`.
 
 ---
 
+## Panel lateral, Inventario y Resumen
+
+La app tiene un **panel lateral** (izquierda) que reemplaza las pestañas de arriba
+y se puede **contraer** (botón ⮜) para que tablas y vistas ocupen toda la pantalla:
+
+- **General:** *Cargar y generar*, *Registrar*, *Resumen mensual*, *Pendientes*,
+  *Google Sheets*, *Ayuda*.
+- **Inventario por estado:** *Todos*, *Operativos*, *No operativos*,
+  *En servicio técnico*, *Baja* y *Con pendientes* (cada uno con su contador).
+
+**📋 Inventario** muestra **todas las columnas del equipo** + **Estado actual**
+(según el último evento registrado), **Última actualización** (fecha de la última
+mantención/correctivo/pendiente) y si **tiene pendientes asociados**. Clic en una
+fila → ficha del equipo.
+
+**📊 Resumen mensual** muestra, por mes, las mantenciones **programadas**,
+**realizadas** y **pendientes**. **Haz clic en cualquier número** para ver la lista
+de equipos de ese grupo; clic en un equipo → su detalle.
+
+## Archivos del equipo (Drive)
+
+En la ficha de cada equipo hay una sección **📎 Archivos del equipo (Drive)**.
+Estando **conectado a Google Sheets/Apps Script**, puedes **subir un archivo**
+(informe, foto, guía de despacho, cotización, etc.): se guarda en tu Drive en
+`MP 2026 - Archivos` → *carpeta del equipo*, y su **enlace** queda en la hoja
+**Archivos** de la planilla (y en la hoja *Archivos* del Excel descargado).
+La primera subida pide un **permiso de Drive**; vuelve a *Implementar → Nueva
+versión* y autoriza.
+
 ## Registrar mantención (modo interactivo)
 
-La app está organizada en **pestañas**: *Cargar y generar*, *Registrar*, *Google Sheets* y *Ayuda*. En la pestaña **🔧 Registrar** (tras cargar el archivo):
+En la vista **🔧 Registrar** (tras cargar el archivo):
 
 1. **Escriba** el N° de Serie o N° de Inventario: aparecen **sugerencias en vivo**
    (use ↑/↓ y Enter, o haga clic).

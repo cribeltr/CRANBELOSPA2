@@ -226,6 +226,75 @@
   .pitem .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
   .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
   .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
+  /* ===================== Panel lateral (sidebar) ===================== */
+  .wrap{max-width:1240px}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .sidebar{flex:0 0 232px;position:sticky;top:12px;align-self:flex-start;
+    background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:14px;padding:10px;box-shadow:var(--shadow);transition:flex-basis .18s ease}
+  .content{flex:1 1 auto;min-width:0}
+  .side-toggle{appearance:none;border:1px solid var(--line);background:#f3f8f9;color:var(--teal-d);
+    border-radius:9px;width:100%;height:34px;cursor:pointer;font-size:14px;font-weight:700;margin-bottom:8px;
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 10px}
+  .side-toggle:hover{background:#e7f1f3}
+  .sidenav{display:flex;flex-direction:column;gap:3px}
+  .navgrp{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+    padding:10px 8px 4px;margin-top:4px;border-top:1px solid var(--line)}
+  .navgrp:first-of-type{border-top:0;margin-top:0}
+  .sidebar .tab,.invcat{appearance:none;border:0;background:transparent;color:var(--ink);font-weight:600;font-size:13.5px;
+    width:100%;text-align:left;padding:9px 10px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:10px}
+  .sidebar .tab:hover,.invcat:hover{background:#eef6f8;color:var(--teal-d)}
+  .sidebar .tab.active{background:var(--teal);color:#fff}
+  .invcat.active{background:#e7f1f3;color:var(--teal-d)}
+  .sidebar .tab .ico,.invcat .ico{flex:0 0 auto;width:20px;text-align:center;font-size:15px}
+  .sidebar .tab .lbl,.invcat .lbl{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navcount{flex:0 0 auto;font-style:normal;font-size:11px;font-weight:800;background:#eef3f5;color:var(--teal-d);
+    border-radius:20px;padding:1px 8px;min-width:20px;text-align:center}
+  .sidebar .tab.active .navcount{background:rgba(255,255,255,.25);color:#fff}
+  .navcount:empty{display:none}
+  /* Contraído: solo íconos */
+  .layout.collapsed .sidebar{flex-basis:60px}
+  .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:none}
+  .layout.collapsed .sidebar .tab,.layout.collapsed .invcat{justify-content:center;padding:10px 6px}
+  .layout.collapsed .sidebar .ico{width:auto}
+  .layout.collapsed .side-toggle{justify-content:center;padding:0}
+  .layout.collapsed .side-toggle .lbl{display:none}
+  @media(max-width:880px){
+    .layout{flex-direction:column}
+    .sidebar{position:static;flex-basis:auto;width:100%}
+    .sidenav{flex-direction:row;flex-wrap:wrap}
+    .sidebar .tab,.invcat{width:auto}
+    .navgrp{width:100%;border-top:0;padding:6px 8px 2px}
+    .side-toggle{display:none}
+    .layout.collapsed .sidebar{flex-basis:auto}
+    .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:initial}
+  }
+  /* Tabla de inventario: filas clicables, estado coloreado */
+  table.prev tr.clik{cursor:pointer}
+  table.prev tr.clik:hover td{background:#e7f3f5 !important}
+  .estpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .est-op{background:#C6EFCE;color:#136b30}.est-no{background:#FFC7CE;color:#b3261e}
+  .est-st{background:#FFE0B2;color:#8a5a00}.est-baja{background:#D9D9D9;color:#444}.est-na{background:#eef3f5;color:#5e7177}
+  /* Resumen: celdas-botón clicables */
+  .rcell{appearance:none;border:0;background:transparent;color:var(--teal-d);font-weight:800;font-size:13px;
+    cursor:pointer;padding:3px 9px;border-radius:7px;min-width:34px}
+  .rcell:hover{background:#e7f3f5}
+  .rcell.zero{color:var(--muted);font-weight:600;cursor:default}
+  .rcell.zero:hover{background:transparent}
+  .rcell.active{background:var(--teal);color:#fff}
+  table.prev td.mescell{font-weight:700;color:var(--ink)}
+  .drillhead{font-weight:700;color:var(--teal-d);margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* Archivos en la ficha del equipo */
+  .arch-sec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .arch-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+  .arch-item{display:flex;align-items:center;gap:8px;font-size:13px;background:#f7fbfc;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .arch-item a{color:#0b61a4;font-weight:600;text-decoration:none;word-break:break-all}
+  .arch-item a:hover{text-decoration:underline}
+  .arch-item .ac{flex:0 0 auto;font-size:11px;font-weight:700;background:#eef3f5;color:var(--teal-d);border-radius:20px;padding:1px 8px}
+  .arch-item .am{color:var(--muted);font-size:11.5px;margin-left:auto}
+  .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
+  .arch-up .fld{min-width:150px}
+  .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -236,13 +305,27 @@
 
 <div class="wrap">
 
-  <nav class="tabs" role="tablist" aria-label="Secciones">
-    <button class="tab active" type="button" data-tab="cargar">📂 Cargar y generar</button>
-    <button class="tab" type="button" data-tab="registrar">🔧 Registrar</button>
-    <button class="tab" type="button" data-tab="pendientes">📌 Pendientes</button>
-    <button class="tab" type="button" data-tab="sheets">☁️ Google Sheets</button>
-    <button class="tab" type="button" data-tab="ayuda">📖 Ayuda</button>
-  </nav>
+  <div class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
+    <button class="side-toggle" id="sideToggle" type="button" title="Contraer/expandir panel" aria-label="Contraer panel"><span class="ico">⮜</span></button>
+    <nav class="sidenav" role="tablist" aria-label="Secciones">
+      <div class="navgrp">General</div>
+      <button class="tab active" type="button" data-tab="cargar"><span class="ico">📂</span><span class="lbl">Cargar y generar</span></button>
+      <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
+      <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
+      <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
+      <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
+      <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
+      <div class="navgrp">Inventario por estado</div>
+      <button class="invcat active" type="button" data-cat="todos"><span class="ico">📋</span><span class="lbl">Todos</span><em class="navcount" id="catTodos"></em></button>
+      <button class="invcat" type="button" data-cat="Operativo"><span class="ico">🟢</span><span class="lbl">Operativos</span><em class="navcount" id="catOperativo"></em></button>
+      <button class="invcat" type="button" data-cat="No operativo"><span class="ico">🔴</span><span class="lbl">No operativos</span><em class="navcount" id="catNoOp"></em></button>
+      <button class="invcat" type="button" data-cat="En servicio técnico"><span class="ico">🛠️</span><span class="lbl">En servicio técnico</span><em class="navcount" id="catST"></em></button>
+      <button class="invcat" type="button" data-cat="Baja"><span class="ico">⚫</span><span class="lbl">Baja</span><em class="navcount" id="catBaja"></em></button>
+      <button class="invcat" type="button" data-cat="pendientes"><span class="ico">📎</span><span class="lbl">Con pendientes</span><em class="navcount" id="catPend"></em></button>
+    </nav>
+  </aside>
+  <div class="content">
 
   <section class="tabpanel active" id="tab-cargar">
   <div class="card" id="card-cargar">
@@ -360,6 +443,29 @@
     </div>
   </section>
 
+  <section class="tabpanel" id="tab-resumen">
+    <div class="card" id="resumenHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el resumen mensual.</div>
+    <div class="card" id="resumenCard" style="display:none">
+      <p class="section-title">📊 Resumen mensual de mantenciones</p>
+      <p class="muted" style="margin:0 0 12px">Programadas, realizadas y pendientes por mes. <b>Haz clic en cualquier número</b> para ver la lista de equipos de ese grupo; luego clic en un equipo para ver su detalle.</p>
+      <div class="tablewrap"><table class="prev" id="resumenTable"></table></div>
+      <div id="resumenDrill" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-inventario">
+    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el inventario.</div>
+    <div class="card" id="inventarioCard" style="display:none">
+      <div class="actions" style="justify-content:space-between;align-items:flex-start">
+        <span class="section-title" id="inventarioTitle" style="font-size:15px">📋 Inventario</span>
+        <span class="badge" id="inventarioCount">0</span>
+      </div>
+      <p class="muted" style="margin:6px 0 0">Todas las columnas del equipo + estado actual (según el último evento), fecha de última actualización y pendientes asociados. <b>Clic en una fila</b> para ver el detalle.</p>
+      <input id="inventarioFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, servicio, marca, modelo…" />
+      <div class="tablewrap" style="margin-top:8px;max-height:560px"><table class="prev" id="inventarioTable"></table></div>
+    </div>
+  </section>
+
   <section class="tabpanel" id="tab-sheets">
   <div id="sheetsCard" class="card">
     <p class="section-title">☁️ Guardar en Google Sheets</p>
@@ -413,12 +519,22 @@
  *      esta planilla (escribe y lee con google.script.run, sin pegar la URL).
  *   Nota: dentro de Apps Script el botón "Descargar Excel" puede quedar
  *   bloqueado por el iframe protegido; para descargar usa la app alojada aparte.
+ *
+ *  -- Subir archivos a Drive (opcional) --
+ *   La app puede subir archivos del equipo a tu Drive: crea la carpeta
+ *   "MP 2026 - Archivos" con una subcarpeta por equipo y agrega el ENLACE a la
+ *   hoja "Archivos". La PRIMERA vez pedirá un permiso adicional de Drive: vuelve
+ *   a "Implementar -&gt; Nueva versión" y autoriza cuando lo solicite.
  ****************************************************************************/
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(60000);
-  try { return json(writeAll(JSON.parse(e.postData.contents))); }
+  try {
+    var body = JSON.parse(e.postData.contents);
+    if (body &amp;&amp; body.action === 'upload') return json(uploadArchivo(body));   // subir archivo a Drive
+    return json(writeAll(body));
+  }
   catch (err) { return json({ ok: false, error: String(err) }); }
   finally { lock.releaseLock(); }
 }
@@ -431,6 +547,66 @@ function appPush(body) {
   finally { lock.releaseLock(); }
 }
 function appPull() { return readAll(); }
+// Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
+function appUpload(body) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try { return uploadArchivo(typeof body === 'string' ? JSON.parse(body) : body); }
+  finally { lock.releaseLock(); }
+}
+
+/* ------------------------- Subida de archivos a Drive -------------------------
+ *  Crea (si no existe) la carpeta raíz "MP 2026 - Archivos" y, dentro, una
+ *  subcarpeta por equipo. Guarda el archivo, lo comparte como "cualquiera con el
+ *  enlace puede ver" y agrega una fila con el ENLACE a la hoja "Archivos".
+ *  payload: { equipoId, equipo, inv, serie, servicio, categoria, nombre, mime, dataBase64 }
+ *  Requiere autorización de Drive (al implementar pedirá el permiso una vez).
+ * ----------------------------------------------------------------------------- */
+var ARCHIVOS_ROOT = 'MP 2026 - Archivos';
+
+function getOrCreateFolder(parent, name) {
+  var it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+function sanitizeName(s) { return String(s == null ? '' : s).replace(/[\\/:*?"&lt;&gt;|]/g, '-').trim() || 'Equipo'; }
+
+function uploadArchivo(p) {
+  if (!p || !p.dataBase64) return { ok: false, error: 'Sin datos de archivo.' };
+  var root = getOrCreateFolder(DriveApp.getRootFolder(), ARCHIVOS_ROOT);
+  var carpetaEquipo = sanitizeName(
+    (p.equipoId ? p.equipoId + ' - ' : '') + (p.equipo || 'Equipo') +
+    (p.inv ? ' (Inv ' + p.inv + ')' : (p.serie ? ' (Serie ' + p.serie + ')' : ''))
+  );
+  var folder = getOrCreateFolder(root, carpetaEquipo);
+
+  var nombre = sanitizeName(p.nombre || 'archivo');
+  var bytes = Utilities.base64Decode(p.dataBase64);
+  var blob = Utilities.newBlob(bytes, p.mime || 'application/octet-stream', nombre);
+  var file = folder.createFile(blob);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e2) {}
+  var url = file.getUrl();
+
+  // Registrar el enlace en la hoja "Archivos"
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Archivos');
+  if (!sh) {
+    sh = ss.insertSheet('Archivos');
+    sh.getRange(1, 1, 1, 9).setValues([[
+      'ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Nombre del archivo', 'Enlace', 'Fecha de carga'
+    ]]);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+  }
+  var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Santiago', 'yyyy-MM-dd HH:mm');
+  // Guardar el ENLACE como texto (Google Sheets lo hace clicable automáticamente)
+  // y además legible al volver a leer la hoja (round-trip de doble vía).
+  sh.appendRow([
+    p.equipoId || '', p.inv || '', p.serie || '', p.equipo || '', p.servicio || '',
+    p.categoria || '', nombre, url, fecha
+  ]);
+
+  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', fecha: fecha };
+}
 
 function writeAll(body) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -548,7 +724,8 @@ function readAll() {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
       Tareas: sheetVals(ss, 'Tareas'),
-      Bitacora: sheetVals(ss, 'Bitacora')
+      Bitacora: sheetVals(ss, 'Bitacora'),
+      Archivos: sheetVals(ss, 'Archivos')
     }
   };
 }
@@ -617,6 +794,9 @@ function json(obj) {
     </details>
   </div>
   </section>
+
+  </div><!-- /.content -->
+  </div><!-- /.layout -->
 
   <div id="status" class="status"></div>
 </div>
@@ -891,6 +1071,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // Estados de un pendiente (ciclo de vida).
   const ESTADO_PENDIENTE_OPCIONES = ['Abierto', 'En progreso', 'Resuelto'];
 
+  // Categorías para clasificar archivos adjuntos del equipo.
+  const ARCHIVO_CATEGORIAS = ['Informe de servicio', 'Foto', 'Guía de despacho', 'Cotización', 'Manual', 'Orden de trabajo', 'Otro'];
+
+  // Estado actual del equipo según su último evento (para el panel/inventario).
+  const ESTADO_EQUIPO_CATS = ['Operativo', 'No operativo', 'En servicio técnico', 'Baja'];
+
   // ---- Helpers de lectura de celdas (ExcelJS) ----------------------------
   // Devuelve el valor MOSTRADO de la celda como texto (resuelve fórmulas con
   // su resultado en caché y conserva ceros a la izquierda guardados como texto).
@@ -1154,7 +1340,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
     CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente,
-    ESTADO_PENDIENTE_OPCIONES
+    ESTADO_PENDIENTE_OPCIONES, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
   };
 });
 
@@ -1588,6 +1774,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     simpleSheet(wb, MP, 'Tareas', TAREA_COLS, tareasRows);
     simpleSheet(wb, MP, 'Bitacora', BIT_COLS, bitRows);
 
+    /* ---------- Hoja Archivos (enlaces a Drive) ------------------------ */
+    const ARCH_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['categoria', 'Categoría', 18, 's'], ['nombre', 'Nombre del archivo', 30, 's'],
+      ['enlace', 'Enlace', 48, 's'], ['fecha', 'Fecha de carga', 16, 's']
+    ];
+    const archivos = meta.archivos || [];
+    const ash = simpleSheet(wb, MP, 'Archivos', ARCH_COLS, archivos.map(a => ({
+      id: a.id, inv: a.inv, serie: a.serie, equipo: a.equipo, servicio: a.servicio,
+      categoria: a.categoria, nombre: a.nombre, enlace: a.enlace, fecha: a.fecha
+    })));
+    // Convertir la columna Enlace en hipervínculo clicable
+    const enlCol = ARCH_COLS.findIndex(c => c[0] === 'enlace') + 1;
+    archivos.forEach((a, i) => {
+      if (!a.enlace) return;
+      const cell = ash.getRow(i + 2).getCell(enlCol);
+      cell.value = { text: a.nombre || a.enlace, hyperlink: a.enlace };
+      cell.font = { size: 10, name: 'Calibri', color: { argb: 'FF0B61A4' }, underline: true };
+    });
+
     // Orden de hojas: Eventos primero
     wb.worksheets.forEach((w, i) => { w.orderNo = i; });
     return wb;
@@ -1609,7 +1816,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], archivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null, invFilter: 'todos', resSel: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -1722,6 +1929,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     } catch (e) { return []; }
   }
 
+  // ---- Persistencia de archivos (enlaces a Drive) ------------------------
+  const LS_ARCH = 'mp_archivos_2026';
+  function saveArchivos() { try { localStorage.setItem(LS_ARCH, JSON.stringify(state.archivos)); } catch (e) { } }
+  function loadArchivos() { try { const r = localStorage.getItem(LS_ARCH); return r ? JSON.parse(r) : []; } catch (e) { return []; } }
+
   // ---- Integración con Google Sheets (Apps Script) -----------------------
   // Exporta las MISMAS hojas que el Excel (Eventos, Catalogos, Resumen),
   // reusando el mismo constructor; reemplaza el contenido en la planilla.
@@ -1828,9 +2040,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
-    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes() });
+    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes(), archivos: state.archivos });
     return {
-      sheets: wb.worksheets.map(ws => {
+      // La hoja "Archivos" la gestiona el propio Apps Script al subir cada
+      // archivo; no la sobrescribimos en el envío masivo para no perder enlaces.
+      sheets: wb.worksheets.filter(ws => ws.name !== 'Archivos').map(ws => {
         const o = { name: ws.name, rows: sheetToRows(ws) };
         if (ws.name === 'Eventos') Object.assign(o, eventosExtras());
         if (ws.name === 'Correctivos') Object.assign(o, correctivosExtras());
@@ -1911,6 +2125,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     pend.forEach(p => { if (cnt[p.id] === 1) { p.tareas = tById[p.id] || []; p.actualizaciones = bById[p.id] || []; } });
     return { correctivos: corr, pendientes: pend };
   }
+  // Archivos (enlaces a Drive) leídos de la hoja "Archivos"
+  function archivosFromTabla(grid) {
+    return rowsToObjs(grid).map(o => ({
+      id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']),
+      equipo: o['Equipo'] || '', servicio: o['Servicio'] || '', categoria: o['Categoría'] || '',
+      nombre: o['Nombre del archivo'] || '', enlace: o['Enlace'] || '', fecha: o['Fecha de carga'] || ''
+    })).filter(a => a.enlace);
+  }
 
   // POST al Apps Script. text/plain evita el preflight CORS; si no se puede leer
   // la respuesta, reintenta en modo no-cors (envío sin confirmación).
@@ -1935,6 +2157,36 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body });
       return { ok: true, unconfirmed: true };
     }
+  }
+
+  // Lee un archivo como base64 (sin el prefijo data:)
+  function readFileB64(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => { const s = String(fr.result); const i = s.indexOf(','); resolve(i >= 0 ? s.slice(i + 1) : s); };
+      fr.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+      fr.readAsDataURL(file);
+    });
+  }
+  // Sube un archivo a Drive (vía Apps Script) y registra el enlace en la hoja "Archivos"
+  async function uploadArchivoFile(eq, file, categoria) {
+    const dataBase64 = await readFileB64(file);
+    const payload = {
+      action: 'upload', equipoId: eq.id, equipo: eq.equipo, inv: eq.inv, serie: eq.serie,
+      servicio: eq.servicio, categoria: categoria || '', nombre: file.name, mime: file.type || 'application/octet-stream', dataBase64
+    };
+    let j;
+    if (GAS) { j = await gasCall('appUpload', payload); }
+    else {
+      const url = sheetsUrl();
+      if (!url) throw new Error('Conecta Google Sheets (Apps Script) para subir archivos.');
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), redirect: 'follow' });
+      j = JSON.parse(await res.text());
+    }
+    if (!j || !j.ok) throw new Error((j && j.error) || 'No se pudo subir el archivo.');
+    state.archivos.push({ id: eq.id, inv: eq.inv, serie: eq.serie, equipo: eq.equipo, servicio: eq.servicio, categoria: categoria || '', nombre: j.name || file.name, enlace: j.url, fecha: j.fecha || '' });
+    saveArchivos();
+    return j;
   }
 
   async function exportToSheets(silent) {
@@ -1976,6 +2228,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       let j;
       if (GAS) { j = await gasCall('appPull'); }
       else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
+      // Archivos: siempre desde la hoja "Archivos" (la gestiona Apps Script)
+      if (j.tablas && j.tablas.Archivos) { state.archivos = archivosFromTabla(j.tablas.Archivos); saveArchivos(); }
       let obj = null;
       if (j.data) { try { obj = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch (_) { obj = null; } }
       if (obj && restoreState(obj)) {
@@ -1983,21 +2237,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         renderRegistry(); renderCorrectivos(); renderPendientes();
         if (state.events.length) { renderPreview(); renderDiscrepancias(); }
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
-        revealRegistrarIfData();
+        revealRegistrarIfData(); touch();
         showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + state.registros.length +
-          ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.');
+          ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.' +
+          (state.archivos.length ? ', ' + state.archivos.length + ' archivo(s).' : ''));
       } else if (j.tablas) {
         // Sin snapshot _datos: reconstruir correctivos y pendientes desde las hojas visibles
         const rec = reconstructFromTablas(j.tablas);
-        if (rec.correctivos.length || rec.pendientes.length) {
+        if (rec.correctivos.length || rec.pendientes.length || state.archivos.length) {
           state.correctivos = rec.correctivos; state.pendientes = rec.pendientes;
           saveCorrectivos(); savePendientes();
           renderCorrectivos(); renderPendientes();
           if (state.events.length) { renderPreview(); renderDiscrepancias(); }
           if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
-          revealRegistrarIfData();
+          revealRegistrarIfData(); touch();
           showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + rec.correctivos.length +
-            ' correctivo(s) y ' + rec.pendientes.length + ' pendiente(s). (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
+            ' correctivo(s), ' + rec.pendientes.length + ' pendiente(s)' +
+            (state.archivos.length ? ' y ' + state.archivos.length + ' archivo(s)' : '') +
+            '. (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
         } else if (!silent) {
           showInline($('#sheetsStatus'), 'info', 'La planilla no tiene datos de la app para traer.');
         }
@@ -2132,13 +2389,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         ev.length.toLocaleString('es-CL') + ' eventos):</div>' +
       '<div class="tablewrap"><table class="prev">' + head + rows + '</table></div>';
     $('#result').style.display = 'block';
+    touch();
   }
 
   async function downloadWorkbook(events, fname, btn) {
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Generando Excel…';
     try {
-      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes() });
+      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes(), archivos: state.archivos });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -2222,6 +2480,222 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return best;
   }
 
+  // ===== Estado actual del equipo · panel lateral · inventario · resumen ===
+  function equipoMap() { const m = new Map(); state.equipos.forEach(eq => m.set(eq.id, eq)); return m; }
+  function eventsByEquipo() {
+    const m = new Map();
+    consolidatedEvents().forEach(e => { let a = m.get(e.id); if (!a) { a = []; m.set(e.id, a); } a.push(e); });
+    return m;
+  }
+  // Categoría de estado del equipo según su último evento (con estado final),
+  // o "Baja" si algún evento lo marca como dado de baja.
+  function categoriaFrom(eq, evs) {
+    const baja = (evs || []).some(e => e.estado === 'Baja' || /^\s*baja\s*$/i.test(String(e.resultado || ''))) || /baja/i.test(String(eq.enubaja || ''));
+    if (baja) return 'Baja';
+    const ef = estadoFinalActual(eq.id);
+    return ef ? ef.ef : 'Sin estado';
+  }
+  // Fecha de la última actividad registrada del equipo (mant./correctivo/pendiente)
+  function ultimaActualizacion(eqId) {
+    let best = null;
+    const consider = d => { if (d instanceof Date && (!best || d.getTime() > best.getTime())) best = d; };
+    state.registros.forEach(r => { if (r.id === eqId) consider(r.fechaEjecucion); });
+    state.correctivos.forEach(c => { if (c.id === eqId) consider(c.fecha); });
+    state.pendientes.forEach(p => { if (p.id === eqId) { consider(p.fechaCompromiso); (p.actualizaciones || []).forEach(a => consider(a.fecha)); } });
+    return best;
+  }
+  function pendAbiertosDe(eqId) { return state.pendientes.filter(p => p.id === eqId && p.estado !== 'Resuelto').length; }
+  function estCatClass(cat) {
+    return cat === 'Operativo' ? 'est-op' : cat === 'No operativo' ? 'est-no'
+      : cat === 'En servicio técnico' ? 'est-st' : cat === 'Baja' ? 'est-baja' : 'est-na';
+  }
+
+  // ---- Navegación entre vistas (panel lateral) ---------------------------
+  function panelActive(id) { const p = $('#tab-' + id); return !!(p && p.classList.contains('active')); }
+  function setActivePanel(panelId) { document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === panelId)); }
+  function goTab(id) {
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+    document.querySelectorAll('.invcat').forEach(b => b.classList.remove('active'));
+    setActivePanel('tab-' + id);
+    if (id === 'resumen') renderResumen();
+    if (id === 'inventario') renderInventario();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
+  }
+  function goInventario(cat) {
+    state.invFilter = cat || 'todos';
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.invcat').forEach(b => b.classList.toggle('active', b.dataset.cat === state.invFilter));
+    setActivePanel('tab-inventario');
+    renderInventario();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
+  }
+  function verDetalle(eq) { if (!eq) return; goTab('registrar'); selectEquipo(eq); }
+
+  // ---- Contadores del panel lateral --------------------------------------
+  function setCount(sel, v) { const el = $(sel); if (el) el.textContent = (v === '' || v == null) ? '' : String(v); }
+  function renderSidebarCounts() {
+    const nP = state.pendientes.filter(p => p.estado !== 'Resuelto').length;
+    setCount('#navPendCount', nP || '');
+    if (!state.equipos.length) { ['#catTodos', '#catOperativo', '#catNoOp', '#catST', '#catBaja', '#catPend'].forEach(s => setCount(s, '')); return; }
+    const map = eventsByEquipo();
+    const pendIds = new Set(state.pendientes.filter(p => p.estado !== 'Resuelto').map(p => p.id));
+    let op = 0, no = 0, st = 0, baja = 0, cp = 0;
+    state.equipos.forEach(eq => {
+      const cat = categoriaFrom(eq, map.get(eq.id));
+      if (cat === 'Operativo') op++; else if (cat === 'No operativo') no++;
+      else if (cat === 'En servicio técnico') st++; else if (cat === 'Baja') baja++;
+      if (pendIds.has(eq.id)) cp++;
+    });
+    setCount('#catTodos', state.equipos.length); setCount('#catOperativo', op); setCount('#catNoOp', no);
+    setCount('#catST', st); setCount('#catBaja', baja); setCount('#catPend', cp);
+  }
+  // Re-render de las vistas derivadas tras cualquier cambio de datos
+  function touch() {
+    renderSidebarCounts();
+    if (panelActive('inventario')) renderInventario();
+    if (panelActive('resumen')) renderResumen();
+  }
+
+  // ---- Vista Inventario ---------------------------------------------------
+  const INV_CAT_LABEL = { todos: '📋 Inventario — Todos', 'Operativo': '🟢 Operativos', 'No operativo': '🔴 No operativos', 'En servicio técnico': '🛠️ En servicio técnico', 'Baja': '⚫ Baja', pendientes: '📎 Con pendientes' };
+  function renderInventario() {
+    const hint = $('#inventarioHint'), card = $('#inventarioCard');
+    if (!state.equipos.length) { if (hint) hint.style.display = 'block'; if (card) card.style.display = 'none'; return; }
+    if (hint) hint.style.display = 'none'; if (card) card.style.display = 'block';
+    const cat = state.invFilter || 'todos';
+    $('#inventarioTitle').textContent = INV_CAT_LABEL[cat] || ('📋 Inventario — ' + cat);
+    const map = eventsByEquipo();
+    const pendIds = new Set(state.pendientes.filter(p => p.estado !== 'Resuelto').map(p => p.id));
+    const term = ($('#inventarioFilter') ? $('#inventarioFilter').value : '').trim().toLowerCase();
+    const cols = ['Familia', 'ID', 'N° Carpeta', 'N° Inventario', 'Equipo', 'Servicio', 'Unidad', 'Ubicación', 'Procedencia', 'Marca', 'Modelo', 'N° Serie', 'Año', 'VUR', 'Clasificación', 'ENU/Baja', 'Frecuencia', 'Observación', 'Estado actual', 'Última actualización', 'Pendientes'];
+    const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+    let shown = 0;
+    const rows = state.equipos.map((eq, i) => {
+      const c = categoriaFrom(eq, map.get(eq.id));
+      if (cat === 'pendientes') { if (!pendIds.has(eq.id)) return ''; }
+      else if (cat !== 'todos') { if (c !== cat) return ''; }
+      if (term) {
+        const hay = [eq.familia, eq.id, eq.carpeta, eq.inv, eq.equipo, eq.servicio, eq.unidad, eq.ubicacion, eq.marca, eq.modelo, eq.serie, c].join(' ').toLowerCase();
+        if (hay.indexOf(term) === -1) return '';
+      }
+      shown++;
+      const ua = ultimaActualizacion(eq.id), np = pendAbiertosDe(eq.id);
+      const v = x => (x != null && String(x).trim() !== '') ? esc(x) : '—';
+      return '<tr class="clik" data-eq="' + i + '">' +
+        '<td>' + v(eq.familia) + '</td><td>' + v(eq.id) + '</td><td>' + v(eq.carpeta) + '</td><td>' + v(eq.inv) + '</td>' +
+        '<td>' + v(eq.equipo) + '</td><td>' + v(eq.servicio) + '</td><td>' + v(eq.unidad) + '</td><td>' + v(eq.ubicacion) + '</td>' +
+        '<td>' + v(eq.procedencia) + '</td><td>' + v(eq.marca) + '</td><td>' + v(eq.modelo) + '</td><td>' + v(eq.serie) + '</td>' +
+        '<td>' + v(eq.anio) + '</td><td>' + v(eq.vur) + '</td><td>' + v(eq.clasif) + '</td><td>' + v(eq.enubaja) + '</td>' +
+        '<td>' + v(eq.frecuencia) + '</td><td>' + v(eq.observacion) + '</td>' +
+        '<td><span class="estpill ' + estCatClass(c) + '">' + esc(c) + '</span></td>' +
+        '<td>' + (ua ? esc(fmtDate(ua)) : '—') + '</td>' +
+        '<td>' + (np ? '<b style="color:#7a5b00">Sí (' + np + ')</b>' : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+    $('#inventarioCount').textContent = shown + (shown !== state.equipos.length ? ' / ' + state.equipos.length : '');
+    const t = $('#inventarioTable');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="' + cols.length + '" class="nomatch">Sin equipos en esta vista.</td></tr>');
+    t.querySelectorAll('tr.clik').forEach(tr => tr.addEventListener('click', () => verDetalle(state.equipos[+tr.dataset.eq])));
+  }
+
+  // ---- Vista Resumen mensual (con desglose clicable) ---------------------
+  function monthlyAgg() {
+    const ev = consolidatedEvents();
+    const m = MP.MONTHS_FULL.map(() => ({ prog: [], real: [], pend: [] }));
+    ev.forEach(e => {
+      const b = m[e.nMes - 1]; if (!b) return;
+      if (e.programa) b.prog.push(e);
+      if (e.estado && e.estado.indexOf('Realizada') === 0) b.real.push(e);
+      else if (e.estado && e.estado.indexOf('Pendiente') === 0) b.pend.push(e);
+    });
+    return m;
+  }
+  function renderResumen() {
+    const hint = $('#resumenHint'), card = $('#resumenCard');
+    if (!state.events.length) { if (hint) hint.style.display = 'block'; if (card) card.style.display = 'none'; return; }
+    if (hint) hint.style.display = 'none'; if (card) card.style.display = 'block';
+    const m = monthlyAgg();
+    const cell = (mi, metric, arr) => arr.length
+      ? '<button class="rcell' + (state.resSel && state.resSel.mi === mi && state.resSel.metric === metric ? ' active' : '') + '" data-mi="' + mi + '" data-metric="' + metric + '">' + arr.length + '</button>'
+      : '<span class="rcell zero">0</span>';
+    const tot = { prog: 0, real: 0, pend: 0 };
+    const body = m.map((x, mi) => {
+      tot.prog += x.prog.length; tot.real += x.real.length; tot.pend += x.pend.length;
+      return '<tr><td class="mescell">' + esc(MP.MONTHS_FULL[mi]) + '</td>' +
+        '<td>' + cell(mi, 'prog', x.prog) + '</td><td>' + cell(mi, 'real', x.real) + '</td><td>' + cell(mi, 'pend', x.pend) + '</td></tr>';
+    }).join('');
+    const head = '<tr><th>Mes</th><th>Programadas</th><th>Realizadas</th><th>Pendientes</th></tr>';
+    const totRow = '<tr><td class="mescell">Total</td><td><b>' + tot.prog + '</b></td><td><b>' + tot.real + '</b></td><td><b>' + tot.pend + '</b></td></tr>';
+    $('#resumenTable').innerHTML = head + body + totRow;
+    $('#resumenTable').querySelectorAll('.rcell[data-mi]').forEach(b =>
+      b.addEventListener('click', () => { state.resSel = { mi: +b.dataset.mi, metric: b.dataset.metric }; renderResumen(); }));
+    renderResumenDrill();
+  }
+  function renderResumenDrill() {
+    const box = $('#resumenDrill'); if (!box) return;
+    const sel = state.resSel;
+    if (!sel) { box.innerHTML = '<div class="muted">Haz clic en un número de la tabla para ver la lista de equipos de ese grupo.</div>'; return; }
+    const m = monthlyAgg()[sel.mi];
+    const arr = (m ? m[sel.metric] : []) || [];
+    const label = sel.metric === 'prog' ? 'Programadas' : sel.metric === 'real' ? 'Realizadas' : 'Pendientes';
+    const emap = equipoMap();
+    const head = '<tr><th>ID</th><th>Equipo</th><th>Servicio</th><th>Programa</th><th>Resultado</th><th>Fecha</th><th>Estado</th></tr>';
+    const rows = arr.map((e, i) => '<tr class="clik" data-ei="' + i + '"><td>' + esc(e.id) + '</td><td>' + esc(e.equipo) +
+      '</td><td>' + esc(e.servicio) + '</td><td>' + esc(e.programa) + '</td><td>' + esc(e.resultado) +
+      '</td><td>' + esc(fmtDate(e.fechaEjecucion)) + '</td><td><span class="pill" style="' + estadoStyle(e.estado) + '">' + esc(e.estado) + '</span></td></tr>').join('');
+    box.innerHTML = '<div class="drillhead">' + esc(MP.MONTHS_FULL[sel.mi]) + ' · ' + label + ' <span class="badge">' + arr.length + '</span>' +
+      '<button class="btn btn-ghost btn-sm" id="resClear" type="button" style="margin-left:auto">✕ Cerrar</button></div>' +
+      (arr.length ? '<div class="tablewrap"><table class="prev">' + head + rows + '</table></div>' : '<div class="muted">Sin equipos.</div>');
+    const rc = $('#resClear'); if (rc) rc.addEventListener('click', () => { state.resSel = null; renderResumen(); });
+    box.querySelectorAll('tr.clik').forEach(tr => tr.addEventListener('click', () => {
+      const e = arr[+tr.dataset.ei]; const eq = emap.get(e.id) || state.equipos.find(q => q.id === e.id); if (eq) verDetalle(eq);
+    }));
+  }
+
+  // ---- Archivos adjuntos del equipo (enlaces a Drive) --------------------
+  function archivosDe(eq) {
+    const idn = sid(eq.id), invn = sid(eq.inv), sern = sid(eq.serie);
+    return state.archivos.filter(a => (idn && sid(a.id) === idn) || (invn && sid(a.inv) === invn) || (sern && sid(a.serie) === sern));
+  }
+  function archivosSectionHTML(eq) {
+    const list = archivosDe(eq);
+    const items = list.length ? list.map(a =>
+      '<div class="arch-item"><span class="ac">' + esc(a.categoria || 'Archivo') + '</span>' +
+      '<a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
+      '<span class="am">' + esc(a.fecha || '') + '</span></div>').join('')
+      : '<div class="muted" style="font-size:12.5px">Sin archivos adjuntos.</div>';
+    let form;
+    if (sheetsReady()) {
+      form = '<div class="arch-up">' +
+        '<div class="fld"><label>Categoría</label><select id="archCat">' + MP.ARCHIVO_CATEGORIAS.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('') + '</select></div>' +
+        '<div class="fld" style="flex:1"><label>Archivo</label><input id="archFile" type="file"></div>' +
+        '<button id="archUp" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬆️ Subir a Drive</button>' +
+        '</div><div id="archMsg" class="inline-msg"></div>';
+    } else {
+      form = '<div class="muted" style="font-size:12.5px;margin-top:6px">📎 Para subir archivos a Drive, conéctate primero en <b>☁️ Google Sheets</b> (o abre la app desde Apps Script).</div>';
+    }
+    return '<div class="arch-sec"><div class="section-title" style="font-size:14px">📎 Archivos del equipo (Drive)</div>' +
+      '<div class="arch-list">' + items + '</div>' + form + '</div>';
+  }
+  function wireArchivos(eq) {
+    const up = $('#archUp'); if (!up) return;
+    up.addEventListener('click', async () => {
+      const fi = $('#archFile'); const f = fi && fi.files && fi.files[0];
+      if (!f) { showInline($('#archMsg'), 'err', 'Selecciona un archivo.'); return; }
+      const cat = $('#archCat') ? $('#archCat').value : '';
+      up.disabled = true; const orig = up.textContent; up.textContent = 'Subiendo…';
+      showInline($('#archMsg'), 'info', 'Subiendo a Drive… (puede tardar unos segundos)');
+      try {
+        const j = await uploadArchivoFile(eq, f, cat);
+        setStatus('✅ Archivo subido a Drive: <b>' + esc(j.name || f.name) + '</b>.', 'ok');
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+      } catch (e) {
+        showInline($('#archMsg'), 'err', '❌ ' + (e.message || e));
+        up.disabled = false; up.textContent = orig;
+      }
+    });
+  }
+
   function renderDetalle(eq) {
     const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
     const pm = MP.programmedMonths(eq);
@@ -2284,7 +2758,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       pendBody = '<div class="muted" style="margin:10px 0 4px">Pendientes registrados</div>' +
         '<div class="tablewrap"><table class="prev">' + ph + pr + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody +
+    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody + archivosSectionHTML(eq) +
       '<div class="actions" style="margin-top:10px">' +
         '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
         '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Registrar evento correctivo</button>' +
@@ -2294,6 +2768,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     $('#detRegistrar').addEventListener('click', () => openModal(eq));
     $('#detCorrectivo').addEventListener('click', () => openCModal(eq));
     $('#detPendiente').addEventListener('click', () => openPModal(eq));
+    wireArchivos(eq);
   }
 
   // Botón Buscar / Enter: selecciona la primera coincidencia
@@ -2491,7 +2966,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // ---- Eventos correctivos: tabla -----------------------------------------
   function renderCorrectivos() {
     const wrap = $('#correctivosWrap');
-    if (!state.correctivos.length) { wrap.style.display = 'none'; return; }
+    if (!state.correctivos.length) { wrap.style.display = 'none'; touch(); return; }
     wrap.style.display = 'block';
     const term = ($('#correctivosFilter') ? $('#correctivosFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', ''];
@@ -2515,6 +2990,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         saveCorrectivos(); renderCorrectivos();
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       }));
+    touch();
   }
 
   // ---- Modal de evento correctivo -----------------------------------------
@@ -2720,7 +3196,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const has = state.pendientes.length > 0;
     $('#pendTableCard').style.display = has ? 'block' : 'none';
     $('#pendNone').style.display = has ? 'none' : 'block';
-    if (!has) return;
+    if (!has) { touch(); return; }
     const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', '', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
@@ -2747,6 +3223,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         savePendientes(); renderPendientes();
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       }));
+    touch();
   }
 
   // ---- Modal de pendiente -------------------------------------------------
@@ -2837,13 +3314,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
-  // Pestañas
-  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
-    const id = btn.dataset.tab;
-    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
-  }));
+  // Navegación del panel lateral (vistas + inventario por estado)
+  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => goTab(btn.dataset.tab)));
+  document.querySelectorAll('.invcat').forEach(btn => btn.addEventListener('click', () => goInventario(btn.dataset.cat)));
+  const LS_SIDE = 'mp_sidebar_collapsed';
+  function applySidebar() { try { $('#layout').classList.toggle('collapsed', localStorage.getItem(LS_SIDE) === '1'); } catch (e) { } }
+  $('#sideToggle').addEventListener('click', () => {
+    const c = !$('#layout').classList.contains('collapsed');
+    $('#layout').classList.toggle('collapsed', c);
+    try { localStorage.setItem(LS_SIDE, c ? '1' : '0'); } catch (e) { }
+  });
+  applySidebar();
 
   // Selector de vista de pendientes (triple foco)
   document.querySelectorAll('.pview').forEach(btn => btn.addEventListener('click', () => {
@@ -2873,6 +3354,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   });
   $('#registryFilter').addEventListener('input', renderRegistry);
   $('#correctivosFilter').addEventListener('input', renderCorrectivos);
+  $('#inventarioFilter').addEventListener('input', renderInventario);
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(ev =>
@@ -2993,8 +3475,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   state.registros = loadRegistros();
   state.correctivos = loadCorrectivos();
   state.pendientes = loadPendientes();
+  state.archivos = loadArchivos();
   renderCorrectivos();
   renderPendientes();
+  renderSidebarCounts();
   revealRegistrarIfData();
   if (state.registros.length || state.correctivos.length || state.pendientes.length) {
     setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es), <b>' + state.correctivos.length +
