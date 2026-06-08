@@ -391,6 +391,7 @@
   $('#pick').addEventListener('click', () => $('#file').click());
   $('#file').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
+    e.target.value = '';   // permite volver a subir el MISMO archivo (corregido) y que se dispare el cambio
     if (f) { $('#fileName').textContent = f.name; handleFile(f); }
   });
   $('#download').addEventListener('click', () =>
