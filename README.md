@@ -84,6 +84,10 @@ completo (con las mantenciones ya consolidadas en `Eventos`), o marca
 Cada hoja se **reemplaza** con el contenido enviado; las demás hojas de la
 planilla no se tocan.
 
+En la hoja `Eventos` el script aplica además **desplegables** (Resultado,
+Estado Final del Equipo y Ejecutor) y el **coloreado por Estado** (y Operativo /
+No operativo), igual que el Excel.
+
 > Requisitos: tu cuenta de Google debe permitir crear y publicar Apps Script.
 > El acceso "Cualquier persona" se refiere a la URL del script; tu planilla
 > sigue siendo privada (el script corre con tu permiso).

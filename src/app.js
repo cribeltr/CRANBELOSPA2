@@ -93,10 +93,42 @@
     }
     return out;
   }
+  // Desplegables y coloreado para la hoja Eventos (los aplica el Apps Script)
+  function eventosExtras() {
+    return {
+      validations: [
+        { header: 'Resultado (R)', values: MP.RESULTADO_OPCIONES },
+        { header: 'Estado Final del Equipo', values: MP.ESTADO_FINAL_OPCIONES },
+        { header: 'Ejecutor', values: MP.EJECUTORES }
+      ],
+      colors: [
+        { header: 'Estado', rules: [
+          { mode: 'startsWith', value: 'Realizada', color: '#C6EFCE' },
+          { mode: 'equals', value: 'Reprogramada', color: '#FCE4A6' },
+          { mode: 'equals', value: 'Puesta en Marcha', color: '#DDEBF7' },
+          { mode: 'equals', value: 'Fuera de Servicio', color: '#FFC7CE' },
+          { mode: 'equals', value: 'No Realizada', color: '#FFC7CE' },
+          { mode: 'equals', value: 'No Ubicable', color: '#E4DFEC' },
+          { mode: 'equals', value: 'Baja', color: '#D9D9D9' },
+          { mode: 'startsWith', value: 'Pendiente', color: '#FFF2CC' }
+        ] },
+        { header: 'Estado Final del Equipo', rules: [
+          { mode: 'equals', value: 'Operativo', color: '#C6EFCE' },
+          { mode: 'equals', value: 'No operativo', color: '#FFC7CE' }
+        ] }
+      ]
+    };
+  }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
     const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length });
-    return { sheets: wb.worksheets.map(ws => ({ name: ws.name, rows: sheetToRows(ws) })) };
+    return {
+      sheets: wb.worksheets.map(ws => {
+        const o = { name: ws.name, rows: sheetToRows(ws) };
+        if (ws.name === 'Eventos') Object.assign(o, eventosExtras());
+        return o;
+      })
+    };
   }
 
   // POST al Apps Script. text/plain evita el preflight CORS; si no se puede leer
