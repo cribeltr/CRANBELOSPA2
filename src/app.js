@@ -418,9 +418,34 @@
     try { $('#equipoDetalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
   }
 
+  // Estilo de la pastilla de Estado Final del equipo
+  function efStyle(v) {
+    if (v === 'Operativo') return 'background:#C6EFCE;color:#136b30';
+    if (v === 'No operativo') return 'background:#FFC7CE;color:#b3261e';
+    if (v === 'En servicio técnico') return 'background:#FFE0B2;color:#8a5a00';
+    return 'background:#eef3f5;color:#333';
+  }
+  // Estado final del equipo según el ÚLTIMO evento registrado (preventivo o
+  // correctivo) por fecha. Empate de fecha: gana el registrado más tarde.
+  function estadoFinalActual(eqId) {
+    let best = null;
+    const consider = (fecha, ef, tipo) => {
+      if (!(fecha instanceof Date) || !ef) return;
+      if (!best || fecha.getTime() >= best.fecha.getTime()) best = { fecha, ef, tipo };
+    };
+    state.registros.forEach(r => { if (r.id === eqId) consider(r.fechaEjecucion, r.estadoFinal, 'mantención preventiva (' + r.mes + ')'); });
+    state.correctivos.forEach(c => { if (c.id === eqId) consider(c.fecha, c.estadoFinal, 'evento correctivo: ' + c.tipoEvento); });
+    return best;
+  }
+
   function renderDetalle(eq) {
     const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
     const pm = MP.programmedMonths(eq);
+    const ef = estadoFinalActual(eq.id);
+    const efBanner = ef
+      ? '<div class="efbanner" style="' + efStyle(ef.ef) + '">Estado final del equipo: <b>' + esc(ef.ef) +
+        '</b> <span class="efmeta">— según el último evento (' + esc(ef.tipo) + ' del ' + esc(fmtDate(ef.fecha)) + ')</span></div>'
+      : '<div class="efbanner efnone">Estado final del equipo: <b>—</b> <span class="efmeta">— aún no hay eventos registrados con estado para este equipo</span></div>';
     const val = v => (v !== null && v !== undefined && String(v).trim() !== '') ? esc(v) : '—';
     const fields = [
       ['Familia', eq.familia], ['ID', eq.id], ['N° Carpeta', eq.carpeta], ['N° Inventario', eq.inv],
@@ -462,7 +487,7 @@
       corrBody = '<div class="muted" style="margin:10px 0 4px">Eventos correctivos registrados</div>' +
         '<div class="tablewrap"><table class="prev">' + ch + cr + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = head + body + corrBody +
+    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody +
       '<div class="actions" style="margin-top:10px">' +
         '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
         '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Registrar evento correctivo</button>' +

@@ -63,6 +63,8 @@ Los eventos correctivos se guardan en el navegador y se exportan en una hoja
 **`Correctivos`** (en el Excel y en Google Sheets), con desplegables de Tipo de
 evento, Ejecutor y Estado final del equipo.
 
+En la ficha del equipo se muestra el **Estado final del equipo** según el **último evento registrado** (preventivo o correctivo) por fecha: gana el de fecha más reciente. Ej.: correctivo 23-03-2026 + preventivo 04-04-2026 "Operativo" ⇒ estado final = **Operativo**.
+
 > Ambas tablas (mantenciones registradas y eventos correctivos) tienen un
 > **filtro de texto** para buscar por equipo, serie, inventario, mes, ejecutor,
 > tipo de evento, empresa o estado.
