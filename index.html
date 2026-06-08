@@ -1552,29 +1552,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // El "Estado final del equipo" solo se solicita cuando el Resultado es "Si";
-  // en cualquier otro caso queda en blanco y deshabilitado (no obligatorio).
+  // El Estado Final siempre se puede elegir (Operativo / No operativo / En servicio técnico).
   function updateEstadoFinal() {
-    const isSi = $('#mResultado').value === 'Si';
-    const sel = $('#mEstadoFinal');
-    sel.disabled = !isSi;
-    if (!isSi) sel.value = '';
-    $('#mEstadoFinalLabel').innerHTML = isSi
-      ? 'Estado final del equipo <span class="req">*</span>'
-      : 'Estado final del equipo <span class="muted">(solo si el resultado es “Si”)</span>';
+    $('#mEstadoFinal').disabled = false;
+    $('#mEstadoFinalLabel').innerHTML = 'Estado final del equipo <span class="req">*</span>';
   }
 
   function updateSave() {
-    const isSi = $('#mResultado').value === 'Si';
-    const efOk = !isSi || !!$('#mEstadoFinal').value;     // obligatorio solo cuando Resultado = Si
     $('#mSave').disabled = !(state.selMonth !== null &&
-      $('#mResultado').value && $('#mEjecutor').value && efOk);
+      $('#mResultado').value && $('#mEjecutor').value && $('#mEstadoFinal').value);
   }
 
   function saveRegistro() {
     const eq = state.selEq, mi = state.selMonth;
     if (!eq || mi === null) return;
-    const isSi = $('#mResultado').value === 'Si';
-    if (!$('#mResultado').value || !$('#mEjecutor').value || (isSi && !$('#mEstadoFinal').value)) {
+    if (!$('#mResultado').value || !$('#mEjecutor').value || !$('#mEstadoFinal').value) {
       showInline($('#modalMsg'), 'err', 'Complete los campos obligatorios (*).'); return;
     }
     const p = $('#mFecha').value.split('-');
@@ -1584,7 +1576,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       resultado: $('#mResultado').value,
       observacion: $('#mObs').value.trim(),
       ejecutor: $('#mEjecutor').value,
-      estadoFinal: isSi ? $('#mEstadoFinal').value : ''   // en blanco si el resultado no es "Si"
+      estadoFinal: $('#mEstadoFinal').value
     });
     state.registros.push(reg);
     saveRegistros();   // persistir en el navegador
