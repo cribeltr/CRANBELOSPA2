@@ -1164,6 +1164,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
   }
 
+  // Crea una hoja simple (encabezado + filas) con formato por tipo de columna.
+  // cols: [key, header, width, tipo('s'|'n'|'t'|'d')]
+  function simpleSheet(wb, MP, name, cols, dataRows) {
+    const sh = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
+    sh.columns = cols.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(sh.getRow(1));
+    dataRows.forEach((d, idx) => {
+      const row = sh.addRow(d);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = cols[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+    });
+    sh.autoFilter = { from: 'A1', to: sh.getColumn(cols.length).letter + '1' };
+    return sh;
+  }
+
   function buildOutputWorkbook(ExcelJS, MP, events, meta) {
     meta = meta || {};
     const wb = new ExcelJS.Workbook();
@@ -1461,6 +1484,32 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         ps.dataValidations.add(L + '2:' + L + pendLast, { type: 'list', allowBlank: true, formulae: ejeRange, showErrorMessage: true, errorStyle: 'warning' });
       });
     }
+
+    /* ---------- Hojas Tareas y Bitácora (de los pendientes) ------------ */
+    const TAREA_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['tarea', 'Tarea', 50, 's'], ['hecha', 'Hecha', 8, 's'],
+      ['estadoPend', 'Estado del Pendiente', 16, 's'], ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd']
+    ];
+    const BIT_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['fecha', 'Fecha', 13, 'd'], ['texto', 'Actualización', 60, 's'], ['estadoPend', 'Estado del Pendiente', 16, 's']
+    ];
+    const tareasRows = [], bitRows = [];
+    pendientes.forEach(p => {
+      (p.tareas || []).forEach(t => tareasRows.push({
+        id: p.id, inv: p.inv, serie: p.serie, equipo: p.equipo, servicio: p.servicio,
+        tarea: t.texto, hecha: t.hecha ? 'Sí' : 'No', estadoPend: p.estado || '', fechaCompromiso: p.fechaCompromiso
+      }));
+      (p.actualizaciones || []).forEach(a => bitRows.push({
+        id: p.id, inv: p.inv, serie: p.serie, equipo: p.equipo, servicio: p.servicio,
+        fecha: a.fecha, texto: a.texto, estadoPend: p.estado || ''
+      }));
+    });
+    simpleSheet(wb, MP, 'Tareas', TAREA_COLS, tareasRows);
+    simpleSheet(wb, MP, 'Bitacora', BIT_COLS, bitRows);
 
     // Orden de hojas: Eventos primero
     wb.worksheets.forEach((w, i) => { w.orderNo = i; });

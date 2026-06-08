@@ -75,7 +75,7 @@ En la ficha del equipo, el botón **📌 Registrar pendiente** abre un formulari
 
 La pestaña **📌 Pendientes** muestra una **Matriz de Eisenhower** (4 cuadrantes): *Urgencia* por la fecha de compromiso (vencido o ≤ 7 días = urgente) e *importancia* por el estado del equipo (No operativo / En servicio técnico = importante). Dentro de cada cuadrante (Hacer ya · Planificar · Delegar · Posponer) los pendientes van ordenados por fecha de compromiso. El Excel/Sheets agrega columnas **Cuadrante**, **Urgencia** e **Importancia**.
 
-Cada pendiente se **gestiona** (botón ⚙️ *Gestionar* en la tabla o clic en la tarjeta del tablero): cambiar **estado** (Abierto / En progreso / Resuelto), crear **tareas** (checklist con avance) y anotar **actualizaciones** (bitácora con fecha). Los resueltos salen del tablero pero quedan en la tabla. El Excel/Sheets agrega **Estado**, **Tareas (hechas/total)** y **Última actualización**.
+Cada pendiente se **gestiona** (botón ⚙️ *Gestionar* en la tabla o clic en la tarjeta del tablero): cambiar **estado** (Abierto / En progreso / Resuelto), crear **tareas** (checklist con avance) y anotar **actualizaciones** (bitácora con fecha). Los resueltos salen del tablero pero quedan en la tabla. El Excel/Sheets agrega **Estado**, **Tareas (hechas/total)** y **Última actualización**. Además, el Excel/Sheets incluye dos hojas de detalle: **`Tareas`** (una fila por tarea) y **`Bitacora`** (una fila por actualización).
 
 ### Persistencia y comparación con el archivo
 
