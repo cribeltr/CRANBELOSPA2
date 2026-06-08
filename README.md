@@ -64,9 +64,10 @@ Las mantenciones registradas se acumulan en una tabla y:
 
 ## Guardar en Google Sheets (opcional)
 
-La sección **☁️ Guardar en Google Sheets** envía las mantenciones registradas a
-una planilla de Google mediante un **Google Apps Script** (puente). Este paso
-**sí usa internet** (los datos van a *tu* propia planilla).
+La sección **☁️ Guardar en Google Sheets** crea/actualiza en tu planilla las
+**mismas hojas que el Excel** (`Eventos`, `Catalogos`, `Resumen`) mediante un
+**Google Apps Script** (puente). Este paso **sí usa internet** (los datos van a
+*tu* propia planilla).
 
 **Configuración (una sola vez):**
 
@@ -77,10 +78,11 @@ una planilla de Google mediante un **Google Apps Script** (puente). Este paso
    *Acceso* **Cualquier persona**. Autoriza y copia la **URL** (termina en `/exec`).
 4. Pega la URL en la app, pulsa **Guardar URL** y **Probar conexión**.
 
-**Uso:** marca *Guardar automáticamente cada mantención* para que cada registro
-se envíe al instante, o usa **Enviar registros a Google Sheets** para mandarlos
-todos. Cada registro lleva un **UID**: si ya existe en la planilla, se
-**actualiza** (no se duplica). Las eliminaciones locales no se propagan.
+**Uso:** pulsa **Enviar / actualizar Google Sheets** para volcar el libro
+completo (con las mantenciones ya consolidadas en `Eventos`), o marca
+*Actualizar Google Sheets al registrar* para que se actualice tras cada registro.
+Cada hoja se **reemplaza** con el contenido enviado; las demás hojas de la
+planilla no se tocan.
 
 > Requisitos: tu cuenta de Google debe permitir crear y publicar Apps Script.
 > El acceso "Cualquier persona" se refiere a la URL del script; tu planilla

@@ -183,7 +183,7 @@
 
   <div id="sheetsCard" class="card">
     <p class="section-title">☁️ Guardar en Google Sheets</p>
-    <p class="muted" style="margin:0 0 12px">Envía las mantenciones registradas a una planilla de Google (vía Apps Script). Se configura <b>una sola vez</b>. (Este paso sí usa internet.)</p>
+    <p class="muted" style="margin:0 0 12px">Crea/actualiza en tu Google Sheet las <b>mismas hojas del Excel</b> (Eventos, Catalogos y Resumen), vía Apps Script. Se configura <b>una sola vez</b>. (Este paso sí usa internet.)</p>
     <div class="field">
       <label for="sheetsUrl">URL de la app web (Apps Script)</label>
       <input id="sheetsUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
@@ -191,8 +191,8 @@
     <div class="actions" style="margin-top:0">
       <button id="sheetsSave" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Guardar URL</button>
       <button id="sheetsTest" class="btn btn-ghost btn-sm" type="button">Probar conexión</button>
-      <button id="sheetsSendAll" class="btn btn-accent btn-sm" type="button">Enviar registros a Google Sheets</button>
-      <label class="chk"><input id="sheetsAuto" type="checkbox"> Guardar automáticamente cada mantención</label>
+      <button id="sheetsSendAll" class="btn btn-accent btn-sm" type="button">Enviar / actualizar Google Sheets</button>
+      <label class="chk"><input id="sheetsAuto" type="checkbox"> Actualizar Google Sheets al registrar</label>
     </div>
     <div id="sheetsStatus" class="inline-msg"></div>
     <details style="margin-top:10px">
