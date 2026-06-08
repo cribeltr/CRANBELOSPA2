@@ -56,6 +56,7 @@
     { key: 'tipoPrograma',     header: 'Tipo de Programación',    w: 34, t: 's' },
     { key: 'resultado',        header: 'Resultado (R)',           w: 12, t: 's' },
     { key: 'detalleResultado', header: 'Detalle del Resultado',   w: 34, t: 's' },
+    { key: 'fechaEjecucion',   header: 'Fecha de Ejecución',      w: 16, t: 'd' },
     { key: 'causal',           header: 'Causal Reprog.',          w: 11, t: 's' },
     { key: 'causalDesc',       header: 'Descripción de la Causal',w: 42, t: 's' },
     { key: 'regla',            header: 'Regla de Reprogramación', w: 42, t: 's' },
@@ -65,6 +66,8 @@
   ];
   const TEXT_KEYS = new Set(['carpeta', 'inv', 'serie', 'observacion']); // conservar tal cual (ceros a la izq. / texto)
   const NUM_KEYS = new Set(['id', 'anio', 'vur', 'nMes']);
+  const DATE_KEYS = new Set(['fechaEjecucion']);                          // formato fecha (llenado manual)
+  const DATE_FMT = 'dd-mm-yyyy';
 
   function styleHeaderRow(row) {
     row.height = 30;
@@ -154,6 +157,9 @@
         else if (NUM_KEYS.has(def.key)) {
           const n = MP.toNum(cell.value);
           if (n !== null) cell.value = n;                              // numérico real
+        } else if (DATE_KEYS.has(def.key)) {
+          if (cell.value === '' || cell.value === null) cell.value = null; // celda vacía limpia
+          cell.numFmt = DATE_FMT;                                      // lista para escribir la fecha
         }
       });
       // Conservar N° Serie / Inventario / Carpeta como TEXTO (ceros a la izq.)

@@ -51,9 +51,12 @@ columnas:
 
 | Datos del equipo | Evento |
 |---|---|
-| Familia, ID, N° Carpeta, N° Inventario, Equipo, Servicio, Unidad, Ubicación, Procedencia, Marca, Modelo, N° Serie, Año Instalación, Vida Útil Residual, Clasificación, ENU / Baja, Frecuencia MP, **Observación** | Mes, N° Mes, Programa (P), Tipo de Programación, Resultado (R), Detalle del Resultado, Causal Reprog., Descripción de la Causal, Regla de Reprogramación, **Estado**, **Estado Final del Equipo**, **Ejecutor** |
+| Familia, ID, N° Carpeta, N° Inventario, Equipo, Servicio, Unidad, Ubicación, Procedencia, Marca, Modelo, N° Serie, Año Instalación, Vida Útil Residual, Clasificación, ENU / Baja, Frecuencia MP, **Observación** | Mes, N° Mes, Programa (P), Tipo de Programación, Resultado (R), Detalle del Resultado, **Fecha de Ejecución**, Causal Reprog., Descripción de la Causal, Regla de Reprogramación, **Estado**, **Estado Final del Equipo**, **Ejecutor** |
 
 - **Observación**: texto tal cual viene en la columna Q del equipo.
+- **Fecha de Ejecución**: columna de **llenado manual** con formato de fecha
+  (`dd-mm-aaaa`). El archivo de origen solo registra el *mes* (no el día), por lo
+  que la fecha exacta se ingresa a mano cuando se ejecuta la mantención.
 - **Estado** se colorea automáticamente (Realizada, Reprogramada, Pendiente,
   Fuera de Servicio, No Realizada, No Ubicable, Baja, Puesta en Marcha).
 - **Estado Final del Equipo**: **desplegable** de llenado manual con las opciones

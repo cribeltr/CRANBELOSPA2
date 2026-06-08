@@ -208,6 +208,7 @@
           tipoPrograma: PROG[pVal.toUpperCase()] || (pVal ? pVal : ''),
           resultado: rVal,
           detalleResultado: decodeResultado(rVal),
+          fechaEjecucion: '',  // fecha real de ejecución (llenado manual; el origen no la registra)
           causal: cCode,
           causalDesc: cCode ? CAUSAL[cCode] : '',
           regla: reglaReprog(cCode),
