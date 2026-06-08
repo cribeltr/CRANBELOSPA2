@@ -342,7 +342,10 @@
       ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd'],
       ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
       ['respEjecucion', 'Responsable de Ejecución', 26, 's'],
-      ['observacion', 'Observación', 50, 's']
+      ['observacion', 'Observación', 50, 's'],
+      ['cuadrante', 'Cuadrante (Eisenhower)', 18, 's'],
+      ['urgencia', 'Urgencia', 12, 's'],
+      ['importancia', 'Importancia', 13, 's']
     ];
     const pendientes = meta.pendientes || [];
     const ps = wb.addWorksheet('Pendientes', { views: [{ state: 'frozen', ySplit: 1 }] });

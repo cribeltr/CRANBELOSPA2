@@ -206,7 +206,7 @@
   }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
-    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: state.pendientes });
+    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes() });
     return {
       sheets: wb.worksheets.map(ws => {
         const o = { name: ws.name, rows: sheetToRows(ws) };
@@ -390,7 +390,7 @@
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Generando Excel…';
     try {
-      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: state.pendientes });
+      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes() });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -838,10 +838,72 @@
   }
 
   // ---- Pendientes: tabla --------------------------------------------------
+  // Clasificación Eisenhower de un pendiente
+  function clasifPendiente(p) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let urgente = false;
+    if (p.fechaCompromiso instanceof Date) {
+      const d = Math.round((p.fechaCompromiso.getTime() - today.getTime()) / 86400000);
+      urgente = d <= 7;   // vencido o dentro de 7 días
+    }
+    const ef = estadoFinalActual(p.id);
+    const importante = !!(ef && (ef.ef === 'No operativo' || ef.ef === 'En servicio técnico'));
+    const cuadrante = urgente && importante ? 'Hacer ya' : (!urgente && importante ? 'Planificar' : (urgente ? 'Delegar' : 'Posponer'));
+    return { urgente, importante, cuadrante };
+  }
+  // Pendientes con su clasificación, para exportar
+  function decoratedPendientes() {
+    return state.pendientes.map(p => {
+      const c = clasifPendiente(p);
+      return Object.assign({}, p, {
+        cuadrante: c.cuadrante,
+        urgencia: c.urgente ? 'Urgente' : 'No urgente',
+        importancia: c.importante ? 'Importante' : 'No importante'
+      });
+    });
+  }
+  // Tablero Eisenhower (4 cuadrantes, ordenados por fecha de compromiso)
+  function renderEisenhower() {
+    const card = $('#eisenhowerCard');
+    if (!state.pendientes.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const quads = { 'Hacer ya': [], 'Planificar': [], 'Delegar': [], 'Posponer': [] };
+    state.pendientes.forEach(p => quads[clasifPendiente(p).cuadrante].push(p));
+    const ft = f => (f instanceof Date) ? f.getTime() : Infinity;
+    Object.keys(quads).forEach(k => quads[k].sort((a, b) => ft(a.fechaCompromiso) - ft(b.fechaCompromiso)));
+    const meta = {
+      'Hacer ya': ['q1', '🔴 Hacer ya', 'Urgente + Importante'],
+      'Planificar': ['q2', '🔵 Planificar', 'Importante, no urgente'],
+      'Delegar': ['q3', '🟡 Delegar', 'Urgente, no importante'],
+      'Posponer': ['q4', '⚪ Posponer', 'Ni urgente ni importante']
+    };
+    const dayInfo = f => {
+      if (!(f instanceof Date)) return '';
+      const d = Math.round((f.getTime() - today.getTime()) / 86400000);
+      if (d < 0) return '<span class="venc">vencido hace ' + (-d) + ' día(s)</span>';
+      if (d === 0) return '<span class="venc">vence hoy</span>';
+      return 'en ' + d + ' día(s)';
+    };
+    $('#eisenhower').innerHTML = Object.keys(meta).map(k => {
+      const m = meta[k], items = quads[k];
+      const body = items.length ? items.map(p =>
+        '<div class="pcard"><div class="pe">' + esc(p.equipo) + ' <span style="color:var(--muted);font-weight:600">(ID ' + esc(p.id) + ')</span></div>' +
+        '<div class="pf">📅 ' + esc(fmtDate(p.fechaCompromiso)) + ' · ' + dayInfo(p.fechaCompromiso) + '</div>' +
+        '<div class="pm">Ejec.: ' + esc(p.respEjecucion || '—') + ' · Adm.: ' + esc(p.respAdministrativo || '—') + '</div>' +
+        (p.observacion ? '<div class="pm">' + esc(p.observacion) + '</div>' : '') +
+        '</div>').join('') : '<div class="empty">— sin pendientes —</div>';
+      return '<div class="quad ' + m[0] + '"><h4>' + m[1] + ' <span class="qcount">' + items.length + '</span></h4>' +
+        '<div class="qsub muted">' + m[2] + '</div>' + body + '</div>';
+    }).join('');
+  }
+
   function renderPendientes() {
-    const wrap = $('#pendientesWrap');
-    if (!state.pendientes.length) { wrap.style.display = 'none'; return; }
-    wrap.style.display = 'block';
+    renderEisenhower();
+    const has = state.pendientes.length > 0;
+    $('#pendTableCard').style.display = has ? 'block' : 'none';
+    $('#pendNone').style.display = has ? 'none' : 'block';
+    if (!has) return;
     const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
     const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';

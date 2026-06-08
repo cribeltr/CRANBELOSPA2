@@ -185,6 +185,23 @@
   .efbanner{border-radius:10px;padding:11px 14px;margin:0 0 12px;font-size:15px;font-weight:700;border:1px solid rgba(0,0,0,.06)}
   .efbanner .efmeta{font-weight:600;opacity:.85;font-size:12.5px}
   .efbanner.efnone{background:#eef3f5;color:var(--muted);font-weight:600}
+  /* Matriz de Eisenhower */
+  .eisen{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:680px){.eisen{grid-template-columns:1fr}}
+  .quad{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .quad h4{margin:0;font-size:14px;display:flex;align-items:center;gap:8px}
+  .quad .qcount{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px;color:var(--teal-d)}
+  .quad .qsub{font-size:11.5px;margin:2px 0 8px}
+  .quad.q1{background:#fff5f5;border-color:#f3c9c9} .quad.q1 h4{color:#b3261e}
+  .quad.q2{background:#f3f9fb;border-color:#cfe2e7} .quad.q2 h4{color:#0e4651}
+  .quad.q3{background:#fff8ec;border-color:#f0e2b8} .quad.q3 h4{color:#8a6d00}
+  .quad.q4{background:#f6f7f8;border-color:#e2e6e8} .quad.q4 h4{color:#555}
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+  .pcard .pe{font-weight:700;color:var(--teal-d)}
+  .pcard .pf{font-weight:700;margin-top:2px}
+  .pcard .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .pcard .venc{color:#b3261e;font-weight:700}
+  .quad .empty{color:var(--muted);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -198,6 +215,7 @@
   <nav class="tabs" role="tablist" aria-label="Secciones">
     <button class="tab active" type="button" data-tab="cargar">📂 Cargar y generar</button>
     <button class="tab" type="button" data-tab="registrar">🔧 Registrar</button>
+    <button class="tab" type="button" data-tab="pendientes">📌 Pendientes</button>
     <button class="tab" type="button" data-tab="sheets">☁️ Google Sheets</button>
     <button class="tab" type="button" data-tab="ayuda">📖 Ayuda</button>
   </nav>
@@ -279,8 +297,18 @@
         <table class="prev" id="correctivosTable"></table>
       </div>
     </div>
+  </div>
 
-    <div id="pendientesWrap" style="display:none;margin-top:18px">
+  </section>
+
+  <section class="tabpanel" id="tab-pendientes">
+    <div class="card" id="eisenhowerCard" style="display:none">
+      <p class="section-title">📌 Gestión de pendientes — Matriz de Eisenhower</p>
+      <p class="muted" style="margin:0 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días = urgente). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico = importante). Dentro de cada cuadrante van ordenados por fecha.</p>
+      <div id="eisenhower" class="eisen"></div>
+    </div>
+    <div class="card" id="pendNone">📌 No hay pendientes registrados. Regístralos desde la <b>ficha del equipo</b> (pestaña 🔧 Registrar).</div>
+    <div class="card" id="pendTableCard" style="display:none">
       <div class="actions" style="justify-content:space-between">
         <span class="section-title" style="font-size:14px">Pendientes: <span class="badge" id="pendientesCount">0</span></span>
         <button id="clearPend" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
@@ -291,8 +319,6 @@
         <table class="prev" id="pendientesTable"></table>
       </div>
     </div>
-  </div>
-
   </section>
 
   <section class="tabpanel" id="tab-sheets">

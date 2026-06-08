@@ -73,6 +73,8 @@ En la ficha del equipo se muestra el **Estado final del equipo** según el **úl
 
 En la ficha del equipo, el botón **📌 Registrar pendiente** abre un formulario con: **Fecha de compromiso**, **Responsable administrativo** (lista de ejecutores), **Responsable de ejecución** (lista de ejecutores) y **Observación**. Los pendientes se guardan en el navegador y se exportan en una hoja **`Pendientes`** (Excel y Google Sheets).
 
+La pestaña **📌 Pendientes** muestra una **Matriz de Eisenhower** (4 cuadrantes): *Urgencia* por la fecha de compromiso (vencido o ≤ 7 días = urgente) e *importancia* por el estado del equipo (No operativo / En servicio técnico = importante). Dentro de cada cuadrante (Hacer ya · Planificar · Delegar · Posponer) los pendientes van ordenados por fecha de compromiso. El Excel/Sheets agrega columnas **Cuadrante**, **Urgencia** e **Importancia**.
+
 ### Persistencia y comparación con el archivo
 
 - Los registros se **guardan en el navegador** (localStorage): se conservan al
