@@ -277,6 +277,7 @@
       renderDiscrepancias();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
+      $('#registrarHint').style.display = 'none';
       resetSearch();
 
       let msg = '✅ Procesado: <b>' + parsed.equipos.length.toLocaleString('es-CL') +
@@ -759,6 +760,14 @@
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
+  // Pestañas
+  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+  }));
+
   $('#pick').addEventListener('click', () => $('#file').click());
   $('#file').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];

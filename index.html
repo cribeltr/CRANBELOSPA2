@@ -170,6 +170,18 @@
     font-size:16px;line-height:1;cursor:pointer;flex:0 0 auto}
   .modal .x:hover{background:#e0eaed}
   table.prev th{background:linear-gradient(180deg,var(--teal-l),var(--teal))}
+  /* pestañas */
+  .tabs{position:sticky;top:0;z-index:40;display:flex;gap:6px;flex-wrap:wrap;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:6px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .tab{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;
+    padding:9px 14px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .tab:hover{background:#eef6f8;color:var(--teal-d)}
+  .tab.active{background:var(--teal);color:#fff}
+  .tabpanel{display:none}
+  .tabpanel.active{display:block;animation:fadein .16s ease}
+  @keyframes fadein{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}
+  #registrarHint{color:var(--muted);font-size:14px}
 </style>
 </head>
 <body>
@@ -180,14 +192,14 @@
 
 <div class="wrap">
 
-  <nav class="appnav" aria-label="Secciones">
-    <a href="#card-cargar">📂 Cargar</a>
-    <a href="#registrar">🔧 Registrar</a>
-    <a href="#sheetsCard">☁️ Google Sheets</a>
-    <a href="#card-ayuda">📖 Ayuda</a>
-    <span class="sp"></span>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab active" type="button" data-tab="cargar">📂 Cargar y generar</button>
+    <button class="tab" type="button" data-tab="registrar">🔧 Registrar</button>
+    <button class="tab" type="button" data-tab="sheets">☁️ Google Sheets</button>
+    <button class="tab" type="button" data-tab="ayuda">📖 Ayuda</button>
   </nav>
 
+  <section class="tabpanel active" id="tab-cargar">
   <div class="card" id="card-cargar">
     <ol class="steps">
       <li>Suba el archivo <b>Programación MP 2026</b> (<code>.xlsm</code> o <code>.xlsx</code>).</li>
@@ -205,7 +217,6 @@
       <input id="file" type="file" accept=".xlsm,.xlsx" />
       <span id="fileName"></span>
     </div>
-    <div id="status" class="status"></div>
   </div>
 
   <div id="result" class="card" style="display:none"></div>
@@ -216,6 +227,10 @@
       <span class="muted">Incluye hojas <b>Eventos</b>, <b>Catalogos</b> y <b>Resumen</b>, con desplegables de Resultado, Estado Final y Ejecutor. <b>Consolida</b> las mantenciones que registres en la fila del equipo y mes correspondiente.</span>
     </div>
   </div>
+  </section>
+
+  <section class="tabpanel" id="tab-registrar">
+  <div id="registrarHint" class="card">📂 Primero cargue el archivo en la pestaña <b>Cargar y generar</b>.</div>
 
   <div id="discrepanciasCard" class="card" style="display:none">
     <p class="section-title">🔍 Comparación: registrado vs. archivo</p>
@@ -263,6 +278,9 @@
     </div>
   </div>
 
+  </section>
+
+  <section class="tabpanel" id="tab-sheets">
   <div id="sheetsCard" class="card">
     <p class="section-title">☁️ Guardar en Google Sheets</p>
     <p class="muted" style="margin:0 0 12px">Crea/actualiza en tu Google Sheet las <b>mismas hojas del Excel</b> (Eventos, Catalogos y Resumen), vía Apps Script. Se configura <b>una sola vez</b>. (Este paso sí usa internet.)</p>
@@ -424,6 +442,9 @@ function json(obj) {
     </details>
   </div>
 
+  </section>
+
+  <section class="tabpanel" id="tab-ayuda">
   <div class="card" id="card-ayuda">
     <details>
       <summary>📖 Diccionario de códigos y reglas</summary>
@@ -468,7 +489,9 @@ function json(obj) {
       </div>
     </details>
   </div>
+  </section>
 
+  <div id="status" class="status"></div>
 </div>
 
 <!-- Vista de registro de mantención -->
@@ -1548,6 +1571,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       renderDiscrepancias();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
+      $('#registrarHint').style.display = 'none';
       resetSearch();
 
       let msg = '✅ Procesado: <b>' + parsed.equipos.length.toLocaleString('es-CL') +
@@ -2030,6 +2054,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
+  // Pestañas
+  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+  }));
+
   $('#pick').addEventListener('click', () => $('#file').click());
   $('#file').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];

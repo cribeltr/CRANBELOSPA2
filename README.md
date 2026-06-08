@@ -24,7 +24,7 @@ Se descarga `Eventos_MP_2026_AAAAMMDD.xlsx`.
 
 ## Registrar mantención (modo interactivo)
 
-Tras cargar el archivo se habilita la tarjeta **🔧 Registrar mantención**:
+La app está organizada en **pestañas**: *Cargar y generar*, *Registrar*, *Google Sheets* y *Ayuda*. En la pestaña **🔧 Registrar** (tras cargar el archivo):
 
 1. **Escriba** el N° de Serie o N° de Inventario: aparecen **sugerencias en vivo**
    (use ↑/↓ y Enter, o haga clic).
