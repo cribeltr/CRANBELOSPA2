@@ -22,11 +22,30 @@ Se descarga `Eventos_MP_2026_AAAAMMDD.xlsx`.
 
 ---
 
+## Registrar mantención (modo interactivo)
+
+Tras cargar el archivo se habilita la tarjeta **🔧 Registrar mantención**:
+
+1. **Busque** el equipo por su **N° de Serie** o **N° de Inventario**.
+2. Pulse **Registrar mantención** en el resultado: se abre una **nueva vista**.
+3. Ingrese la **fecha de ejecución**. Si el mes **no coincide** con un mes
+   programado para ese equipo, **el sistema no deja avanzar** (e indica los meses
+   programados).
+4. Con un mes válido se **carga el tipo de programa** automáticamente.
+5. Complete **Resultado** (lista), **Observación** (opcional), **Ejecutor** (lista)
+   y **Estado final del equipo** (lista) y pulse **Guardar registro**.
+
+Las mantenciones registradas se acumulan en una tabla y se exportan con
+**⬇️ Descargar registro (Excel)** → `Registro_Mantenciones_AAAAMMDD.xlsx`
+(mismo formato que el Excel masivo).
+
+---
+
 ## Qué lee del archivo
 
 - **Hoja `PMP_2026`** (programación): datos desde la fila 7, columnas **B a AE**,
-  excluyendo **Q** (Observación) y **S** (Responsable MP). Las columnas **T a AE**
-  son los doce meses; cada mes lleva el código de programación (P).
+  excluyendo solo **S** (Responsable MP); se **incluye Q** (Observación). Las
+  columnas **T a AE** son los doce meses; cada mes lleva el código de programación (P).
 - **Hoja `Registro_MP-2026`** (ejecución): mismos campos de equipo (también se
   ignoran **Q** y **S**). Cada mes tiene dos subcolumnas: **P** (programa) y
   **R** (resultado). Las columnas P son fórmulas que reflejan la hoja de
@@ -54,6 +73,8 @@ columnas:
 | Familia, ID, N° Carpeta, N° Inventario, Equipo, Servicio, Unidad, Ubicación, Procedencia, Marca, Modelo, N° Serie, Año Instalación, Vida Útil Residual, Clasificación, ENU / Baja, Frecuencia MP, **Observación** | Mes, N° Mes, Programa (P), Tipo de Programación, Resultado (R), Detalle del Resultado, **Fecha de Ejecución**, Causal Reprog., Descripción de la Causal, Regla de Reprogramación, **Estado**, **Estado Final del Equipo**, **Ejecutor** |
 
 - **Observación**: texto tal cual viene en la columna Q del equipo.
+- **Resultado (R)**: **desplegable** con los códigos válidos (`Si`, `C1`–`C8`,
+  `Si-RA`, `FS`, `No`, `NU`, `Baja`).
 - **Fecha de Ejecución**: columna de **llenado manual** con formato de fecha
   (`dd-mm-aaaa`). El archivo de origen solo registra el *mes* (no el día), por lo
   que la fecha exacta se ingresa a mano cuando se ejecuta la mantención.

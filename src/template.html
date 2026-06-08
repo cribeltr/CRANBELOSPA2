@@ -64,6 +64,45 @@
         background:var(--teal);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
   footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
   code{background:#eef3f5;padding:1px 5px;border-radius:4px;font-size:12px}
+  /* --- Registrar mantención --- */
+  .section-title{font-size:16px;font-weight:700;color:var(--teal-d);margin:0 0 4px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  .field .req{color:var(--err)}
+  input[type=text],input[type=date],select,textarea{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;
+    font-family:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--teal-l);border-color:var(--teal-l)}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .row .grow{flex:1;min-width:200px}
+  .reslist{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto}
+  .resitem{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#f9fbfc}
+  .resitem .info{font-size:13px}
+  .resitem .info b{color:var(--teal-d)}
+  .resitem .meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .btn-sm{padding:7px 12px;font-size:13px;margin-top:0}
+  .btn-ghost{background:#eef3f5;color:var(--teal-d)}
+  .btn-ghost:hover{background:#e0eaed}
+  .btn-del{background:transparent;color:var(--err);padding:2px 8px;font-size:16px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,30,35,.55);display:none;
+    align-items:flex-start;justify-content:center;padding:24px;z-index:50;overflow:auto}
+  .modal-overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:22px;
+    box-shadow:0 18px 50px rgba(0,0,0,.3);margin:auto}
+  .modal h3{margin:0 0 4px;color:var(--teal-d);font-size:18px}
+  .eqbox{background:#f1f7f8;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;font-size:13px}
+  .eqbox b{color:var(--teal-d)}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  .inline-msg{padding:9px 11px;border-radius:8px;font-size:13px;margin-top:6px;display:none}
+  .inline-msg.show{display:block}
+  .inline-msg.ok{background:var(--okbg);color:var(--ok)}
+  .inline-msg.err{background:var(--errbg);color:var(--err)}
+  .tipo-box{background:#fff6df;border:1px solid #f0e2b8;border-radius:8px;padding:9px 11px;font-size:13px;margin-top:8px}
+  fieldset.formfields{border:0;padding:0;margin:0}
+  fieldset.formfields[disabled]{opacity:.45}
+  .badge{display:inline-block;background:var(--teal);color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700}
 </style>
 </head>
 <body>
@@ -79,6 +118,7 @@
       <li>Suba el archivo <b>Programación MP 2026</b> (<code>.xlsm</code> o <code>.xlsx</code>).</li>
       <li>El sistema lee las hojas <b>PMP_2026</b> y <b>Registro_MP-2026</b> y arma los eventos.</li>
       <li>Descargue el Excel: una fila por equipo y mes con programación o resultado.</li>
+      <li><b>(Opcional)</b> Registre mantenciones ejecutadas: busque el equipo por serie/inventario, valide el mes y complete los datos.</li>
     </ol>
   </div>
 
@@ -98,7 +138,30 @@
   <div class="card">
     <div class="actions">
       <button id="download" class="btn btn-accent" type="button" disabled>⬇️ Descargar Excel (una fila por evento)</button>
-      <span class="muted">El archivo incluye las hojas <b>Eventos</b>, <b>Catalogos</b> y <b>Resumen</b>, con desplegable de Ejecutor.</span>
+      <span class="muted">El archivo incluye las hojas <b>Eventos</b>, <b>Catalogos</b> y <b>Resumen</b>, con desplegables de Resultado, Estado Final y Ejecutor.</span>
+    </div>
+  </div>
+
+  <div id="registrar" class="card" style="display:none">
+    <p class="section-title">🔧 Registrar mantención</p>
+    <p class="muted" style="margin:0 0 12px">Busque un equipo por su <b>N° de Serie</b> o <b>N° de Inventario</b> y registre una mantención ejecutada.</p>
+    <div class="row">
+      <div class="grow">
+        <input id="searchInput" type="text" placeholder="Ingrese N° de Serie o N° de Inventario…" autocomplete="off" />
+      </div>
+      <button id="searchBtn" class="btn btn-primary" type="button" style="margin-top:0">Buscar</button>
+    </div>
+    <div id="searchMsg" class="inline-msg"></div>
+    <div id="searchResults" class="reslist"></div>
+
+    <div id="registryWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Mantenciones registradas: <span class="badge" id="registryCount">0</span></span>
+        <button id="downloadReg" class="btn btn-accent btn-sm" type="button">⬇️ Descargar registro (Excel)</button>
+      </div>
+      <div class="tablewrap" style="margin-top:10px">
+        <table class="prev" id="registryTable"></table>
+      </div>
     </div>
   </div>
 
@@ -147,6 +210,48 @@
     </details>
   </div>
 
+</div>
+
+<!-- Vista de registro de mantención -->
+<div id="modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h3 id="modalTitle">Registrar mantención</h3>
+    <div class="muted">Complete los datos de la mantención ejecutada.</div>
+    <div id="modalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="mFecha">Fecha de ejecución <span class="req">*</span></label>
+      <input id="mFecha" type="date" min="2026-01-01" max="2026-12-31" />
+      <div id="mFechaMsg" class="inline-msg"></div>
+    </div>
+
+    <div id="mTipo" class="tipo-box" style="display:none"></div>
+
+    <fieldset id="mFields" class="formfields" disabled>
+      <div class="field" style="margin-top:12px">
+        <label for="mResultado">Resultado <span class="req">*</span></label>
+        <select id="mResultado"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field">
+        <label for="mObs">Observación (opcional)</label>
+        <textarea id="mObs" placeholder="Detalle de la mantención, repuestos, etc."></textarea>
+      </div>
+      <div class="field">
+        <label for="mEjecutor">Ejecutor <span class="req">*</span></label>
+        <select id="mEjecutor"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field">
+        <label for="mEstadoFinal">Estado final del equipo <span class="req">*</span></label>
+        <select id="mEstadoFinal"><option value="">— Seleccione —</option></select>
+      </div>
+    </fieldset>
+    <div id="modalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="mCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="mSave" class="btn btn-accent" type="button" disabled>Guardar registro</button>
+    </div>
+  </div>
 </div>
 
 <footer>Funciona sin conexión a internet · Procesamiento local en el navegador · ExcelJS</footer>

@@ -80,6 +80,9 @@
   // Opciones del desplegable "Estado Final del Equipo" (se llena manualmente).
   const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo'];
 
+  // Opciones del desplegable "Resultado (R)".
+  const RESULTADO_OPCIONES = ['Si', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'Si-RA', 'FS', 'No', 'NU', 'Baja'];
+
   // ---- Helpers de lectura de celdas (ExcelJS) ----------------------------
   // Devuelve el valor MOSTRADO de la celda como texto (resuelve fórmulas con
   // su resultado en caché y conserva ceros a la izquierda guardados como texto).
@@ -159,7 +162,37 @@
     return 'Pendiente';
   }
 
-  // ---- Parseo principal: workbook -> lista de eventos --------------------
+  // ---- Construcción de un evento (fila) ----------------------------------
+  // Centraliza el armado del objeto-evento para reutilizarlo tanto en la
+  // generación masiva como en el registro manual de mantenciones.
+  function makeEvent(eq, i, pVal, rVal, extra) {
+    extra = extra || {};
+    pVal = pVal || ''; rVal = rVal || '';
+    const cCode = causalCode(rVal);
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv,
+      equipo: eq.equipo, servicio: eq.servicio, unidad: eq.unidad,
+      ubicacion: eq.ubicacion, procedencia: eq.procedencia, marca: eq.marca,
+      modelo: eq.modelo, serie: eq.serie, anio: eq.anio, vur: eq.vur,
+      clasif: eq.clasif, enubaja: eq.enubaja,
+      observacion: ('observacion' in extra) ? extra.observacion : eq.observacion,
+      frecuencia: eq.frecuencia,
+      mes: MONTHS_FULL[i], nMes: i + 1,
+      programa: pVal,
+      tipoPrograma: PROG[pVal.toUpperCase()] || (pVal || ''),
+      resultado: rVal,
+      detalleResultado: decodeResultado(rVal),
+      fechaEjecucion: ('fechaEjecucion' in extra) ? extra.fechaEjecucion : '',
+      causal: cCode,
+      causalDesc: cCode ? CAUSAL[cCode] : '',
+      regla: reglaReprog(cCode),
+      estado: estado(pVal, rVal),
+      estadoFinal: ('estadoFinal' in extra) ? extra.estadoFinal : '',
+      ejecutor: ('ejecutor' in extra) ? extra.ejecutor : ''
+    };
+  }
+
+  // ---- Parseo principal: workbook -> equipos + eventos -------------------
   function parseWorkbook(wb) {
     const pmp = wb.getWorksheet(PMP_SHEET);
     const reg = wb.getWorksheet(REG_SHEET);
@@ -171,51 +204,40 @@
     // Mapa de resultados (R) del Registro, por ID
     const regResByID = new Map();
     if (reg) {
-      const last = reg.rowCount;
-      for (let r = FIRST_DATA_ROW; r <= last; r++) {
+      const lastR = reg.rowCount;
+      for (let r = FIRST_DATA_ROW; r <= lastR; r++) {
         if (!isDataRow(reg, r)) continue;
         const id = cellText(reg.getRow(r).getCell(COL.id));
         const arr = [];
-        for (let i = 0; i < 12; i++) arr.push(cellText(reg.getRow(r).getCell(regRCol(i))));
+        for (let i = 0; i < 12; i++) {
+          const v = cellText(reg.getRow(r).getCell(regRCol(i)));
+          arr.push(isEmpty(v) ? '' : v);
+        }
         regResByID.set(id, arr);
       }
     }
 
+    const equipos = [];
     const events = [];
     const last = pmp.rowCount;
-    let equipos = 0;
     for (let r = FIRST_DATA_ROW; r <= last; r++) {
       if (!isDataRow(pmp, r)) continue;
-      equipos++;
       const eq = readEquipo(pmp, r);
       const res = regResByID.get(eq.id) || [];
+      const prog = [];
       for (let i = 0; i < 12; i++) {
-        const pRaw = cellText(pmp.getRow(r).getCell(pmpMonthCol(i)));
-        const rRaw = res[i] || '';
-        if (isEmpty(pRaw) && isEmpty(rRaw)) continue;     // sin evento ese mes
-        const pVal = isEmpty(pRaw) ? '' : pRaw;
-        const rVal = isEmpty(rRaw) ? '' : rRaw;
-        const cCode = causalCode(rVal);
-        events.push({
-          familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv,
-          equipo: eq.equipo, servicio: eq.servicio, unidad: eq.unidad,
-          ubicacion: eq.ubicacion, procedencia: eq.procedencia, marca: eq.marca,
-          modelo: eq.modelo, serie: eq.serie, anio: eq.anio, vur: eq.vur,
-          clasif: eq.clasif, enubaja: eq.enubaja,
-          observacion: eq.observacion, frecuencia: eq.frecuencia,
-          mes: MONTHS_FULL[i], nMes: i + 1,
-          programa: pVal,
-          tipoPrograma: PROG[pVal.toUpperCase()] || (pVal ? pVal : ''),
-          resultado: rVal,
-          detalleResultado: decodeResultado(rVal),
-          fechaEjecucion: '',  // fecha real de ejecución (llenado manual; el origen no la registra)
-          causal: cCode,
-          causalDesc: cCode ? CAUSAL[cCode] : '',
-          regla: reglaReprog(cCode),
-          estado: estado(pVal, rVal),
-          estadoFinal: '',     // se completa con desplegable (Operativo / No operativo)
-          ejecutor: ''
-        });
+        const v = cellText(pmp.getRow(r).getCell(pmpMonthCol(i)));
+        prog.push(isEmpty(v) ? '' : v);
+      }
+      eq.prog = prog;                                   // 12 valores de programación (X/R/RA/PM)
+      eq.res = [];
+      for (let i = 0; i < 12; i++) eq.res.push(res[i] || '');
+      equipos.push(eq);
+
+      for (let i = 0; i < 12; i++) {
+        const pVal = eq.prog[i], rVal = eq.res[i];
+        if (isEmpty(pVal) && isEmpty(rVal)) continue;   // sin evento ese mes
+        events.push(makeEvent(eq, i, pVal, rVal));
       }
     }
 
@@ -223,6 +245,37 @@
     events.sort((a, b) => (toNum(a.id) - toNum(b.id)) || (a.nMes - b.nMes));
 
     return { events, equipos, warnings };
+  }
+
+  // ---- Helpers para el registro manual de mantenciones -------------------
+  // Busca equipos por N° de Serie o N° de Inventario (exacto y luego parcial).
+  function findEquipos(equipos, query) {
+    const q = String(query == null ? '' : query).trim().toLowerCase();
+    if (!q) return [];
+    const norm = s => String(s == null ? '' : s).trim().toLowerCase();
+    const exact = equipos.filter(e => norm(e.serie) === q || norm(e.inv) === q);
+    if (exact.length) return exact;
+    return equipos.filter(e =>
+      norm(e.serie).includes(q) || norm(e.inv).includes(q) || norm(e.id) === q);
+  }
+
+  // Meses (0-11) en que el equipo tiene mantención programada (P no vacío).
+  function programmedMonths(eq) {
+    const out = [];
+    if (eq && eq.prog) for (let i = 0; i < 12; i++) if (!isEmpty(eq.prog[i])) out.push(i);
+    return out;
+  }
+
+  // Arma un evento a partir del formulario de registro manual.
+  function buildRegistro(eq, monthIndex, data) {
+    data = data || {};
+    const pVal = (eq.prog && eq.prog[monthIndex]) ? eq.prog[monthIndex] : '';
+    return makeEvent(eq, monthIndex, pVal, data.resultado || '', {
+      fechaEjecucion: data.fecha || '',
+      observacion: data.observacion || '',
+      ejecutor: data.ejecutor || '',
+      estadoFinal: data.estadoFinal || ''
+    });
   }
 
   // ---- Estadísticas para hoja Resumen ------------------------------------
@@ -244,9 +297,11 @@
 
   return {
     HEADER_ROW, FIRST_DATA_ROW, MONTHS, MONTHS_FULL, COL,
-    PROG, CAUSAL, CAUSAL_30, CAUSAL_REINTEGRO, RESULT_TXT, EJECUTORES, ESTADO_FINAL_OPCIONES,
+    PROG, CAUSAL, CAUSAL_30, CAUSAL_REINTEGRO, RESULT_TXT,
+    EJECUTORES, ESTADO_FINAL_OPCIONES, RESULTADO_OPCIONES,
     cellText, isEmpty, toNum, isDataRow, readEquipo,
     decodeResultado, causalCode, reglaReprog, estado,
-    parseWorkbook, buildStats
+    parseWorkbook, buildStats, makeEvent,
+    findEquipos, programmedMonths, buildRegistro
   };
 });

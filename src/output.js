@@ -200,6 +200,19 @@
       });
     }
 
+    // Validación (desplegable) en la columna "Resultado (R)"
+    const resLetter = ws.getColumn(COLS.findIndex(c => c.key === 'resultado') + 1).letter;
+    if (lastRow >= 2) {
+      ws.dataValidations.add(resLetter + '2:' + resLetter + lastRow, {
+        type: 'list', allowBlank: true,
+        formulae: ['"' + MP.RESULTADO_OPCIONES.join(',') + '"'],
+        showErrorMessage: true,
+        errorStyle: 'warning',
+        errorTitle: 'Resultado no válido',
+        error: 'Seleccione un código de resultado de la lista (Si, C1–C8, Si-RA, FS, No, NU, Baja).'
+      });
+    }
+
     // Validación (desplegable) en "Estado Final del Equipo": Operativo / No operativo
     const efLetter = ws.getColumn(COLS.findIndex(c => c.key === 'estadoFinal') + 1).letter;
     if (lastRow >= 2) {
