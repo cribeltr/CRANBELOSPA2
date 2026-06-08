@@ -484,13 +484,28 @@ function applyColors(sh, colors) {
   if (rules.length) sh.setConditionalFormatRules(rules);
 }
 
+function sheetVals(ss, name) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) return [];
+  var lr = sh.getLastRow(), lc = sh.getLastColumn();
+  return (lr &gt;= 1 &amp;&amp; lc &gt;= 1) ? sh.getRange(1, 1, lr, lc).getValues() : [];
+}
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Eventos');
   var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
-  return json({ ok: true, count: n, data: data });
+  // Además del snapshot, devolvemos las hojas visibles por si hay que reconstruir
+  return json({
+    ok: true, count: n, data: data,
+    tablas: {
+      Pendientes: sheetVals(ss, 'Pendientes'),
+      Correctivos: sheetVals(ss, 'Correctivos'),
+      Tareas: sheetVals(ss, 'Tareas'),
+      Bitacora: sheetVals(ss, 'Bitacora')
+    }
+  });
 }
 
 function json(obj) {
@@ -1799,6 +1814,43 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return any;
   }
 
+  // Reconstrucción desde las hojas visibles (cuando no hay snapshot _datos)
+  function asDate(v) {
+    if (v instanceof Date) return v;
+    if (typeof v === 'string') {
+      let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      m = v.match(/^(\d{2})-(\d{2})-(\d{4})/); if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+    }
+    return '';
+  }
+  function rowsToObjs(grid) {
+    if (!grid || grid.length < 2) return [];
+    const h = grid[0].map(x => String(x == null ? '' : x).trim());
+    return grid.slice(1).map(r => { const o = {}; h.forEach((k, i) => o[k] = r[i]); return o; });
+  }
+  function sid(v) { return v == null ? '' : String(typeof v === 'number' ? Math.round(v) : v).trim(); }
+  function reconstructFromTablas(tablas) {
+    const corr = rowsToObjs(tablas.Correctivos).map(o => ({
+      id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']), equipo: o['Equipo'] || '',
+      servicio: o['Servicio'] || '', unidad: o['Unidad'] || '', tipoEvento: o['Tipo de Evento'] || '', fecha: asDate(o['Fecha']),
+      folioSolicitud: sid(o['Folio Solicitud']), nEnvio: sid(o['N° Envío']), folioGuia: sid(o['Folio Guía Despacho']),
+      empresa: o['Empresa'] || '', ejecutor: o['Ejecutor'] || '', descripcion: o['Descripción'] || '', estadoFinal: o['Estado Final del Equipo'] || ''
+    })).filter(c => c.id || c.equipo);
+    const pend = rowsToObjs(tablas.Pendientes).map(o => ({
+      id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']), equipo: o['Equipo'] || '',
+      servicio: o['Servicio'] || '', unidad: o['Unidad'] || '', fechaCompromiso: asDate(o['Fecha de Compromiso']),
+      respAdministrativo: o['Responsable Administrativo'] || '', respEjecucion: o['Responsable de Ejecución'] || '',
+      observacion: o['Observación'] || '', estado: o['Estado'] || 'Abierto', tareas: [], actualizaciones: []
+    })).filter(p => p.id || p.equipo);
+    // Tareas y bitácora por ID (solo si hay un único pendiente por equipo, para no mezclar)
+    const cnt = {}; pend.forEach(p => cnt[p.id] = (cnt[p.id] || 0) + 1);
+    const tById = {}, bById = {};
+    rowsToObjs(tablas.Tareas).forEach(o => { const id = sid(o['ID']); (tById[id] = tById[id] || []).push({ texto: o['Tarea'] || '', hecha: /^s[ií]$/i.test(String(o['Hecha']).trim()) }); });
+    rowsToObjs(tablas.Bitacora).forEach(o => { const id = sid(o['ID']); (bById[id] = bById[id] || []).push({ fecha: asDate(o['Fecha']), texto: o['Actualización'] || '' }); });
+    pend.forEach(p => { if (cnt[p.id] === 1) { p.tareas = tById[p.id] || []; p.actualizaciones = bById[p.id] || []; } });
+    return { correctivos: corr, pendientes: pend };
+  }
+
   // POST al Apps Script. text/plain evita el preflight CORS; si no se puede leer
   // la respuesta, reintenta en modo no-cors (envío sin confirmación).
   async function postSheets(payloadObj) {
@@ -1868,6 +1920,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         revealRegistrarIfData();
         showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + state.registros.length +
           ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.');
+      } else if (j.tablas) {
+        // Sin snapshot _datos: reconstruir correctivos y pendientes desde las hojas visibles
+        const rec = reconstructFromTablas(j.tablas);
+        if (rec.correctivos.length || rec.pendientes.length) {
+          state.correctivos = rec.correctivos; state.pendientes = rec.pendientes;
+          saveCorrectivos(); savePendientes();
+          renderCorrectivos(); renderPendientes();
+          if (state.events.length) { renderPreview(); renderDiscrepancias(); }
+          if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+          revealRegistrarIfData();
+          showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + rec.correctivos.length +
+            ' correctivo(s) y ' + rec.pendientes.length + ' pendiente(s). (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
+        } else if (!silent) {
+          showInline($('#sheetsStatus'), 'info', 'La planilla no tiene datos de la app para traer.');
+        }
       } else if (!silent) {
         showInline($('#sheetsStatus'), 'info', 'La planilla aún no tiene datos guardados por la app.');
       }

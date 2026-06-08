@@ -126,13 +126,28 @@ function applyColors(sh, colors) {
   if (rules.length) sh.setConditionalFormatRules(rules);
 }
 
+function sheetVals(ss, name) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) return [];
+  var lr = sh.getLastRow(), lc = sh.getLastColumn();
+  return (lr >= 1 && lc >= 1) ? sh.getRange(1, 1, lr, lc).getValues() : [];
+}
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Eventos');
   var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
-  return json({ ok: true, count: n, data: data });
+  // Además del snapshot, devolvemos las hojas visibles por si hay que reconstruir
+  return json({
+    ok: true, count: n, data: data,
+    tablas: {
+      Pendientes: sheetVals(ss, 'Pendientes'),
+      Correctivos: sheetVals(ss, 'Correctivos'),
+      Tareas: sheetVals(ss, 'Tareas'),
+      Bitacora: sheetVals(ss, 'Bitacora')
+    }
+  });
 }
 
 function json(obj) {

@@ -122,7 +122,7 @@ Estado Final del Equipo y Ejecutor) y el **coloreado por Estado de toda la fila*
 (formato condicional por fórmula), más el color verde/rojo en la celda
 *Estado Final del Equipo*.
 
-**Leer / sincronizar:** la app guarda un *snapshot* de lo registrado en la planilla y, al **abrir el programa** (si hay URL configurada) lo **trae automáticamente**; también puedes pulsar **⬇️ Traer de Google Sheets**. Así tus mantenciones, correctivos y pendientes (con sus tareas y bitácora) se ven en cualquier equipo, no solo donde se registraron.
+**Leer / sincronizar:** la app guarda un *snapshot* de lo registrado en la planilla y, al **abrir el programa** (si hay URL configurada) lo **trae automáticamente**; también puedes pulsar **⬇️ Traer de Google Sheets**. Así tus mantenciones, correctivos y pendientes (con sus tareas y bitácora) se ven en cualquier equipo, no solo donde se registraron. Si la planilla aún no tiene el snapshot `_datos`, "Traer" **reconstruye** los correctivos y pendientes desde las hojas visibles.
 
 > Requisitos: tu cuenta de Google debe permitir crear y publicar Apps Script.
 > El acceso "Cualquier persona" se refiere a la URL del script; tu planilla
