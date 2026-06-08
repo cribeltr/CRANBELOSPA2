@@ -23,11 +23,14 @@
     el.className = 'inline-msg ' + (kind || '') + (msg ? ' show' : '');
     el.innerHTML = msg || '';
   }
+  let statusTimer = null;
   function setStatus(msg, kind) {
     const s = $('#status');
+    if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
     s.className = 'status ' + (kind || '');
     s.innerHTML = msg;
     s.style.display = msg ? 'block' : 'none';
+    if (msg && kind === 'ok') statusTimer = setTimeout(() => { s.style.display = 'none'; }, 6000);
   }
 
   // ---- Persistencia de registros + clave estable -------------------------
@@ -310,20 +313,37 @@
     return out;
   }
 
+  function estadoStyle(st) {
+    if (st.startsWith('Realizada')) return 'background:#C6EFCE;color:#136b30';
+    if (st === 'Reprogramada') return 'background:#FCE4A6;color:#8a6d00';
+    if (st === 'Puesta en Marcha') return 'background:#DDEBF7;color:#0a4a6e';
+    if (st === 'Fuera de Servicio' || st === 'No Realizada') return 'background:#FFC7CE;color:#b3261e';
+    if (st === 'No Ubicable') return 'background:#E4DFEC;color:#5b4b8a';
+    if (st === 'Baja') return 'background:#D9D9D9;color:#444';
+    if (st.startsWith('Pendiente')) return 'background:#FFF2CC;color:#7a5b00';
+    return 'background:#eef3f5;color:#333';
+  }
   function renderPreview() {
     const ev = consolidatedEvents();
-    const stats = MP.buildStats(ev);
-    const estados = [...stats.byEstado.entries()].sort((a, b) => b[1] - a[1]);
-    const chips = estados.map(([k, v]) =>
-      '<span class="chip">' + esc(k) + ' <b>' + v.toLocaleString('es-CL') + '</b></span>').join('');
+    let real = 0, reprog = 0, pend = 0;
+    for (const e of ev) {
+      if (e.estado.startsWith('Realizada')) real++;
+      else if (e.estado === 'Reprogramada') reprog++;
+      else if (e.estado.startsWith('Pendiente')) pend++;
+    }
+    const cards = [
+      ['Equipos', state.equipos.length], ['Eventos', ev.length], ['Realizadas', real],
+      ['Reprogramadas', reprog], ['Pendientes', pend], ['Correctivos', state.correctivos.length]
+    ].map(s => '<div class="stat"><div class="n">' + s[1].toLocaleString('es-CL') + '</div><div class="l">' + esc(s[0]) + '</div></div>').join('');
     const cols = ['ID', 'Equipo', 'Servicio', 'Mes', 'P', 'Tipo de Programación', 'R', 'Estado'];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     const rows = ev.slice(0, 20).map(e =>
-      '<tr>' + [e.id, e.equipo, e.servicio, e.mes, e.programa, e.tipoPrograma, e.resultado, e.estado]
-        .map(x => '<td>' + esc(x) + '</td>').join('') + '</tr>').join('');
+      '<tr><td>' + esc(e.id) + '</td><td>' + esc(e.equipo) + '</td><td>' + esc(e.servicio) + '</td><td>' + esc(e.mes) +
+      '</td><td>' + esc(e.programa) + '</td><td>' + esc(e.tipoPrograma) + '</td><td>' + esc(e.resultado) +
+      '</td><td><span class="pill" style="' + estadoStyle(e.estado) + '">' + esc(e.estado) + '</span></td></tr>').join('');
     $('#result').innerHTML =
-      '<div class="chips">' + chips + '</div>' +
-      '<div class="muted" style="margin:10px 0 6px">Vista previa (primeros 20 de ' +
+      '<div class="stats">' + cards + '</div>' +
+      '<div class="muted" style="margin:4px 0 6px">Vista previa (primeros 20 de ' +
         ev.length.toLocaleString('es-CL') + ' eventos):</div>' +
       '<div class="tablewrap"><table class="prev">' + head + rows + '</table></div>';
     $('#result').style.display = 'block';
@@ -394,7 +414,7 @@
     hideSuggest();
     showInline($('#searchMsg'), '', '');
     renderDetalle(eq);
-    $('#equipoDetalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    try { $('#equipoDetalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
   }
 
   function renderDetalle(eq) {
@@ -795,6 +815,8 @@
   ['#mEjecutor', '#mEstadoFinal'].forEach(s => $(s).addEventListener('change', updateSave));
   $('#mSave').addEventListener('click', saveRegistro);
   $('#mCancel').addEventListener('click', closeModal);
+  $('#mClose').addEventListener('click', closeModal);
+  $('#status').addEventListener('click', () => { $('#status').style.display = 'none'; });
   $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').classList.contains('show')) closeModal(); });
 
@@ -802,6 +824,7 @@
   $('#cTipo').addEventListener('change', renderCFields);
   $('#cSave').addEventListener('click', saveCorrectivo);
   $('#cCancel').addEventListener('click', closeCModal);
+  $('#cClose').addEventListener('click', closeCModal);
   $('#cmodal').addEventListener('click', e => { if (e.target === $('#cmodal')) closeCModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#cmodal').classList.contains('show')) closeCModal(); });
   $('#clearCorr').addEventListener('click', () => {
