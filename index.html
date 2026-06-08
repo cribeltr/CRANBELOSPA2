@@ -279,6 +279,18 @@
         <table class="prev" id="correctivosTable"></table>
       </div>
     </div>
+
+    <div id="pendientesWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Pendientes: <span class="badge" id="pendientesCount">0</span></span>
+        <button id="clearPend" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Pendientes</b> al descargar / enviar a Google Sheets.</p>
+      <input id="pendientesFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, responsable, observación…" />
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="pendientesTable"></table>
+      </div>
+    </div>
   </div>
 
   </section>
@@ -557,6 +569,38 @@ function json(obj) {
     <div class="modal-foot">
       <button id="cCancel" class="btn btn-ghost" type="button">Cancelar</button>
       <button id="cSave" class="btn btn-accent" type="button" disabled>Guardar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de pendiente -->
+<div id="pmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>📌 Registrar pendiente</h3><button id="pClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Complete los datos del pendiente.</div>
+    <div id="pmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="pFecha">Fecha de compromiso <span class="req">*</span></label>
+      <input id="pFecha" type="date" />
+    </div>
+    <div class="field">
+      <label for="pRespAdmin">Responsable administrativo <span class="req">*</span></label>
+      <select id="pRespAdmin"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pRespEjec">Responsable de ejecución <span class="req">*</span></label>
+      <select id="pRespEjec"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pObs">Observación <span class="req">*</span></label>
+      <textarea id="pObs" placeholder="Describa el pendiente"></textarea>
+    </div>
+    <div id="pmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="pCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="pSave" class="btn btn-accent" type="button" disabled>Guardar pendiente</button>
     </div>
   </div>
 </div>
@@ -917,6 +961,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     };
   }
 
+  // ---- Pendientes ---------------------------------------------------------
+  function buildPendiente(eq, data) {
+    data = data || {};
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
+      servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      fechaCompromiso: data.fechaCompromiso || '',
+      respAdministrativo: data.respAdministrativo || '',
+      respEjecucion: data.respEjecucion || '',
+      observacion: data.observacion || ''
+    };
+  }
+
   // ---- Estadísticas para hoja Resumen ------------------------------------
   function buildStats(events) {
     const byEstado = new Map();
@@ -942,7 +999,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     decodeResultado, causalCode, reglaReprog, estado,
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
-    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo
+    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente
   };
 });
 
@@ -1285,6 +1342,42 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       addDV('estadoFinal', ['"' + MP.ESTADO_FINAL_OPCIONES.join(',') + '"']);
     }
 
+    /* ---------- Hoja Pendientes ---------------------------------------- */
+    const PEND_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd'],
+      ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
+      ['respEjecucion', 'Responsable de Ejecución', 26, 's'],
+      ['observacion', 'Observación', 50, 's']
+    ];
+    const pendientes = meta.pendientes || [];
+    const ps = wb.addWorksheet('Pendientes', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ps.columns = PEND_COLS.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(ps.getRow(1));
+    pendientes.forEach((p, idx) => {
+      const row = ps.addRow(p);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = PEND_COLS[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+    });
+    ps.autoFilter = { from: 'A1', to: ps.getColumn(PEND_COLS.length).letter + '1' };
+    const pendLast = pendientes.length + 1;
+    if (pendLast >= 2) {
+      const ejeRange = ['Catalogos!$A$2:$A$' + (MP.EJECUTORES.length + 1)];
+      ['respAdministrativo', 'respEjecucion'].forEach(key => {
+        const L = ps.getColumn(PEND_COLS.findIndex(c => c[0] === key) + 1).letter;
+        ps.dataValidations.add(L + '2:' + L + pendLast, { type: 'list', allowBlank: true, formulae: ejeRange, showErrorMessage: true, errorStyle: 'warning' });
+      });
+    }
+
     // Orden de hojas: Eventos primero
     wb.worksheets.forEach((w, i) => { w.orderNo = i; });
     return wb;
@@ -1306,7 +1399,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -1389,6 +1482,31 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     } catch (e) { return []; }
   }
 
+  // ---- Persistencia de pendientes ----------------------------------------
+  const LS_PEND = 'mp_pendientes_2026';
+  function savePendientes() {
+    try {
+      const data = state.pendientes.map(p => {
+        const o = Object.assign({}, p);
+        o.fechaCompromiso = (p.fechaCompromiso instanceof Date) ? isoDate(p.fechaCompromiso) : (p.fechaCompromiso || '');
+        return o;
+      });
+      localStorage.setItem(LS_PEND, JSON.stringify(data));
+    } catch (e) { /* localStorage no disponible */ }
+  }
+  function loadPendientes() {
+    try {
+      const raw = localStorage.getItem(LS_PEND);
+      if (!raw) return [];
+      return JSON.parse(raw).map(o => {
+        const p = Object.assign({}, o);
+        if (typeof p.fechaCompromiso === 'string' && p.fechaCompromiso) { const x = p.fechaCompromiso.split('-'); p.fechaCompromiso = new Date(+x[0], +x[1] - 1, +x[2]); }
+        else p.fechaCompromiso = '';
+        return p;
+      });
+    } catch (e) { return []; }
+  }
+
   // ---- Integración con Google Sheets (Apps Script) -----------------------
   // Exporta las MISMAS hojas que el Excel (Eventos, Catalogos, Resumen),
   // reusando el mismo constructor; reemplaza el contenido en la planilla.
@@ -1467,14 +1585,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       ]
     };
   }
+  // Desplegables para la hoja Pendientes (responsables = ejecutores)
+  function pendientesExtras() {
+    return {
+      validations: [
+        { header: 'Responsable Administrativo', values: MP.EJECUTORES },
+        { header: 'Responsable de Ejecución', values: MP.EJECUTORES }
+      ]
+    };
+  }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
-    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos });
+    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: state.pendientes });
     return {
       sheets: wb.worksheets.map(ws => {
         const o = { name: ws.name, rows: sheetToRows(ws) };
         if (ws.name === 'Eventos') Object.assign(o, eventosExtras());
         if (ws.name === 'Correctivos') Object.assign(o, correctivosExtras());
+        if (ws.name === 'Pendientes') Object.assign(o, pendientesExtras());
         return o;
       })
     };
@@ -1571,6 +1699,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       renderPreview();
       renderRegistry();
       renderCorrectivos();
+      renderPendientes();
       renderDiscrepancias();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
@@ -1651,7 +1780,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Generando Excel…';
     try {
-      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos });
+      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: state.pendientes });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -1784,14 +1913,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       corrBody = '<div class="muted" style="margin:10px 0 4px">Eventos correctivos registrados</div>' +
         '<div class="tablewrap"><table class="prev">' + ch + cr + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody +
+    // Pendientes del equipo
+    const pend = state.pendientes.filter(p => p.id === eq.id);
+    let pendBody = '';
+    if (pend.length) {
+      const pc = ['Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación'];
+      const ph = '<tr>' + pc.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+      const pr = pend.map(p =>
+        '<tr><td>' + esc(fmtDate(p.fechaCompromiso)) + '</td><td>' + esc(p.respAdministrativo) + '</td><td>' +
+        esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) + '</td></tr>'
+      ).join('');
+      pendBody = '<div class="muted" style="margin:10px 0 4px">Pendientes registrados</div>' +
+        '<div class="tablewrap"><table class="prev">' + ph + pr + '</table></div>';
+    }
+    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody +
       '<div class="actions" style="margin-top:10px">' +
         '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
         '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Registrar evento correctivo</button>' +
+        '<button id="detPendiente" class="btn btn-ghost btn-sm" type="button">📌 Registrar pendiente</button>' +
       '</div>';
     $('#equipoDetalle').style.display = 'block';
     $('#detRegistrar').addEventListener('click', () => openModal(eq));
     $('#detCorrectivo').addEventListener('click', () => openCModal(eq));
+    $('#detPendiente').addEventListener('click', () => openPModal(eq));
   }
 
   // Botón Buscar / Enter: selecciona la primera coincidencia
@@ -1813,6 +1957,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     fillSelect($('#mEjecutor'), MP.EJECUTORES);
     fillSelect($('#mEstadoFinal'), MP.ESTADO_FINAL_OPCIONES);
     fillSelect($('#cTipo'), MP.CORRECTIVO_TIPOS);
+    fillSelect($('#pRespAdmin'), MP.EJECUTORES);
+    fillSelect($('#pRespEjec'), MP.EJECUTORES);
   }
 
   function openModal(eq) {
@@ -2081,6 +2227,69 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     autoExportSheets();
   }
 
+  // ---- Pendientes: tabla --------------------------------------------------
+  function renderPendientes() {
+    const wrap = $('#pendientesWrap');
+    if (!state.pendientes.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
+    const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación', ''];
+    const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+    let shown = 0;
+    const rows = state.pendientes.map((p, i) => {
+      const hay = [p.id, p.equipo, p.serie, p.inv, fmtDate(p.fechaCompromiso), p.respAdministrativo, p.respEjecucion, p.observacion].join(' ').toLowerCase();
+      if (term && hay.indexOf(term) === -1) return '';
+      shown++;
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.id) + '</td><td>' + esc(p.equipo) + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) +
+        '</td><td>' + esc(p.respAdministrativo) + '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) +
+        '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
+    }).join('');
+    $('#pendientesCount').textContent = term ? (shown + ' / ' + state.pendientes.length) : state.pendientes.length;
+    const t = $('#pendientesTable');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="8" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.querySelectorAll('button[data-del]').forEach(b =>
+      b.addEventListener('click', () => {
+        state.pendientes.splice(+b.dataset.del, 1);
+        savePendientes(); renderPendientes();
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+      }));
+  }
+
+  // ---- Modal de pendiente -------------------------------------------------
+  function updatePSave() {
+    $('#pSave').disabled = !(state.pEq && $('#pFecha').value && $('#pRespAdmin').value && $('#pRespEjec').value && $('#pObs').value.trim());
+  }
+  function openPModal(eq) {
+    state.pEq = eq;
+    $('#pmodalEq').innerHTML = '<b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · Serie: <b>' +
+      esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
+    $('#pFecha').value = ''; $('#pRespAdmin').value = ''; $('#pRespEjec').value = ''; $('#pObs').value = '';
+    showInline($('#pmodalMsg'), '', '');
+    $('#pSave').disabled = true;
+    $('#pmodal').classList.add('show');
+  }
+  function closePModal() { $('#pmodal').classList.remove('show'); state.pEq = null; }
+  function savePendiente() {
+    const eq = state.pEq;
+    if (!eq) return;
+    if (!$('#pFecha').value || !$('#pRespAdmin').value || !$('#pRespEjec').value || !$('#pObs').value.trim()) {
+      showInline($('#pmodalMsg'), 'err', 'Complete todos los campos.'); return;
+    }
+    const x = $('#pFecha').value.split('-');
+    state.pendientes.push(MP.buildPendiente(eq, {
+      fechaCompromiso: new Date(+x[0], +x[1] - 1, +x[2]),
+      respAdministrativo: $('#pRespAdmin').value,
+      respEjecucion: $('#pRespEjec').value,
+      observacion: $('#pObs').value.trim()
+    }));
+    savePendientes();
+    closePModal();
+    renderPendientes();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+    setStatus('✅ Pendiente registrado: <b>' + esc(eq.equipo) + '</b>.', 'ok');
+    autoExportSheets();
+  }
+
   // ---- Conexión de eventos de UI -----------------------------------------
   // Pestañas
   document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
@@ -2165,6 +2374,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
   });
 
+  // Pendientes
+  ['#pFecha', '#pRespAdmin', '#pRespEjec', '#pObs'].forEach(s => {
+    $(s).addEventListener('input', updatePSave); $(s).addEventListener('change', updatePSave);
+  });
+  $('#pSave').addEventListener('click', savePendiente);
+  $('#pCancel').addEventListener('click', closePModal);
+  $('#pClose').addEventListener('click', closePModal);
+  $('#pmodal').addEventListener('click', e => { if (e.target === $('#pmodal')) closePModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#pmodal').classList.contains('show')) closePModal(); });
+  $('#pendientesFilter').addEventListener('input', renderPendientes);
+  $('#clearPend').addEventListener('click', () => {
+    if (!state.pendientes.length) return;
+    if (!confirm('¿Eliminar los ' + state.pendientes.length + ' pendientes registrados?')) return;
+    state.pendientes = []; savePendientes(); renderPendientes();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+  });
+
   // Google Sheets
   $('#sheetsSave').addEventListener('click', () => {
     const u = $('#sheetsUrl').value.trim();
@@ -2196,10 +2422,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // Recuperar registros guardados en este navegador (persistencia entre sesiones)
   state.registros = loadRegistros();
   state.correctivos = loadCorrectivos();
+  state.pendientes = loadPendientes();
   renderCorrectivos();
-  if (state.registros.length || state.correctivos.length) {
-    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es) y <b>' + state.correctivos.length +
-      '</b> evento(s) correctivo(s) guardados en este navegador. Cargue el archivo para incluirlos al descargar.', 'info');
+  renderPendientes();
+  if (state.registros.length || state.correctivos.length || state.pendientes.length) {
+    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es), <b>' + state.correctivos.length +
+      '</b> correctivo(s) y <b>' + state.pendientes.length + '</b> pendiente(s) guardados en este navegador. ' +
+      'Cargue el archivo para incluirlos al descargar.', 'info');
   }
 })();
 

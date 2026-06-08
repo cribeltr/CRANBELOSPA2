@@ -9,7 +9,7 @@
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -92,6 +92,31 @@
     } catch (e) { return []; }
   }
 
+  // ---- Persistencia de pendientes ----------------------------------------
+  const LS_PEND = 'mp_pendientes_2026';
+  function savePendientes() {
+    try {
+      const data = state.pendientes.map(p => {
+        const o = Object.assign({}, p);
+        o.fechaCompromiso = (p.fechaCompromiso instanceof Date) ? isoDate(p.fechaCompromiso) : (p.fechaCompromiso || '');
+        return o;
+      });
+      localStorage.setItem(LS_PEND, JSON.stringify(data));
+    } catch (e) { /* localStorage no disponible */ }
+  }
+  function loadPendientes() {
+    try {
+      const raw = localStorage.getItem(LS_PEND);
+      if (!raw) return [];
+      return JSON.parse(raw).map(o => {
+        const p = Object.assign({}, o);
+        if (typeof p.fechaCompromiso === 'string' && p.fechaCompromiso) { const x = p.fechaCompromiso.split('-'); p.fechaCompromiso = new Date(+x[0], +x[1] - 1, +x[2]); }
+        else p.fechaCompromiso = '';
+        return p;
+      });
+    } catch (e) { return []; }
+  }
+
   // ---- Integración con Google Sheets (Apps Script) -----------------------
   // Exporta las MISMAS hojas que el Excel (Eventos, Catalogos, Resumen),
   // reusando el mismo constructor; reemplaza el contenido en la planilla.
@@ -170,14 +195,24 @@
       ]
     };
   }
+  // Desplegables para la hoja Pendientes (responsables = ejecutores)
+  function pendientesExtras() {
+    return {
+      validations: [
+        { header: 'Responsable Administrativo', values: MP.EJECUTORES },
+        { header: 'Responsable de Ejecución', values: MP.EJECUTORES }
+      ]
+    };
+  }
   // Construye el mismo libro del Excel y lo pasa a filas por hoja
   function buildSheetsPayload() {
-    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos });
+    const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, consolidatedEvents(), { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: state.pendientes });
     return {
       sheets: wb.worksheets.map(ws => {
         const o = { name: ws.name, rows: sheetToRows(ws) };
         if (ws.name === 'Eventos') Object.assign(o, eventosExtras());
         if (ws.name === 'Correctivos') Object.assign(o, correctivosExtras());
+        if (ws.name === 'Pendientes') Object.assign(o, pendientesExtras());
         return o;
       })
     };
@@ -274,6 +309,7 @@
       renderPreview();
       renderRegistry();
       renderCorrectivos();
+      renderPendientes();
       renderDiscrepancias();
       $('#download').disabled = false;
       $('#registrar').style.display = 'block';   // habilitar registro de mantenciones
@@ -354,7 +390,7 @@
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Generando Excel…';
     try {
-      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos });
+      const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: state.pendientes });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -487,14 +523,29 @@
       corrBody = '<div class="muted" style="margin:10px 0 4px">Eventos correctivos registrados</div>' +
         '<div class="tablewrap"><table class="prev">' + ch + cr + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody +
+    // Pendientes del equipo
+    const pend = state.pendientes.filter(p => p.id === eq.id);
+    let pendBody = '';
+    if (pend.length) {
+      const pc = ['Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación'];
+      const ph = '<tr>' + pc.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+      const pr = pend.map(p =>
+        '<tr><td>' + esc(fmtDate(p.fechaCompromiso)) + '</td><td>' + esc(p.respAdministrativo) + '</td><td>' +
+        esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) + '</td></tr>'
+      ).join('');
+      pendBody = '<div class="muted" style="margin:10px 0 4px">Pendientes registrados</div>' +
+        '<div class="tablewrap"><table class="prev">' + ph + pr + '</table></div>';
+    }
+    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody +
       '<div class="actions" style="margin-top:10px">' +
         '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
         '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Registrar evento correctivo</button>' +
+        '<button id="detPendiente" class="btn btn-ghost btn-sm" type="button">📌 Registrar pendiente</button>' +
       '</div>';
     $('#equipoDetalle').style.display = 'block';
     $('#detRegistrar').addEventListener('click', () => openModal(eq));
     $('#detCorrectivo').addEventListener('click', () => openCModal(eq));
+    $('#detPendiente').addEventListener('click', () => openPModal(eq));
   }
 
   // Botón Buscar / Enter: selecciona la primera coincidencia
@@ -516,6 +567,8 @@
     fillSelect($('#mEjecutor'), MP.EJECUTORES);
     fillSelect($('#mEstadoFinal'), MP.ESTADO_FINAL_OPCIONES);
     fillSelect($('#cTipo'), MP.CORRECTIVO_TIPOS);
+    fillSelect($('#pRespAdmin'), MP.EJECUTORES);
+    fillSelect($('#pRespEjec'), MP.EJECUTORES);
   }
 
   function openModal(eq) {
@@ -784,6 +837,69 @@
     autoExportSheets();
   }
 
+  // ---- Pendientes: tabla --------------------------------------------------
+  function renderPendientes() {
+    const wrap = $('#pendientesWrap');
+    if (!state.pendientes.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
+    const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación', ''];
+    const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+    let shown = 0;
+    const rows = state.pendientes.map((p, i) => {
+      const hay = [p.id, p.equipo, p.serie, p.inv, fmtDate(p.fechaCompromiso), p.respAdministrativo, p.respEjecucion, p.observacion].join(' ').toLowerCase();
+      if (term && hay.indexOf(term) === -1) return '';
+      shown++;
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.id) + '</td><td>' + esc(p.equipo) + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) +
+        '</td><td>' + esc(p.respAdministrativo) + '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) +
+        '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
+    }).join('');
+    $('#pendientesCount').textContent = term ? (shown + ' / ' + state.pendientes.length) : state.pendientes.length;
+    const t = $('#pendientesTable');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="8" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.querySelectorAll('button[data-del]').forEach(b =>
+      b.addEventListener('click', () => {
+        state.pendientes.splice(+b.dataset.del, 1);
+        savePendientes(); renderPendientes();
+        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+      }));
+  }
+
+  // ---- Modal de pendiente -------------------------------------------------
+  function updatePSave() {
+    $('#pSave').disabled = !(state.pEq && $('#pFecha').value && $('#pRespAdmin').value && $('#pRespEjec').value && $('#pObs').value.trim());
+  }
+  function openPModal(eq) {
+    state.pEq = eq;
+    $('#pmodalEq').innerHTML = '<b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · Serie: <b>' +
+      esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
+    $('#pFecha').value = ''; $('#pRespAdmin').value = ''; $('#pRespEjec').value = ''; $('#pObs').value = '';
+    showInline($('#pmodalMsg'), '', '');
+    $('#pSave').disabled = true;
+    $('#pmodal').classList.add('show');
+  }
+  function closePModal() { $('#pmodal').classList.remove('show'); state.pEq = null; }
+  function savePendiente() {
+    const eq = state.pEq;
+    if (!eq) return;
+    if (!$('#pFecha').value || !$('#pRespAdmin').value || !$('#pRespEjec').value || !$('#pObs').value.trim()) {
+      showInline($('#pmodalMsg'), 'err', 'Complete todos los campos.'); return;
+    }
+    const x = $('#pFecha').value.split('-');
+    state.pendientes.push(MP.buildPendiente(eq, {
+      fechaCompromiso: new Date(+x[0], +x[1] - 1, +x[2]),
+      respAdministrativo: $('#pRespAdmin').value,
+      respEjecucion: $('#pRespEjec').value,
+      observacion: $('#pObs').value.trim()
+    }));
+    savePendientes();
+    closePModal();
+    renderPendientes();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+    setStatus('✅ Pendiente registrado: <b>' + esc(eq.equipo) + '</b>.', 'ok');
+    autoExportSheets();
+  }
+
   // ---- Conexión de eventos de UI -----------------------------------------
   // Pestañas
   document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
@@ -868,6 +984,23 @@
     if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
   });
 
+  // Pendientes
+  ['#pFecha', '#pRespAdmin', '#pRespEjec', '#pObs'].forEach(s => {
+    $(s).addEventListener('input', updatePSave); $(s).addEventListener('change', updatePSave);
+  });
+  $('#pSave').addEventListener('click', savePendiente);
+  $('#pCancel').addEventListener('click', closePModal);
+  $('#pClose').addEventListener('click', closePModal);
+  $('#pmodal').addEventListener('click', e => { if (e.target === $('#pmodal')) closePModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#pmodal').classList.contains('show')) closePModal(); });
+  $('#pendientesFilter').addEventListener('input', renderPendientes);
+  $('#clearPend').addEventListener('click', () => {
+    if (!state.pendientes.length) return;
+    if (!confirm('¿Eliminar los ' + state.pendientes.length + ' pendientes registrados?')) return;
+    state.pendientes = []; savePendientes(); renderPendientes();
+    if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+  });
+
   // Google Sheets
   $('#sheetsSave').addEventListener('click', () => {
     const u = $('#sheetsUrl').value.trim();
@@ -899,9 +1032,12 @@
   // Recuperar registros guardados en este navegador (persistencia entre sesiones)
   state.registros = loadRegistros();
   state.correctivos = loadCorrectivos();
+  state.pendientes = loadPendientes();
   renderCorrectivos();
-  if (state.registros.length || state.correctivos.length) {
-    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es) y <b>' + state.correctivos.length +
-      '</b> evento(s) correctivo(s) guardados en este navegador. Cargue el archivo para incluirlos al descargar.', 'info');
+  renderPendientes();
+  if (state.registros.length || state.correctivos.length || state.pendientes.length) {
+    setStatus('ℹ️ Tienes <b>' + state.registros.length + '</b> mantención(es), <b>' + state.correctivos.length +
+      '</b> correctivo(s) y <b>' + state.pendientes.length + '</b> pendiente(s) guardados en este navegador. ' +
+      'Cargue el archivo para incluirlos al descargar.', 'info');
   }
 })();

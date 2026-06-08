@@ -335,6 +335,42 @@
       addDV('estadoFinal', ['"' + MP.ESTADO_FINAL_OPCIONES.join(',') + '"']);
     }
 
+    /* ---------- Hoja Pendientes ---------------------------------------- */
+    const PEND_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd'],
+      ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
+      ['respEjecucion', 'Responsable de Ejecución', 26, 's'],
+      ['observacion', 'Observación', 50, 's']
+    ];
+    const pendientes = meta.pendientes || [];
+    const ps = wb.addWorksheet('Pendientes', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ps.columns = PEND_COLS.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(ps.getRow(1));
+    pendientes.forEach((p, idx) => {
+      const row = ps.addRow(p);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = PEND_COLS[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+    });
+    ps.autoFilter = { from: 'A1', to: ps.getColumn(PEND_COLS.length).letter + '1' };
+    const pendLast = pendientes.length + 1;
+    if (pendLast >= 2) {
+      const ejeRange = ['Catalogos!$A$2:$A$' + (MP.EJECUTORES.length + 1)];
+      ['respAdministrativo', 'respEjecucion'].forEach(key => {
+        const L = ps.getColumn(PEND_COLS.findIndex(c => c[0] === key) + 1).letter;
+        ps.dataValidations.add(L + '2:' + L + pendLast, { type: 'list', allowBlank: true, formulae: ejeRange, showErrorMessage: true, errorStyle: 'warning' });
+      });
+    }
+
     // Orden de hojas: Eventos primero
     wb.worksheets.forEach((w, i) => { w.orderNo = i; });
     return wb;

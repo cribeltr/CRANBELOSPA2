@@ -69,6 +69,10 @@ En la ficha del equipo se muestra el **Estado final del equipo** según el **úl
 > **filtro de texto** para buscar por equipo, serie, inventario, mes, ejecutor,
 > tipo de evento, empresa o estado.
 
+### Pendientes
+
+En la ficha del equipo, el botón **📌 Registrar pendiente** abre un formulario con: **Fecha de compromiso**, **Responsable administrativo** (lista de ejecutores), **Responsable de ejecución** (lista de ejecutores) y **Observación**. Los pendientes se guardan en el navegador y se exportan en una hoja **`Pendientes`** (Excel y Google Sheets).
+
 ### Persistencia y comparación con el archivo
 
 - Los registros se **guardan en el navegador** (localStorage): se conservan al

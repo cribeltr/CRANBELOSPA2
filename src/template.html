@@ -279,6 +279,18 @@
         <table class="prev" id="correctivosTable"></table>
       </div>
     </div>
+
+    <div id="pendientesWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Pendientes: <span class="badge" id="pendientesCount">0</span></span>
+        <button id="clearPend" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Pendientes</b> al descargar / enviar a Google Sheets.</p>
+      <input id="pendientesFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, responsable, observación…" />
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="pendientesTable"></table>
+      </div>
+    </div>
   </div>
 
   </section>
@@ -424,6 +436,38 @@
     <div class="modal-foot">
       <button id="cCancel" class="btn btn-ghost" type="button">Cancelar</button>
       <button id="cSave" class="btn btn-accent" type="button" disabled>Guardar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de pendiente -->
+<div id="pmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>📌 Registrar pendiente</h3><button id="pClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Complete los datos del pendiente.</div>
+    <div id="pmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="pFecha">Fecha de compromiso <span class="req">*</span></label>
+      <input id="pFecha" type="date" />
+    </div>
+    <div class="field">
+      <label for="pRespAdmin">Responsable administrativo <span class="req">*</span></label>
+      <select id="pRespAdmin"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pRespEjec">Responsable de ejecución <span class="req">*</span></label>
+      <select id="pRespEjec"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pObs">Observación <span class="req">*</span></label>
+      <textarea id="pObs" placeholder="Describa el pendiente"></textarea>
+    </div>
+    <div id="pmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="pCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="pSave" class="btn btn-accent" type="button" disabled>Guardar pendiente</button>
     </div>
   </div>
 </div>

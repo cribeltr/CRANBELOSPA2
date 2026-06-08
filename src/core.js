@@ -304,6 +304,19 @@
     };
   }
 
+  // ---- Pendientes ---------------------------------------------------------
+  function buildPendiente(eq, data) {
+    data = data || {};
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
+      servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      fechaCompromiso: data.fechaCompromiso || '',
+      respAdministrativo: data.respAdministrativo || '',
+      respEjecucion: data.respEjecucion || '',
+      observacion: data.observacion || ''
+    };
+  }
+
   // ---- Estadísticas para hoja Resumen ------------------------------------
   function buildStats(events) {
     const byEstado = new Map();
@@ -329,6 +342,6 @@
     decodeResultado, causalCode, reglaReprog, estado,
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
-    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo
+    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente
   };
 });
