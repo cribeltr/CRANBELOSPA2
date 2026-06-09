@@ -1,4 +1,5 @@
 /****************************************************************************
+ *  ===>  VERSIÓN: v10-equipos-paginado  <===  (debe coincidir con "Probar conexión")
  *  Puente Google Sheets — Programación MP 2026
  *  --------------------------------------------------------------------------
  *  Crea/actualiza en tu planilla las MISMAS hojas que el Excel:
