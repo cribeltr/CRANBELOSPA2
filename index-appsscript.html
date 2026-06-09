@@ -292,6 +292,51 @@
   .estpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
   .est-op{background:#C6EFCE;color:#136b30}.est-no{background:#FFC7CE;color:#b3261e}
   .est-st{background:#FFE0B2;color:#8a5a00}.est-baja{background:#D9D9D9;color:#444}.est-na{background:#eef3f5;color:#5e7177}
+  /* ===== Vista Equipo: pestañas de estado + tabla sin scroll horizontal ===== */
+  .estabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;background:var(--line-soft);border:1px solid var(--line);border-radius:12px;padding:5px}
+  .estab{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;
+    padding:7px 12px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .14s,color .14s}
+  .estab:hover{background:#fff;color:var(--teal-d)}
+  .estab.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .estab .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .estab .ec{font-style:normal;font-size:11px;font-weight:800;background:var(--line);color:var(--teal-d);border-radius:20px;padding:0 7px;min-width:18px;text-align:center}
+  .estab.active .ec{background:var(--teal);color:#fff}
+  /* tabla sin scroll horizontal: ancho 100%, el texto se ajusta */
+  .eqwrap{margin-top:10px;border:1px solid var(--line);border-radius:var(--radius-sm,10px);overflow-x:hidden;overflow-y:auto;max-height:600px}
+  table.eqtable{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12.5px}
+  table.eqtable th{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,var(--teal-l),var(--teal));color:#fff;
+    text-align:left;padding:8px 9px;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;vertical-align:top}
+  table.eqtable td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+  table.eqtable tr:nth-child(even) td{background:#f6f9fa}
+  table.eqtable tbody tr{cursor:pointer}
+  table.eqtable tbody tr:hover td{background:#eaf5f7}
+  .th-in{display:flex;align-items:center;gap:4px;justify-content:space-between}
+  .th-f{appearance:none;border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:6px;cursor:pointer;
+    font-size:11px;line-height:1;padding:3px 5px;flex:0 0 auto}
+  .th-f:hover{background:rgba(255,255,255,.34)}
+  .th-f.on{background:var(--accent);color:#fff}
+  /* anchos relativos por columna para repartir el espacio */
+  table.eqtable col.c-id{width:4%}table.eqtable col.c-inv{width:9%}table.eqtable col.c-carp{width:6%}
+  table.eqtable col.c-eq{width:15%}table.eqtable col.c-serie{width:10%}table.eqtable col.c-serv{width:12%}
+  table.eqtable col.c-uni{width:11%}table.eqtable col.c-ubi{width:9%}table.eqtable col.c-est{width:9%}
+  table.eqtable col.c-pend{width:7%}table.eqtable col.c-act{width:8%}
+  /* popover de filtro por columna (estilo Excel) */
+  .colfilter{position:fixed;z-index:120;width:248px;max-width:92vw;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow-lg);padding:10px}
+  .cf-search{width:100%;margin-bottom:8px}
+  .cf-all{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-d);padding:4px 2px;cursor:pointer}
+  .cf-all input{width:auto}
+  .cf-list{max-height:240px;overflow:auto;border:1px solid var(--line-soft);border-radius:8px;padding:4px 2px;margin:6px 0}
+  .cf-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 6px;border-radius:6px;cursor:pointer}
+  .cf-item:hover{background:var(--line-soft)}
+  .cf-item input{width:auto}
+  .cf-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cf-foot{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+  @media(max-width:760px){
+    table.eqtable col.c-carp,table.eqtable col.c-uni,table.eqtable col.c-ubi{width:0}
+    table.eqtable .h-carp,table.eqtable .h-uni,table.eqtable .h-ubi,
+    table.eqtable td.d-carp,table.eqtable td.d-uni,table.eqtable td.d-ubi{display:none}
+  }
   /* Resumen: celdas-botón clicables */
   .rcell{appearance:none;border:0;background:transparent;color:var(--teal-d);font-weight:800;font-size:13px;
     cursor:pointer;padding:3px 9px;border-radius:7px;min-width:34px}
@@ -371,19 +416,13 @@
     <nav class="sidenav" role="tablist" aria-label="Secciones">
       <div class="navgrp">General</div>
       <button class="tab active" type="button" data-tab="cargar"><span class="ico">📂</span><span class="lbl">Cargar y generar</span></button>
+      <button class="tab" type="button" data-tab="inventario"><span class="ico">🩺</span><span class="lbl">Equipo</span><em class="navcount" id="navEqCount"></em></button>
       <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
       <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
       <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
       <button class="tab" type="button" data-tab="utilidades"><span class="ico">🧰</span><span class="lbl">Utilidades PDF</span></button>
       <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
       <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
-      <div class="navgrp">Inventario por estado</div>
-      <button class="invcat active" type="button" data-cat="todos"><span class="ico">📋</span><span class="lbl">Todos</span><em class="navcount" id="catTodos"></em></button>
-      <button class="invcat" type="button" data-cat="Operativo"><span class="ico">🟢</span><span class="lbl">Operativos</span><em class="navcount" id="catOperativo"></em></button>
-      <button class="invcat" type="button" data-cat="No operativo"><span class="ico">🔴</span><span class="lbl">No operativos</span><em class="navcount" id="catNoOp"></em></button>
-      <button class="invcat" type="button" data-cat="En servicio técnico"><span class="ico">🛠️</span><span class="lbl">En servicio técnico</span><em class="navcount" id="catST"></em></button>
-      <button class="invcat" type="button" data-cat="Baja"><span class="ico">⚫</span><span class="lbl">Baja</span><em class="navcount" id="catBaja"></em></button>
-      <button class="invcat" type="button" data-cat="pendientes"><span class="ico">📎</span><span class="lbl">Con pendientes</span><em class="navcount" id="catPend"></em></button>
     </nav>
   </aside>
   <div class="content">
@@ -515,15 +554,18 @@
   </section>
 
   <section class="tabpanel" id="tab-inventario">
-    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el inventario.</div>
+    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> (o espere a que se traiga de Google Sheets) para ver los equipos.</div>
     <div class="card" id="inventarioCard" style="display:none">
-      <div class="actions" style="justify-content:space-between;align-items:flex-start">
-        <span class="section-title" id="inventarioTitle" style="font-size:15px">📋 Inventario</span>
-        <span class="badge" id="inventarioCount">0</span>
+      <div class="actions" style="justify-content:space-between;align-items:center">
+        <span class="section-title" id="inventarioTitle" style="font-size:15px">🩺 Equipo</span>
+        <span class="muted" style="font-size:12.5px">Mostrando <b id="inventarioCount">0</b> equipo(s) · clic en una fila para ver el detalle</span>
       </div>
-      <p class="muted" style="margin:6px 0 0">Todas las columnas del equipo + estado actual (según el último evento), fecha de última actualización y pendientes asociados. <b>Clic en una fila</b> para ver el detalle.</p>
-      <input id="inventarioFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, servicio, marca, modelo…" />
-      <div class="tablewrap" style="margin-top:8px;max-height:560px"><table class="prev" id="inventarioTable"></table></div>
+      <div class="estabs" id="estabs"></div>
+      <div class="actions" style="margin-top:10px">
+        <input id="inventarioFilter" type="text" class="filter" style="margin-top:0;flex:1;min-width:220px" autocomplete="off" placeholder="🔎 Buscar en todas las columnas…" />
+        <button id="invClearFilters" class="btn btn-ghost btn-sm" type="button">✕ Quitar filtros</button>
+      </div>
+      <div class="eqwrap" id="eqwrap"><table class="eqtable" id="inventarioTable"></table></div>
     </div>
   </section>
 
@@ -645,7 +687,48 @@ function appPush(body) {
   finally { lock.releaseLock(); }
 }
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
-function appPullEquipos() { return { ok: true, equipos: sheetVals(SpreadsheetApp.getActiveSpreadsheet(), '_equipos') }; }
+function appPullEquipos() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var es = ss.getSheetByName('_equipos');
+  if (es &amp;&amp; es.getLastRow() &gt; 1) return { ok: true, equipos: sheetVals(ss, '_equipos') };
+  // Si no hay hoja _equipos (planilla antigua), reconstruir el inventario desde "Eventos".
+  return { ok: true, equipos: equiposFromEventos(ss) };
+}
+// Reconstruye el inventario (filas compactas) a partir de la hoja "Eventos".
+function equiposFromEventos(ss) {
+  var vals = sheetVals(ss, 'Eventos');
+  if (!vals || vals.length &lt; 2) return [];
+  var h = vals[0].map(String); var idx = {}; h.forEach(function (k, i) { idx[k] = i; });
+  var MAP = { 'ID': 'id', 'Familia': 'familia', 'N° Carpeta': 'carpeta', 'N° Inventario': 'inv', 'Equipo': 'equipo', 'Servicio': 'servicio', 'Unidad': 'unidad', 'Ubicación': 'ubicacion', 'Procedencia': 'procedencia', 'Marca': 'marca', 'Modelo': 'modelo', 'N° Serie': 'serie', 'Año Instalación': 'anio', 'Vida Útil Residual': 'vur', 'Clasificación': 'clasif', 'ENU / Baja': 'enubaja', 'Observación': 'observacion', 'Frecuencia MP': 'frecuencia' };
+  var KEYS = ['id', 'familia', 'carpeta', 'inv', 'equipo', 'servicio', 'unidad', 'ubicacion', 'procedencia', 'marca', 'modelo', 'serie', 'anio', 'vur', 'clasif', 'enubaja', 'observacion', 'frecuencia'];
+  var get = function (row, hdr) { var i = idx[hdr]; return (i == null || row[i] == null) ? '' : String(row[i]); };
+  var mesI = idx['N° Mes'], progI = idx['Programa (P)'], resI = idx['Resultado (R)'];
+  var byId = {}, order = [];
+  for (var r = 1; r &lt; vals.length; r++) {
+    var row = vals[r]; var id = get(row, 'ID'); var eqn = get(row, 'Equipo');
+    if (!id &amp;&amp; !eqn) continue;
+    var key = id || eqn;
+    if (!byId[key]) {
+      var o = { prog: ['', '', '', '', '', '', '', '', '', '', '', ''], res: ['', '', '', '', '', '', '', '', '', '', '', ''] };
+      for (var hdr in MAP) o[MAP[hdr]] = get(row, hdr);
+      byId[key] = o; order.push(key);
+    }
+    var e = byId[key];
+    var m = parseInt(mesI != null ? row[mesI] : '', 10);
+    if (m &gt;= 1 &amp;&amp; m &lt;= 12) {
+      var p = progI != null &amp;&amp; row[progI] != null ? String(row[progI]) : '';
+      var rr = resI != null &amp;&amp; row[resI] != null ? String(row[resI]) : '';
+      if (p) e.prog[m - 1] = p;
+      if (rr) e.res[m - 1] = rr;
+    }
+  }
+  var out = [KEYS.concat(['prog', 'res'])];
+  order.forEach(function (k) {
+    var o = byId[k]; var arr = KEYS.map(function (kk) { return o[kk] || ''; });
+    arr.push(o.prog.join('|')); arr.push(o.res.join('|')); out.push(arr);
+  });
+  return out;
+}
 // Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
 function appUpload(body) {
   var lock = LockService.getScriptLock();
@@ -933,6 +1016,17 @@ function json(obj) {
   </div><!-- /.layout -->
 
   <div id="status" class="status"></div>
+</div>
+
+<!-- Filtro de columna estilo Excel (Equipo) -->
+<div id="colFilterPop" class="colfilter" style="display:none">
+  <input id="cfSearch" type="text" class="cf-search" autocomplete="off" placeholder="Buscar valor…" />
+  <label class="cf-all"><input type="checkbox" id="cfAll" /> <span>(Seleccionar todo)</span></label>
+  <div id="cfList" class="cf-list"></div>
+  <div class="cf-foot">
+    <button id="cfClear" class="btn btn-ghost btn-sm" type="button">Quitar filtro</button>
+    <button id="cfApply" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Aplicar</button>
+  </div>
 </div>
 
 <!-- Vista de registro de mantención -->
@@ -1476,7 +1570,7 @@ function json(obj) {
     header: 'FF15616D', headerText: 'FFFFFFFF',
     realizada: 'FFC6EFCE', reprogramada: 'FFFCE4A6', pendiente: 'FFFFF2CC',
     pm: 'FFDDEBF7', fueraServicio: 'FFFFC7CE', noReal: 'FFFFC7CE',
-    nu: 'FFE4DFEC', baja: 'FFD9D9D9', band: 'FFF2F7F8',
+    nu: 'FFE4DFEC', baja: 'FFD9D9D9', band: 'FFF2F7F8', correctivo: 'FFE6E0F8',
     catTitle: 'FF2A6F77'
   };
   function estadoFill(st) {
@@ -1487,6 +1581,7 @@ function json(obj) {
     if (st === 'No Realizada') return COLOR.noReal;
     if (st === 'No Ubicable') return COLOR.nu;
     if (st === 'Baja') return COLOR.baja;
+    if (st === 'Correctivo') return COLOR.correctivo;
     if (st.startsWith('Pendiente')) return COLOR.pendiente;
     return null;
   }
@@ -1502,6 +1597,7 @@ function json(obj) {
 
   // Definición de columnas de la hoja Eventos
   const COLS = [
+    { key: 'tipoRegistro',     header: 'Tipo de registro',        w: 14, t: 's' },
     { key: 'familia',          header: 'Familia',                 w: 16, t: 's' },
     { key: 'id',               header: 'ID',                      w: 7,  t: 'n' },
     { key: 'carpeta',          header: 'N° Carpeta',              w: 12, t: 's' },
@@ -1637,7 +1733,21 @@ function json(obj) {
     ws.columns = COLS.map(c => ({ header: c.header, key: c.key, width: c.w }));
     styleHeaderRow(ws.getRow(1));
 
-    events.forEach((e, idx) => {
+    // Filas: mantención preventiva + (a pedido) eventos correctivos en la misma hoja
+    const mapCorr = c => ({
+      tipoRegistro: 'Correctivo', familia: '', id: c.id, carpeta: '', inv: c.inv, equipo: c.equipo,
+      servicio: c.servicio, unidad: c.unidad || '', ubicacion: '', procedencia: '', marca: c.marca || '', modelo: c.modelo || '', serie: c.serie,
+      anio: '', vur: '', clasif: '', enubaja: '', frecuencia: '', observacion: c.descripcion || '',
+      mes: (c.fecha instanceof Date) ? MP.MONTHS_FULL[c.fecha.getMonth()] : '', nMes: (c.fecha instanceof Date) ? c.fecha.getMonth() + 1 : '',
+      programa: '', tipoPrograma: 'Correctivo: ' + (c.tipoEvento || ''), resultado: '',
+      detalleResultado: [c.folioSolicitud && ('Folio ' + c.folioSolicitud), c.nEnvio && ('N° envío ' + c.nEnvio), c.folioGuia && ('Guía ' + c.folioGuia), c.empresa].filter(Boolean).join(' · '),
+      fechaEjecucion: c.fecha || '', causal: '', causalDesc: '', regla: '',
+      estado: 'Correctivo', estadoFinal: c.estadoFinal || '', ejecutor: c.ejecutor || '', archivoUrl: c.archivoUrl || '', archivoNombre: c.archivoNombre || ''
+    });
+    const allEventRows = events.map(e => Object.assign({ tipoRegistro: 'Preventivo' }, e))
+      .concat((meta.correctivos || []).map(mapCorr));
+
+    allEventRows.forEach((e, idx) => {
       const row = ws.addRow(e);
       const band = idx % 2 === 1;
       row.eachCell({ includeEmpty: true }, (cell, col) => {
@@ -1684,7 +1794,7 @@ function json(obj) {
     // Validación de datos (desplegable) en la columna Ejecutor — un solo rango
     const ejeCol = ws.getColumn(COLS.findIndex(c => c.key === 'ejecutor') + 1);
     const ejeLetter = ejeCol.letter;
-    const lastRow = events.length + 1;
+    const lastRow = allEventRows.length + 1;
     if (lastRow >= 2) {
       ws.dataValidations.add(ejeLetter + '2:' + ejeLetter + lastRow, {
         type: 'list', allowBlank: true,
@@ -1945,7 +2055,7 @@ function json(obj) {
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], archivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null, invFilter: 'todos', resSel: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], archivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null, invFilter: 'todos', resSel: null, invColFilters: {}, cfCol: null };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -2127,6 +2237,7 @@ function json(obj) {
           { value: 'No Realizada', color: '#FFC7CE' },
           { value: 'No Ubicable', color: '#E4DFEC' },
           { value: 'Baja', color: '#D9D9D9' },
+          { value: 'Correctivo', color: '#E6E0F8' },
           { value: 'Pendiente', color: '#FFF2CC' },
           { value: 'Pendiente (Reprogramada)', color: '#FFF2CC' },
           { value: 'Pendiente (Año Anterior)', color: '#FFF2CC' }
@@ -2738,18 +2849,9 @@ function json(obj) {
   function setActivePanel(panelId) { document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === panelId)); }
   function goTab(id) {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
-    document.querySelectorAll('.invcat').forEach(b => b.classList.remove('active'));
     setActivePanel('tab-' + id);
     if (id === 'resumen') renderResumen();
     if (id === 'inventario') renderInventario();
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
-  }
-  function goInventario(cat) {
-    state.invFilter = cat || 'todos';
-    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.invcat').forEach(b => b.classList.toggle('active', b.dataset.cat === state.invFilter));
-    setActivePanel('tab-inventario');
-    renderInventario();
     try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
   }
   function verDetalle(eq) { if (!eq) return; goTab('registrar'); selectEquipo(eq); }
@@ -2759,18 +2861,7 @@ function json(obj) {
   function renderSidebarCounts() {
     const nP = state.pendientes.filter(p => p.estado !== 'Resuelto').length;
     setCount('#navPendCount', nP || '');
-    if (!state.equipos.length) { ['#catTodos', '#catOperativo', '#catNoOp', '#catST', '#catBaja', '#catPend'].forEach(s => setCount(s, '')); return; }
-    const map = eventsByEquipo();
-    const pendIds = new Set(state.pendientes.filter(p => p.estado !== 'Resuelto').map(p => p.id));
-    let op = 0, no = 0, st = 0, baja = 0, cp = 0;
-    state.equipos.forEach(eq => {
-      const cat = categoriaFrom(eq, map.get(eq.id));
-      if (cat === 'Operativo') op++; else if (cat === 'No operativo') no++;
-      else if (cat === 'En servicio técnico') st++; else if (cat === 'Baja') baja++;
-      if (pendIds.has(eq.id)) cp++;
-    });
-    setCount('#catTodos', state.equipos.length); setCount('#catOperativo', op); setCount('#catNoOp', no);
-    setCount('#catST', st); setCount('#catBaja', baja); setCount('#catPend', cp);
+    setCount('#navEqCount', state.equipos.length || '');
   }
   // Re-render de las vistas derivadas tras cualquier cambio de datos
   function touch() {
@@ -2779,46 +2870,138 @@ function json(obj) {
     if (panelActive('resumen')) renderResumen();
   }
 
-  // ---- Vista Inventario ---------------------------------------------------
-  const INV_CAT_LABEL = { todos: '📋 Inventario — Todos', 'Operativo': '🟢 Operativos', 'No operativo': '🔴 No operativos', 'En servicio técnico': '🛠️ En servicio técnico', 'Baja': '⚫ Baja', pendientes: '📎 Con pendientes' };
+  // ===== Vista Equipo (inventario) ========================================
+  function setInvFilter(cat) { state.invFilter = cat || 'todos'; renderInventario(); }
+  // Columnas de la vista Equipo: clave, encabezado, clase de ancho/responsive, y extractor de valor
+  function equipoCatMap() {
+    const map = eventsByEquipo(), out = {};
+    state.equipos.forEach(eq => out[eq.id] = categoriaFrom(eq, map.get(eq.id)));
+    return out;
+  }
+  const EQVIEW_COLS = [
+    { k: 'id', h: 'ID', cls: 'id', val: eq => eq.id },
+    { k: 'inv', h: 'N° Inventario', cls: 'inv', val: eq => eq.inv },
+    { k: 'carpeta', h: 'N° Carpeta', cls: 'carp', val: eq => eq.carpeta },
+    { k: 'equipo', h: 'Equipo', cls: 'eq', val: eq => eq.equipo },
+    { k: 'serie', h: 'Serie', cls: 'serie', val: eq => eq.serie },
+    { k: 'servicio', h: 'Servicio', cls: 'serv', val: eq => eq.servicio },
+    { k: 'unidad', h: 'Unidad', cls: 'uni', val: eq => eq.unidad },
+    { k: 'ubicacion', h: 'Ubicación', cls: 'ubi', val: eq => eq.ubicacion },
+    { k: 'estado', h: 'Estado del equipo', cls: 'est', val: (eq, ctx) => ctx.cats[eq.id] || 'Sin estado' },
+    { k: 'pend', h: 'Pendientes', cls: 'pend', val: eq => pendAbiertosDe(eq.id) > 0 ? 'Sí' : 'No' },
+    { k: 'act', h: 'Última actualización', cls: 'act', val: eq => { const d = ultimaActualizacion(eq.id); return d ? fmtDate(d) : '—'; } }
+  ];
+  function eqColByKey(k) { return EQVIEW_COLS.find(c => c.k === k); }
+  // ¿el equipo pasa la pestaña de estado seleccionada?
+  function passEstado(eq, cat, ctx) {
+    if (cat === 'todos') return true;
+    if (cat === 'pendientes') return pendAbiertosDe(eq.id) > 0;
+    return (ctx.cats[eq.id] || 'Sin estado') === cat;
+  }
+  // ¿el equipo pasa los filtros por columna (estilo Excel)?
+  function passColFilters(eq, ctx) {
+    for (const k in state.invColFilters) {
+      const set = state.invColFilters[k]; if (!set || !set.length) continue;
+      const col = eqColByKey(k); if (!col) continue;
+      const val = String(col.val(eq, ctx) == null ? '' : col.val(eq, ctx)).trim() || '—';
+      if (set.indexOf(val) === -1) return false;
+    }
+    return true;
+  }
+  const ESTADO_TABS = [
+    { cat: 'todos', label: 'Todo', dot: '' },
+    { cat: 'Operativo', label: 'Operativos', dot: '#1b9c4b' },
+    { cat: 'No operativo', label: 'No operativos', dot: '#e23b2e' },
+    { cat: 'En servicio técnico', label: 'Servicio técnico', dot: '#f0a020' },
+    { cat: 'Baja', label: 'Baja', dot: '#7a7a7a' },
+    { cat: 'pendientes', label: 'Con pendientes', dot: '#0b61a4' }
+  ];
   function renderInventario() {
     const hint = $('#inventarioHint'), card = $('#inventarioCard');
     if (!state.equipos.length) { if (hint) hint.style.display = 'block'; if (card) card.style.display = 'none'; return; }
     if (hint) hint.style.display = 'none'; if (card) card.style.display = 'block';
+    const ctx = { cats: equipoCatMap() };
     const cat = state.invFilter || 'todos';
-    $('#inventarioTitle').textContent = INV_CAT_LABEL[cat] || ('📋 Inventario — ' + cat);
-    const map = eventsByEquipo();
-    const pendIds = new Set(state.pendientes.filter(p => p.estado !== 'Resuelto').map(p => p.id));
+    // Conteos por estado para las pestañas
+    const counts = { todos: state.equipos.length, 'Operativo': 0, 'No operativo': 0, 'En servicio técnico': 0, 'Baja': 0, pendientes: 0 };
+    state.equipos.forEach(eq => { const c = ctx.cats[eq.id]; if (counts[c] != null) counts[c]++; if (pendAbiertosDe(eq.id) > 0) counts.pendientes++; });
+    $('#estabs').innerHTML = ESTADO_TABS.map(t =>
+      '<button class="estab' + (t.cat === cat ? ' active' : '') + '" type="button" data-cat="' + esc(t.cat) + '">' +
+      (t.dot ? '<span class="dot" style="background:' + t.dot + '"></span>' : '') + esc(t.label) +
+      ' <em class="ec">' + (counts[t.cat] || 0) + '</em></button>').join('');
+    $('#estabs').querySelectorAll('.estab').forEach(b => b.addEventListener('click', () => setInvFilter(b.dataset.cat)));
+
     const term = ($('#inventarioFilter') ? $('#inventarioFilter').value : '').trim().toLowerCase();
-    const cols = ['Familia', 'ID', 'N° Carpeta', 'N° Inventario', 'Equipo', 'Servicio', 'Unidad', 'Ubicación', 'Procedencia', 'Marca', 'Modelo', 'N° Serie', 'Año', 'VUR', 'Clasificación', 'ENU/Baja', 'Frecuencia', 'Observación', 'Estado actual', 'Última actualización', 'Pendientes'];
-    const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+    // <colgroup> para repartir anchos y permitir ocultar columnas en móvil
+    const colgroup = '<colgroup>' + EQVIEW_COLS.map(c => '<col class="c-' + c.cls + '">').join('') + '</colgroup>';
+    const head = '<tr>' + EQVIEW_COLS.map(c => {
+      const active = state.invColFilters[c.k] && state.invColFilters[c.k].length;
+      return '<th class="h-' + c.cls + '"><span class="th-in"><span>' + esc(c.h) + '</span>' +
+        '<button class="th-f' + (active ? ' on' : '') + '" type="button" data-col="' + c.k + '" title="Filtrar">▾</button></span></th>';
+    }).join('') + '</tr>';
     let shown = 0;
     const rows = state.equipos.map((eq, i) => {
-      const c = categoriaFrom(eq, map.get(eq.id));
-      if (cat === 'pendientes') { if (!pendIds.has(eq.id)) return ''; }
-      else if (cat !== 'todos') { if (c !== cat) return ''; }
+      if (!passEstado(eq, cat, ctx) || !passColFilters(eq, ctx)) return '';
       if (term) {
-        const hay = [eq.familia, eq.id, eq.carpeta, eq.inv, eq.equipo, eq.servicio, eq.unidad, eq.ubicacion, eq.marca, eq.modelo, eq.serie, c].join(' ').toLowerCase();
+        const hay = EQVIEW_COLS.map(c => c.val(eq, ctx)).join(' ').toLowerCase();
         if (hay.indexOf(term) === -1) return '';
       }
       shown++;
-      const ua = ultimaActualizacion(eq.id), np = pendAbiertosDe(eq.id);
+      const c = ctx.cats[eq.id], np = pendAbiertosDe(eq.id), ua = ultimaActualizacion(eq.id);
       const v = x => (x != null && String(x).trim() !== '') ? esc(x) : '—';
-      return '<tr class="clik" data-eq="' + i + '">' +
-        '<td>' + v(eq.familia) + '</td><td>' + v(eq.id) + '</td><td>' + v(eq.carpeta) + '</td><td>' + v(eq.inv) + '</td>' +
-        '<td>' + v(eq.equipo) + '</td><td>' + v(eq.servicio) + '</td><td>' + v(eq.unidad) + '</td><td>' + v(eq.ubicacion) + '</td>' +
-        '<td>' + v(eq.procedencia) + '</td><td>' + v(eq.marca) + '</td><td>' + v(eq.modelo) + '</td><td>' + v(eq.serie) + '</td>' +
-        '<td>' + v(eq.anio) + '</td><td>' + v(eq.vur) + '</td><td>' + v(eq.clasif) + '</td><td>' + v(eq.enubaja) + '</td>' +
-        '<td>' + v(eq.frecuencia) + '</td><td>' + v(eq.observacion) + '</td>' +
-        '<td><span class="estpill ' + estCatClass(c) + '">' + esc(c) + '</span></td>' +
-        '<td>' + (ua ? esc(fmtDate(ua)) : '—') + '</td>' +
-        '<td>' + (np ? '<b style="color:#7a5b00">Sí (' + np + ')</b>' : '—') + '</td>' +
-        '</tr>';
+      return '<tr data-eq="' + i + '">' +
+        '<td class="d-id">' + v(eq.id) + '</td><td class="d-inv">' + v(eq.inv) + '</td><td class="d-carp">' + v(eq.carpeta) + '</td>' +
+        '<td class="d-eq">' + v(eq.equipo) + '</td><td class="d-serie">' + v(eq.serie) + '</td><td class="d-serv">' + v(eq.servicio) + '</td>' +
+        '<td class="d-uni">' + v(eq.unidad) + '</td><td class="d-ubi">' + v(eq.ubicacion) + '</td>' +
+        '<td class="d-est"><span class="estpill ' + estCatClass(c) + '">' + esc(c) + '</span></td>' +
+        '<td class="d-pend">' + (np ? '<b style="color:#7a5b00">Sí (' + np + ')</b>' : '—') + '</td>' +
+        '<td class="d-act">' + (ua ? esc(fmtDate(ua)) : '—') + '</td></tr>';
     }).join('');
-    $('#inventarioCount').textContent = shown + (shown !== state.equipos.length ? ' / ' + state.equipos.length : '');
+    $('#inventarioCount').textContent = shown.toLocaleString('es-CL');
     const t = $('#inventarioTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="' + cols.length + '" class="nomatch">Sin equipos en esta vista.</td></tr>');
-    t.querySelectorAll('tr.clik').forEach(tr => tr.addEventListener('click', () => verDetalle(state.equipos[+tr.dataset.eq])));
+    t.innerHTML = colgroup + '<thead>' + head + '</thead><tbody>' + rows + (shown ? '' : '<tr><td colspan="' + EQVIEW_COLS.length + '" class="nomatch">Sin equipos con estos filtros.</td></tr>') + '</tbody>';
+    t.querySelectorAll('tbody tr[data-eq]').forEach(tr => tr.addEventListener('click', () => verDetalle(state.equipos[+tr.dataset.eq])));
+    t.querySelectorAll('.th-f').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); openColFilter(b.dataset.col, b); }));
+  }
+
+  // ---- Filtro por columna estilo Excel (popover) -------------------------
+  function colDistinctValues(colKey) {
+    const ctx = { cats: equipoCatMap() };
+    const cat = state.invFilter || 'todos';
+    const col = eqColByKey(colKey); const set = new Set();
+    state.equipos.forEach(eq => { if (passEstado(eq, cat, ctx)) { const val = String(col.val(eq, ctx) == null ? '' : col.val(eq, ctx)).trim() || '—'; set.add(val); } });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+  }
+  function openColFilter(colKey, btn) {
+    state.cfCol = colKey;
+    const all = colDistinctValues(colKey);
+    const sel = state.invColFilters[colKey] && state.invColFilters[colKey].length ? new Set(state.invColFilters[colKey]) : new Set(all);
+    state._cfAll = all; state._cfSel = sel;
+    $('#cfSearch').value = '';
+    renderCfList('');
+    const pop = $('#colFilterPop'); pop.style.display = 'block';
+    const r = btn.getBoundingClientRect();
+    const w = 248; let left = Math.min(r.left, window.innerWidth - w - 10); if (left < 6) left = 6;
+    pop.style.left = left + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+  }
+  function renderCfList(filter) {
+    const all = state._cfAll || [], sel = state._cfSel || new Set();
+    const f = (filter || '').toLowerCase();
+    const vis = all.filter(v => !f || v.toLowerCase().indexOf(f) !== -1);
+    $('#cfAll').checked = vis.length > 0 && vis.every(v => sel.has(v));
+    $('#cfList').innerHTML = vis.map((v, i) =>
+      '<label class="cf-item"><input type="checkbox" data-v="' + esc(v) + '"' + (sel.has(v) ? ' checked' : '') + '> <span title="' + esc(v) + '">' + esc(v) + '</span></label>').join('')
+      || '<div class="muted" style="padding:6px">Sin valores.</div>';
+    $('#cfList').querySelectorAll('input[data-v]').forEach(c =>
+      c.addEventListener('change', () => { const val = c.getAttribute('data-v'); if (c.checked) sel.add(val); else sel.delete(val); $('#cfAll').checked = vis.every(v => sel.has(v)); }));
+  }
+  function closeColFilter() { $('#colFilterPop').style.display = 'none'; state.cfCol = null; }
+  function applyColFilter() {
+    const all = state._cfAll || [], sel = state._cfSel || new Set();
+    if (sel.size === 0 || sel.size === all.length) delete state.invColFilters[state.cfCol];
+    else state.invColFilters[state.cfCol] = [...sel];
+    closeColFilter(); renderInventario();
   }
 
   // ---- Vista Resumen mensual (con desglose clicable) ---------------------
@@ -3657,9 +3840,24 @@ function json(obj) {
   }
 
   // ---- Conexión de eventos de UI -----------------------------------------
-  // Navegación del panel lateral (vistas + inventario por estado)
+  // Navegación del panel lateral
   document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => goTab(btn.dataset.tab)));
-  document.querySelectorAll('.invcat').forEach(btn => btn.addEventListener('click', () => goInventario(btn.dataset.cat)));
+  // Filtro por columna (popover estilo Excel) de la vista Equipo
+  $('#cfSearch').addEventListener('input', () => renderCfList($('#cfSearch').value));
+  $('#cfAll').addEventListener('change', () => {
+    const all = state._cfAll || [], sel = state._cfSel || new Set();
+    const f = ($('#cfSearch').value || '').toLowerCase();
+    const vis = all.filter(v => !f || v.toLowerCase().indexOf(f) !== -1);
+    if ($('#cfAll').checked) vis.forEach(v => sel.add(v)); else vis.forEach(v => sel.delete(v));
+    renderCfList($('#cfSearch').value);
+  });
+  $('#cfApply').addEventListener('click', applyColFilter);
+  $('#cfClear').addEventListener('click', () => { delete state.invColFilters[state.cfCol]; closeColFilter(); renderInventario(); });
+  $('#invClearFilters').addEventListener('click', () => { state.invColFilters = {}; $('#inventarioFilter').value = ''; renderInventario(); });
+  document.addEventListener('click', e => {
+    const pop = $('#colFilterPop');
+    if (pop.style.display === 'block' && !pop.contains(e.target) && !(e.target.classList && e.target.classList.contains('th-f'))) closeColFilter();
+  });
   const LS_SIDE = 'mp_sidebar_collapsed';
   function applySidebar() { try { $('#layout').classList.toggle('collapsed', localStorage.getItem(LS_SIDE) === '1'); } catch (e) { } }
   $('#sideToggle').addEventListener('click', () => {

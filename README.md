@@ -84,16 +84,16 @@ Se descarga `Eventos_MP_2026_AAAAMMDD.xlsx`.
 
 La app tiene un **panel lateral** (izquierda) que reemplaza las pestañas de arriba
 y se puede **contraer** (botón ⮜) para que tablas y vistas ocupen toda la pantalla:
+*Cargar y generar*, *Equipo*, *Registrar*, *Resumen mensual*, *Pendientes*,
+*Utilidades PDF*, *Google Sheets*, *Ayuda*.
 
-- **General:** *Cargar y generar*, *Registrar*, *Resumen mensual*, *Pendientes*,
-  *Google Sheets*, *Ayuda*.
-- **Inventario por estado:** *Todos*, *Operativos*, *No operativos*,
-  *En servicio técnico*, *Baja* y *Con pendientes* (cada uno con su contador).
-
-**📋 Inventario** muestra **todas las columnas del equipo** + **Estado actual**
-(según el último evento registrado), **Última actualización** (fecha de la última
-mantención/correctivo/pendiente) y si **tiene pendientes asociados**. Clic en una
-fila → ficha del equipo.
+**🩺 Equipo** es el inventario. Columnas: *ID, N° Inventario, N° Carpeta, Equipo,
+Serie, Servicio, Unidad, Ubicación, Estado del equipo, Pendientes, Última
+actualización* (sin barra de desplazamiento horizontal). Arriba tiene **pestañas
+de estado con su cantidad** — *Todo, Operativos, No operativos, En servicio
+técnico, Baja, Con pendientes* — y **cada columna es filtrable tipo Excel**
+(menú ▾ con casillas para elegir uno o varios valores). Clic en una fila → ficha
+del equipo.
 
 **📊 Resumen mensual** muestra, por mes, las mantenciones **programadas**,
 **realizadas** y **pendientes**. **Haz clic en cualquier número** para ver la lista

@@ -55,7 +55,48 @@ function appPush(body) {
   finally { lock.releaseLock(); }
 }
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
-function appPullEquipos() { return { ok: true, equipos: sheetVals(SpreadsheetApp.getActiveSpreadsheet(), '_equipos') }; }
+function appPullEquipos() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var es = ss.getSheetByName('_equipos');
+  if (es && es.getLastRow() > 1) return { ok: true, equipos: sheetVals(ss, '_equipos') };
+  // Si no hay hoja _equipos (planilla antigua), reconstruir el inventario desde "Eventos".
+  return { ok: true, equipos: equiposFromEventos(ss) };
+}
+// Reconstruye el inventario (filas compactas) a partir de la hoja "Eventos".
+function equiposFromEventos(ss) {
+  var vals = sheetVals(ss, 'Eventos');
+  if (!vals || vals.length < 2) return [];
+  var h = vals[0].map(String); var idx = {}; h.forEach(function (k, i) { idx[k] = i; });
+  var MAP = { 'ID': 'id', 'Familia': 'familia', 'N° Carpeta': 'carpeta', 'N° Inventario': 'inv', 'Equipo': 'equipo', 'Servicio': 'servicio', 'Unidad': 'unidad', 'Ubicación': 'ubicacion', 'Procedencia': 'procedencia', 'Marca': 'marca', 'Modelo': 'modelo', 'N° Serie': 'serie', 'Año Instalación': 'anio', 'Vida Útil Residual': 'vur', 'Clasificación': 'clasif', 'ENU / Baja': 'enubaja', 'Observación': 'observacion', 'Frecuencia MP': 'frecuencia' };
+  var KEYS = ['id', 'familia', 'carpeta', 'inv', 'equipo', 'servicio', 'unidad', 'ubicacion', 'procedencia', 'marca', 'modelo', 'serie', 'anio', 'vur', 'clasif', 'enubaja', 'observacion', 'frecuencia'];
+  var get = function (row, hdr) { var i = idx[hdr]; return (i == null || row[i] == null) ? '' : String(row[i]); };
+  var mesI = idx['N° Mes'], progI = idx['Programa (P)'], resI = idx['Resultado (R)'];
+  var byId = {}, order = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r]; var id = get(row, 'ID'); var eqn = get(row, 'Equipo');
+    if (!id && !eqn) continue;
+    var key = id || eqn;
+    if (!byId[key]) {
+      var o = { prog: ['', '', '', '', '', '', '', '', '', '', '', ''], res: ['', '', '', '', '', '', '', '', '', '', '', ''] };
+      for (var hdr in MAP) o[MAP[hdr]] = get(row, hdr);
+      byId[key] = o; order.push(key);
+    }
+    var e = byId[key];
+    var m = parseInt(mesI != null ? row[mesI] : '', 10);
+    if (m >= 1 && m <= 12) {
+      var p = progI != null && row[progI] != null ? String(row[progI]) : '';
+      var rr = resI != null && row[resI] != null ? String(row[resI]) : '';
+      if (p) e.prog[m - 1] = p;
+      if (rr) e.res[m - 1] = rr;
+    }
+  }
+  var out = [KEYS.concat(['prog', 'res'])];
+  order.forEach(function (k) {
+    var o = byId[k]; var arr = KEYS.map(function (kk) { return o[kk] || ''; });
+    arr.push(o.prog.join('|')); arr.push(o.res.join('|')); out.push(arr);
+  });
+  return out;
+}
 // Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
 function appUpload(body) {
   var lock = LockService.getScriptLock();

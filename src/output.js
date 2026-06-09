@@ -12,7 +12,7 @@
     header: 'FF15616D', headerText: 'FFFFFFFF',
     realizada: 'FFC6EFCE', reprogramada: 'FFFCE4A6', pendiente: 'FFFFF2CC',
     pm: 'FFDDEBF7', fueraServicio: 'FFFFC7CE', noReal: 'FFFFC7CE',
-    nu: 'FFE4DFEC', baja: 'FFD9D9D9', band: 'FFF2F7F8',
+    nu: 'FFE4DFEC', baja: 'FFD9D9D9', band: 'FFF2F7F8', correctivo: 'FFE6E0F8',
     catTitle: 'FF2A6F77'
   };
   function estadoFill(st) {
@@ -23,6 +23,7 @@
     if (st === 'No Realizada') return COLOR.noReal;
     if (st === 'No Ubicable') return COLOR.nu;
     if (st === 'Baja') return COLOR.baja;
+    if (st === 'Correctivo') return COLOR.correctivo;
     if (st.startsWith('Pendiente')) return COLOR.pendiente;
     return null;
   }
@@ -38,6 +39,7 @@
 
   // Definición de columnas de la hoja Eventos
   const COLS = [
+    { key: 'tipoRegistro',     header: 'Tipo de registro',        w: 14, t: 's' },
     { key: 'familia',          header: 'Familia',                 w: 16, t: 's' },
     { key: 'id',               header: 'ID',                      w: 7,  t: 'n' },
     { key: 'carpeta',          header: 'N° Carpeta',              w: 12, t: 's' },
@@ -173,7 +175,21 @@
     ws.columns = COLS.map(c => ({ header: c.header, key: c.key, width: c.w }));
     styleHeaderRow(ws.getRow(1));
 
-    events.forEach((e, idx) => {
+    // Filas: mantención preventiva + (a pedido) eventos correctivos en la misma hoja
+    const mapCorr = c => ({
+      tipoRegistro: 'Correctivo', familia: '', id: c.id, carpeta: '', inv: c.inv, equipo: c.equipo,
+      servicio: c.servicio, unidad: c.unidad || '', ubicacion: '', procedencia: '', marca: c.marca || '', modelo: c.modelo || '', serie: c.serie,
+      anio: '', vur: '', clasif: '', enubaja: '', frecuencia: '', observacion: c.descripcion || '',
+      mes: (c.fecha instanceof Date) ? MP.MONTHS_FULL[c.fecha.getMonth()] : '', nMes: (c.fecha instanceof Date) ? c.fecha.getMonth() + 1 : '',
+      programa: '', tipoPrograma: 'Correctivo: ' + (c.tipoEvento || ''), resultado: '',
+      detalleResultado: [c.folioSolicitud && ('Folio ' + c.folioSolicitud), c.nEnvio && ('N° envío ' + c.nEnvio), c.folioGuia && ('Guía ' + c.folioGuia), c.empresa].filter(Boolean).join(' · '),
+      fechaEjecucion: c.fecha || '', causal: '', causalDesc: '', regla: '',
+      estado: 'Correctivo', estadoFinal: c.estadoFinal || '', ejecutor: c.ejecutor || '', archivoUrl: c.archivoUrl || '', archivoNombre: c.archivoNombre || ''
+    });
+    const allEventRows = events.map(e => Object.assign({ tipoRegistro: 'Preventivo' }, e))
+      .concat((meta.correctivos || []).map(mapCorr));
+
+    allEventRows.forEach((e, idx) => {
       const row = ws.addRow(e);
       const band = idx % 2 === 1;
       row.eachCell({ includeEmpty: true }, (cell, col) => {
@@ -220,7 +236,7 @@
     // Validación de datos (desplegable) en la columna Ejecutor — un solo rango
     const ejeCol = ws.getColumn(COLS.findIndex(c => c.key === 'ejecutor') + 1);
     const ejeLetter = ejeCol.letter;
-    const lastRow = events.length + 1;
+    const lastRow = allEventRows.length + 1;
     if (lastRow >= 2) {
       ws.dataValidations.add(ejeLetter + '2:' + ejeLetter + lastRow, {
         type: 'list', allowBlank: true,

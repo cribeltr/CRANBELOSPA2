@@ -292,6 +292,51 @@
   .estpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
   .est-op{background:#C6EFCE;color:#136b30}.est-no{background:#FFC7CE;color:#b3261e}
   .est-st{background:#FFE0B2;color:#8a5a00}.est-baja{background:#D9D9D9;color:#444}.est-na{background:#eef3f5;color:#5e7177}
+  /* ===== Vista Equipo: pestañas de estado + tabla sin scroll horizontal ===== */
+  .estabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;background:var(--line-soft);border:1px solid var(--line);border-radius:12px;padding:5px}
+  .estab{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;
+    padding:7px 12px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .14s,color .14s}
+  .estab:hover{background:#fff;color:var(--teal-d)}
+  .estab.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .estab .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .estab .ec{font-style:normal;font-size:11px;font-weight:800;background:var(--line);color:var(--teal-d);border-radius:20px;padding:0 7px;min-width:18px;text-align:center}
+  .estab.active .ec{background:var(--teal);color:#fff}
+  /* tabla sin scroll horizontal: ancho 100%, el texto se ajusta */
+  .eqwrap{margin-top:10px;border:1px solid var(--line);border-radius:var(--radius-sm,10px);overflow-x:hidden;overflow-y:auto;max-height:600px}
+  table.eqtable{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12.5px}
+  table.eqtable th{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,var(--teal-l),var(--teal));color:#fff;
+    text-align:left;padding:8px 9px;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;vertical-align:top}
+  table.eqtable td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+  table.eqtable tr:nth-child(even) td{background:#f6f9fa}
+  table.eqtable tbody tr{cursor:pointer}
+  table.eqtable tbody tr:hover td{background:#eaf5f7}
+  .th-in{display:flex;align-items:center;gap:4px;justify-content:space-between}
+  .th-f{appearance:none;border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:6px;cursor:pointer;
+    font-size:11px;line-height:1;padding:3px 5px;flex:0 0 auto}
+  .th-f:hover{background:rgba(255,255,255,.34)}
+  .th-f.on{background:var(--accent);color:#fff}
+  /* anchos relativos por columna para repartir el espacio */
+  table.eqtable col.c-id{width:4%}table.eqtable col.c-inv{width:9%}table.eqtable col.c-carp{width:6%}
+  table.eqtable col.c-eq{width:15%}table.eqtable col.c-serie{width:10%}table.eqtable col.c-serv{width:12%}
+  table.eqtable col.c-uni{width:11%}table.eqtable col.c-ubi{width:9%}table.eqtable col.c-est{width:9%}
+  table.eqtable col.c-pend{width:7%}table.eqtable col.c-act{width:8%}
+  /* popover de filtro por columna (estilo Excel) */
+  .colfilter{position:fixed;z-index:120;width:248px;max-width:92vw;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow-lg);padding:10px}
+  .cf-search{width:100%;margin-bottom:8px}
+  .cf-all{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-d);padding:4px 2px;cursor:pointer}
+  .cf-all input{width:auto}
+  .cf-list{max-height:240px;overflow:auto;border:1px solid var(--line-soft);border-radius:8px;padding:4px 2px;margin:6px 0}
+  .cf-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 6px;border-radius:6px;cursor:pointer}
+  .cf-item:hover{background:var(--line-soft)}
+  .cf-item input{width:auto}
+  .cf-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cf-foot{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+  @media(max-width:760px){
+    table.eqtable col.c-carp,table.eqtable col.c-uni,table.eqtable col.c-ubi{width:0}
+    table.eqtable .h-carp,table.eqtable .h-uni,table.eqtable .h-ubi,
+    table.eqtable td.d-carp,table.eqtable td.d-uni,table.eqtable td.d-ubi{display:none}
+  }
   /* Resumen: celdas-botón clicables */
   .rcell{appearance:none;border:0;background:transparent;color:var(--teal-d);font-weight:800;font-size:13px;
     cursor:pointer;padding:3px 9px;border-radius:7px;min-width:34px}
@@ -371,19 +416,13 @@
     <nav class="sidenav" role="tablist" aria-label="Secciones">
       <div class="navgrp">General</div>
       <button class="tab active" type="button" data-tab="cargar"><span class="ico">📂</span><span class="lbl">Cargar y generar</span></button>
+      <button class="tab" type="button" data-tab="inventario"><span class="ico">🩺</span><span class="lbl">Equipo</span><em class="navcount" id="navEqCount"></em></button>
       <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
       <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
       <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
       <button class="tab" type="button" data-tab="utilidades"><span class="ico">🧰</span><span class="lbl">Utilidades PDF</span></button>
       <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
       <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
-      <div class="navgrp">Inventario por estado</div>
-      <button class="invcat active" type="button" data-cat="todos"><span class="ico">📋</span><span class="lbl">Todos</span><em class="navcount" id="catTodos"></em></button>
-      <button class="invcat" type="button" data-cat="Operativo"><span class="ico">🟢</span><span class="lbl">Operativos</span><em class="navcount" id="catOperativo"></em></button>
-      <button class="invcat" type="button" data-cat="No operativo"><span class="ico">🔴</span><span class="lbl">No operativos</span><em class="navcount" id="catNoOp"></em></button>
-      <button class="invcat" type="button" data-cat="En servicio técnico"><span class="ico">🛠️</span><span class="lbl">En servicio técnico</span><em class="navcount" id="catST"></em></button>
-      <button class="invcat" type="button" data-cat="Baja"><span class="ico">⚫</span><span class="lbl">Baja</span><em class="navcount" id="catBaja"></em></button>
-      <button class="invcat" type="button" data-cat="pendientes"><span class="ico">📎</span><span class="lbl">Con pendientes</span><em class="navcount" id="catPend"></em></button>
     </nav>
   </aside>
   <div class="content">
@@ -515,15 +554,18 @@
   </section>
 
   <section class="tabpanel" id="tab-inventario">
-    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el inventario.</div>
+    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> (o espere a que se traiga de Google Sheets) para ver los equipos.</div>
     <div class="card" id="inventarioCard" style="display:none">
-      <div class="actions" style="justify-content:space-between;align-items:flex-start">
-        <span class="section-title" id="inventarioTitle" style="font-size:15px">📋 Inventario</span>
-        <span class="badge" id="inventarioCount">0</span>
+      <div class="actions" style="justify-content:space-between;align-items:center">
+        <span class="section-title" id="inventarioTitle" style="font-size:15px">🩺 Equipo</span>
+        <span class="muted" style="font-size:12.5px">Mostrando <b id="inventarioCount">0</b> equipo(s) · clic en una fila para ver el detalle</span>
       </div>
-      <p class="muted" style="margin:6px 0 0">Todas las columnas del equipo + estado actual (según el último evento), fecha de última actualización y pendientes asociados. <b>Clic en una fila</b> para ver el detalle.</p>
-      <input id="inventarioFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, servicio, marca, modelo…" />
-      <div class="tablewrap" style="margin-top:8px;max-height:560px"><table class="prev" id="inventarioTable"></table></div>
+      <div class="estabs" id="estabs"></div>
+      <div class="actions" style="margin-top:10px">
+        <input id="inventarioFilter" type="text" class="filter" style="margin-top:0;flex:1;min-width:220px" autocomplete="off" placeholder="🔎 Buscar en todas las columnas…" />
+        <button id="invClearFilters" class="btn btn-ghost btn-sm" type="button">✕ Quitar filtros</button>
+      </div>
+      <div class="eqwrap" id="eqwrap"><table class="eqtable" id="inventarioTable"></table></div>
     </div>
   </section>
 
@@ -645,6 +687,17 @@
   </div><!-- /.layout -->
 
   <div id="status" class="status"></div>
+</div>
+
+<!-- Filtro de columna estilo Excel (Equipo) -->
+<div id="colFilterPop" class="colfilter" style="display:none">
+  <input id="cfSearch" type="text" class="cf-search" autocomplete="off" placeholder="Buscar valor…" />
+  <label class="cf-all"><input type="checkbox" id="cfAll" /> <span>(Seleccionar todo)</span></label>
+  <div id="cfList" class="cf-list"></div>
+  <div class="cf-foot">
+    <button id="cfClear" class="btn btn-ghost btn-sm" type="button">Quitar filtro</button>
+    <button id="cfApply" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Aplicar</button>
+  </div>
 </div>
 
 <!-- Vista de registro de mantención -->
