@@ -488,10 +488,22 @@
     const u = sheetsUrl(); const q = extra ? 'api=' + extra : 'api=1';
     return u + (u.indexOf('?') >= 0 ? '&' : '?') + q;
   }
-  // Trae el inventario por separado (puede ser grande). Devuelve la grilla o null.
+  // Trae el inventario (grande). Por google.script.run lo pide POR PARTES
+  // (paginado) para no superar su límite de tamaño; por HTTP lo trae completo.
   async function pullEquiposGrid() {
     try {
-      if (GAS) { const je = await gasCall('appPullEquipos'); return je && je.equipos ? je.equipos : null; }
+      if (GAS) {
+        let page = 0, header = null, rows = [];
+        while (page < 1000) {
+          const j = await gasCall('appPullEquipos', page);
+          if (!j || !j.ok) return null;
+          if (j.header) header = j.header;
+          if (j.rows && j.rows.length) rows = rows.concat(j.rows);
+          if (j.done) break;
+          page++;
+        }
+        return header ? [header].concat(rows) : (rows.length ? rows : null);
+      }
       const res = await fetch(apiUrl('equipos'), { method: 'GET', redirect: 'follow' });
       const je = JSON.parse(await res.text()); return je && je.equipos ? je.equipos : null;
     } catch (e) { return null; }

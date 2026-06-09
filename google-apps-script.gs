@@ -54,14 +54,23 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-var APP_VERSION = 'v9-descarga-drive';   // para confirmar qué versión está publicada (Probar conexión)
+var APP_VERSION = 'v10-equipos-paginado';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
-function appPullEquipos() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+// Inventario completo (de _equipos o, si no existe, reconstruido desde Eventos).
+function allEquipos(ss) {
   var es = ss.getSheetByName('_equipos');
-  if (es && es.getLastRow() > 1) return { ok: true, equipos: sheetVals(ss, '_equipos') };
-  // Si no hay hoja _equipos (planilla antigua), reconstruir el inventario desde "Eventos".
-  return { ok: true, equipos: equiposFromEventos(ss) };
+  return (es && es.getLastRow() > 1) ? sheetVals(ss, '_equipos') : equiposFromEventos(ss);
+}
+// Inventario POR PARTES (paginado) para no superar el límite de google.script.run.
+function appPullEquipos(page) {
+  var all = allEquipos(SpreadsheetApp.getActiveSpreadsheet());
+  var PAGE = 200;
+  page = page || 0;
+  if (!all.length) return { ok: true, header: [], rows: [], total: 0, page: 0, done: true };
+  var body = all.slice(1);
+  var start = page * PAGE;
+  var slice = body.slice(start, start + PAGE);
+  return { ok: true, header: (page === 0 ? all[0] : null), rows: slice, total: body.length, page: page, done: (start + PAGE) >= body.length };
 }
 // Reconstruye el inventario (filas compactas) a partir de la hoja "Eventos".
 function equiposFromEventos(ss) {
@@ -324,13 +333,13 @@ function readAll(includeEquipos) {
     }
   };
   // El inventario puede ser grande; solo se incluye cuando se pide explícitamente
-  // (por HTTP no hay problema; con google.script.run se pide por separado).
-  if (includeEquipos) out.equipos = sheetVals(ss, '_equipos');
+  // (por HTTP no hay problema; con google.script.run se pide por separado/paginado).
+  if (includeEquipos) out.equipos = allEquipos(ss);
   return out;
 }
-// doGet: ?api=equipos -> inventario; ?api=1 -> datos (JSON); sin parámetros -> la app.
+// doGet: ?api=equipos -> inventario completo (HTTP, sin límite); ?api=1 -> datos; sin parámetros -> la app.
 function doGet(e) {
-  if (e && e.parameter && e.parameter.api === 'equipos') return json(appPullEquipos());
+  if (e && e.parameter && e.parameter.api === 'equipos') return json({ ok: true, equipos: allEquipos(SpreadsheetApp.getActiveSpreadsheet()) });
   if (e && e.parameter && e.parameter.api) return json(readAll(true));
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Gestión MP 2026')

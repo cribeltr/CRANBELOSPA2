@@ -686,14 +686,23 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-var APP_VERSION = 'v9-descarga-drive';   // para confirmar qué versión está publicada (Probar conexión)
+var APP_VERSION = 'v10-equipos-paginado';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
-function appPullEquipos() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+// Inventario completo (de _equipos o, si no existe, reconstruido desde Eventos).
+function allEquipos(ss) {
   var es = ss.getSheetByName('_equipos');
-  if (es &amp;&amp; es.getLastRow() &gt; 1) return { ok: true, equipos: sheetVals(ss, '_equipos') };
-  // Si no hay hoja _equipos (planilla antigua), reconstruir el inventario desde "Eventos".
-  return { ok: true, equipos: equiposFromEventos(ss) };
+  return (es &amp;&amp; es.getLastRow() &gt; 1) ? sheetVals(ss, '_equipos') : equiposFromEventos(ss);
+}
+// Inventario POR PARTES (paginado) para no superar el límite de google.script.run.
+function appPullEquipos(page) {
+  var all = allEquipos(SpreadsheetApp.getActiveSpreadsheet());
+  var PAGE = 200;
+  page = page || 0;
+  if (!all.length) return { ok: true, header: [], rows: [], total: 0, page: 0, done: true };
+  var body = all.slice(1);
+  var start = page * PAGE;
+  var slice = body.slice(start, start + PAGE);
+  return { ok: true, header: (page === 0 ? all[0] : null), rows: slice, total: body.length, page: page, done: (start + PAGE) &gt;= body.length };
 }
 // Reconstruye el inventario (filas compactas) a partir de la hoja "Eventos".
 function equiposFromEventos(ss) {
@@ -956,13 +965,13 @@ function readAll(includeEquipos) {
     }
   };
   // El inventario puede ser grande; solo se incluye cuando se pide explícitamente
-  // (por HTTP no hay problema; con google.script.run se pide por separado).
-  if (includeEquipos) out.equipos = sheetVals(ss, '_equipos');
+  // (por HTTP no hay problema; con google.script.run se pide por separado/paginado).
+  if (includeEquipos) out.equipos = allEquipos(ss);
   return out;
 }
-// doGet: ?api=equipos -&gt; inventario; ?api=1 -&gt; datos (JSON); sin parámetros -&gt; la app.
+// doGet: ?api=equipos -&gt; inventario completo (HTTP, sin límite); ?api=1 -&gt; datos; sin parámetros -&gt; la app.
 function doGet(e) {
-  if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api === 'equipos') return json(appPullEquipos());
+  if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api === 'equipos') return json({ ok: true, equipos: allEquipos(SpreadsheetApp.getActiveSpreadsheet()) });
   if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api) return json(readAll(true));
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Gestión MP 2026')
@@ -2549,10 +2558,22 @@ function json(obj) {
     const u = sheetsUrl(); const q = extra ? 'api=' + extra : 'api=1';
     return u + (u.indexOf('?') >= 0 ? '&' : '?') + q;
   }
-  // Trae el inventario por separado (puede ser grande). Devuelve la grilla o null.
+  // Trae el inventario (grande). Por google.script.run lo pide POR PARTES
+  // (paginado) para no superar su límite de tamaño; por HTTP lo trae completo.
   async function pullEquiposGrid() {
     try {
-      if (GAS) { const je = await gasCall('appPullEquipos'); return je && je.equipos ? je.equipos : null; }
+      if (GAS) {
+        let page = 0, header = null, rows = [];
+        while (page < 1000) {
+          const j = await gasCall('appPullEquipos', page);
+          if (!j || !j.ok) return null;
+          if (j.header) header = j.header;
+          if (j.rows && j.rows.length) rows = rows.concat(j.rows);
+          if (j.done) break;
+          page++;
+        }
+        return header ? [header].concat(rows) : (rows.length ? rows : null);
+      }
       const res = await fetch(apiUrl('equipos'), { method: 'GET', redirect: 'follow' });
       const je = JSON.parse(await res.text()); return je && je.equipos ? je.equipos : null;
     } catch (e) { return null; }
