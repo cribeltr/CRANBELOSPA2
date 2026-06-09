@@ -632,6 +632,10 @@
         <label for="mEstadoFinal" id="mEstadoFinalLabel">Estado final del equipo <span class="req">*</span></label>
         <select id="mEstadoFinal"><option value="">— Seleccione —</option></select>
       </div>
+      <div class="field" id="mAttachField" style="display:none">
+        <label for="mFile">📎 Adjuntar archivo (opcional) — se sube a Drive</label>
+        <input id="mFile" type="file" />
+      </div>
     </fieldset>
     <div id="modalMsg" class="inline-msg"></div>
 
@@ -655,6 +659,10 @@
     </div>
 
     <div id="cFields"></div>
+    <div class="field" id="cAttachField" style="display:none">
+      <label for="cFile">📎 Adjuntar archivo (opcional) — se sube a Drive</label>
+      <input id="cFile" type="file" />
+    </div>
     <div id="cmodalMsg" class="inline-msg"></div>
 
     <div class="modal-foot">
@@ -694,6 +702,10 @@
     <div class="field">
       <label for="pObs">Observación <span class="req">*</span></label>
       <textarea id="pObs" placeholder="Describa el pendiente"></textarea>
+    </div>
+    <div class="field" id="pAttachField" style="display:none">
+      <label for="pFile">📎 Adjuntar archivo (opcional) — se sube a Drive</label>
+      <input id="pFile" type="file" />
     </div>
     <div id="pmodalMsg" class="inline-msg"></div>
 

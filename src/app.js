@@ -383,6 +383,24 @@
     saveArchivos();
     return j;
   }
+  // Adjunta un archivo a un evento ya registrado (preventivo/correctivo/pendiente):
+  // lo sube a Drive con categoría = tipo de evento y guarda el enlace en el registro.
+  async function attachToEvent(kind, record, file, categoria, descripcion) {
+    if (!file) return;
+    if (!sheetsReady()) { setStatus('⚠️ Para adjuntar archivos conéctate primero en <b>☁️ Google Sheets</b>. El evento se guardó igual.', 'warn'); return; }
+    setStatus('📎 Subiendo adjunto a Drive…', 'info');
+    try {
+      const j = await uploadArchivoFile(record, file, categoria, descripcion);
+      record.archivoUrl = j.url; record.archivoNombre = j.name || file.name;
+      (kind === 'reg' ? saveRegistros : kind === 'corr' ? saveCorrectivos : savePendientes)();
+      renderRegistry(); renderCorrectivos(); renderPendientes();
+      if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
+      autoExportSheets();
+      setStatus('✅ Adjunto subido: <b>' + esc(j.name || file.name) + '</b> (' + esc(categoria) + ').', 'ok');
+    } catch (e) {
+      setStatus('⚠️ El evento se guardó, pero el adjunto no se pudo subir: ' + esc(e.message || e), 'warn');
+    }
+  }
 
   async function exportToSheets(silent) {
     if (!sheetsReady()) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
@@ -1006,6 +1024,7 @@
     $('#mFecha').value = '';
     $('#mObs').value = '';
     $('#mResultado').value = ''; $('#mEjecutor').value = ''; $('#mEstadoFinal').value = '';
+    $('#mFile').value = ''; $('#mAttachField').style.display = sheetsReady() ? 'block' : 'none';
     updateEstadoFinal();
     $('#mTipo').style.display = 'none';
     $('#mFields').disabled = true;
@@ -1069,6 +1088,7 @@
       ejecutor: $('#mEjecutor').value,
       estadoFinal: $('#mEstadoFinal').value
     });
+    const attFile = $('#mFile') ? $('#mFile').files[0] : null;   // capturar antes de cerrar
     state.registros.push(reg);
     saveRegistros();   // persistir en el navegador
     closeModal();
@@ -1079,6 +1099,7 @@
     setStatus('✅ Mantención registrada: <b>' + esc(eq.equipo) + '</b> — ' + esc(reg.mes) +
       ' (' + esc(fmtDate(fecha)) + '). Quedará incluida al descargar el Excel.', 'ok');
     autoExportSheets();   // actualizar Google Sheets si está activado
+    if (attFile) attachToEvent('reg', reg, attFile, 'Mantención preventiva', reg.mes + ' · ' + reg.resultado + ' · ' + fmtDate(fecha));
   }
 
   // ---- Comparación: registrado vs. archivo cargado -----------------------
@@ -1125,12 +1146,18 @@
   }
 
   // ---- Tabla de registros -------------------------------------------------
+  // Celda con enlace al archivo adjunto del evento (📎) o "—"
+  function adjCell(o) {
+    return o && o.archivoUrl
+      ? '<a href="' + esc(o.archivoUrl) + '" target="_blank" rel="noopener" title="' + esc(o.archivoNombre || 'Ver adjunto') + '">📎</a>'
+      : '<span class="muted">—</span>';
+  }
   function renderRegistry() {
     const wrap = $('#registryWrap');
     if (!state.registros.length) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
     const term = ($('#registryFilter') ? $('#registryFilter').value : '').trim().toLowerCase();
-    const cols = ['#', 'ID', 'Equipo', 'Serie / Inv', 'Mes', 'Fecha', 'Programa', 'Resultado', 'Ejecutor', 'Estado Final', ''];
+    const cols = ['#', 'ID', 'Equipo', 'Serie / Inv', 'Mes', 'Fecha', 'Programa', 'Resultado', 'Ejecutor', 'Estado Final', 'Adjunto', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.registros.map((e, i) => {
@@ -1148,12 +1175,13 @@
         '<td>' + esc(e.resultado) + '</td>' +
         '<td>' + esc(e.ejecutor) + '</td>' +
         '<td>' + esc(e.estadoFinal) + '</td>' +
+        '<td>' + adjCell(e) + '</td>' +
         '<td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td>' +
       '</tr>';
     }).join('');
     $('#registryCount').textContent = term ? (shown + ' / ' + state.registros.length) : state.registros.length;
     const t = $('#registryTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="11" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.registros.splice(+b.dataset.del, 1);
@@ -1168,7 +1196,7 @@
     if (!state.correctivos.length) { wrap.style.display = 'none'; touch(); return; }
     wrap.style.display = 'block';
     const term = ($('#correctivosFilter') ? $('#correctivosFilter').value : '').trim().toLowerCase();
-    const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', ''];
+    const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', 'Adjunto', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.correctivos.map((c, i) => {
@@ -1178,11 +1206,11 @@
       return '<tr><td>' + (i + 1) + '</td><td>' + esc(c.id) + '</td><td>' + esc(c.equipo) + '</td><td>' + esc(c.tipoEvento) +
         '</td><td>' + esc(fmtDate(c.fecha)) + '</td><td>' + esc(c.folioSolicitud || c.folioGuia) + '</td><td>' + esc(c.nEnvio) +
         '</td><td>' + esc(c.empresa) + '</td><td>' + esc(c.ejecutor) + '</td><td>' + esc(c.estadoFinal) +
-        '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
+        '</td><td>' + adjCell(c) + '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
     }).join('');
     $('#correctivosCount').textContent = term ? (shown + ' / ' + state.correctivos.length) : state.correctivos.length;
     const t = $('#correctivosTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="11" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.correctivos.splice(+b.dataset.del, 1);
@@ -1235,6 +1263,7 @@
       esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
     $('#cTipo').value = '';
     $('#cFields').innerHTML = '';
+    $('#cFile').value = ''; $('#cAttachField').style.display = sheetsReady() ? 'block' : 'none';
     showInline($('#cmodalMsg'), '', '');
     $('#cSave').disabled = true;
     $('#cmodal').classList.add('show');
@@ -1252,13 +1281,21 @@
       if (!v && !CORR_OPCIONALES.has(k)) { showInline($('#cmodalMsg'), 'err', 'Complete los campos obligatorios (*).'); return; }
       data[k] = v;
     }
-    state.correctivos.push(MP.buildCorrectivo(eq, data));
+    const corr = MP.buildCorrectivo(eq, data);
+    const attFile = $('#cFile') ? $('#cFile').files[0] : null;
+    state.correctivos.push(corr);
     saveCorrectivos();
     closeCModal();
     renderCorrectivos();
     if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
     setStatus('✅ Evento correctivo registrado: <b>' + esc(eq.equipo) + '</b> — ' + esc(tipo) + '.', 'ok');
     autoExportSheets();
+    if (attFile) {
+      const desc = tipo + (corr.fecha ? ' · ' + fmtDate(corr.fecha) : '') +
+        (corr.folioSolicitud ? ' · Folio ' + corr.folioSolicitud : corr.folioGuia ? ' · Guía ' + corr.folioGuia : '') +
+        (corr.empresa ? ' · ' + corr.empresa : '');
+      attachToEvent('corr', corr, attFile, 'Correctivo: ' + tipo, desc);
+    }
   }
 
   // ---- Pendientes: tabla --------------------------------------------------
@@ -1397,7 +1434,7 @@
     $('#pendNone').style.display = has ? 'none' : 'block';
     if (!has) { touch(); return; }
     const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
-    const cols = ['#', 'ID', 'Equipo', 'Tipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', '', ''];
+    const cols = ['#', 'ID', 'Equipo', 'Tipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', 'Adjunto', '', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.pendientes.map((p, i) => {
@@ -1407,13 +1444,13 @@
       const tr = tareasResumen(p);
       return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.id) + '</td><td>' + esc(p.equipo) + '</td><td>' + esc(p.tipo || '—') + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) +
         '</td><td><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span></td><td>' + esc(tr || '—') +
-        '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) +
+        '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) + '</td><td>' + adjCell(p) +
         '</td><td><button class="btn btn-ghost btn-sm" title="Gestionar" data-gest="' + i + '">⚙️ Gestionar</button></td>' +
         '<td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
     }).join('');
     $('#pendientesCount').textContent = term ? (shown + ' / ' + state.pendientes.length) : state.pendientes.length;
     const t = $('#pendientesTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="11" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
     t.querySelectorAll('button[data-gest]').forEach(b =>
       b.addEventListener('click', () => openGModal(state.pendientes[+b.dataset.gest])));
     t.querySelectorAll('button[data-del]').forEach(b =>
@@ -1434,6 +1471,7 @@
     $('#pmodalEq').innerHTML = '<b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · Serie: <b>' +
       esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
     $('#pTipo').value = ''; $('#pFecha').value = ''; $('#pRespAdmin').value = ''; $('#pRespEjec').value = ''; $('#pObs').value = '';
+    $('#pFile').value = ''; $('#pAttachField').style.display = sheetsReady() ? 'block' : 'none';
     showInline($('#pmodalMsg'), '', '');
     $('#pSave').disabled = true;
     $('#pmodal').classList.add('show');
@@ -1449,19 +1487,23 @@
       showInline($('#pmodalMsg'), 'err', 'Complete todos los campos.'); return;
     }
     const x = $('#pFecha').value.split('-');
-    state.pendientes.push(MP.buildPendiente(eq, {
-      tipo: $('#pTipo').value,
+    const pTipo = $('#pTipo').value;
+    const pend = MP.buildPendiente(eq, {
+      tipo: pTipo,
       fechaCompromiso: new Date(+x[0], +x[1] - 1, +x[2]),
       respAdministrativo: $('#pRespAdmin').value,
       respEjecucion: $('#pRespEjec').value,
       observacion: $('#pObs').value.trim()
-    }));
+    });
+    const attFile = $('#pFile') ? $('#pFile').files[0] : null;
+    state.pendientes.push(pend);
     savePendientes();
     closePModal();
     renderPendientes();
     if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
     setStatus('✅ Pendiente registrado: <b>' + esc(eq.equipo) + '</b>.', 'ok');
     autoExportSheets();
+    if (attFile) attachToEvent('pend', pend, attFile, 'Pendiente: ' + pTipo, pTipo + ' · ' + fmtDate(pend.fechaCompromiso));
   }
 
   // ---- Gestión de un pendiente (estado, bitácora, tareas) ----------------

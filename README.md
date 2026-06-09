@@ -119,6 +119,13 @@ Estando **conectado a Google Sheets/Apps Script**, puedes **subir un archivo**
 La primera subida pide un **permiso de Drive**; vuelve a *Implementar → Nueva
 versión* y autoriza.
 
+**Adjuntar al registrar cada evento:** los formularios de **mantención
+preventiva**, **evento correctivo** y **pendiente** incluyen un campo
+*📎 Adjuntar archivo (opcional)* (visible cuando estás conectado). Al guardar, el
+archivo se sube a Drive con **categoría = tipo de evento** (p. ej. *Correctivo:
+Recepción*), queda enlazado al equipo y se muestra un **📎** en la fila del evento
+(tablas de Registros / Correctivos / Pendientes) y en la hoja *Archivos*.
+
 ## Registrar mantención (modo interactivo)
 
 En la vista **🔧 Registrar** (tras cargar el archivo):
