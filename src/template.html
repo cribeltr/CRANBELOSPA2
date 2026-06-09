@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de Eventos — Programación MP 2026</title>
+<style>
+  :root{
+    --teal:#0e5e6e; --teal-d:#0a3d47; --teal-l:#2f93a3; --accent:#f57c1f; --accent-d:#e06a0c;
+    --bg:#eef2f5; --card:#ffffff; --ink:#15262d; --muted:#5d7682; --line:#e4ebee; --line-soft:#eef3f5;
+    --ok:#1b7f3b; --okbg:#e8f6ed; --warn:#8a6300; --warnbg:#fff6df;
+    --err:#b3261e; --errbg:#fdecea; --info:#0b5; --infobg:#eef7ff;
+    --ring:rgba(47,147,163,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.45}
+  header{background:
+           radial-gradient(620px 200px at 88% -40%, rgba(245,124,31,.30), transparent 70%),
+           linear-gradient(125deg,var(--teal) 0%,var(--teal-d) 100%);
+         color:#fff;padding:24px 26px;border-bottom:3px solid var(--accent);
+         box-shadow:0 6px 22px rgba(10,40,48,.20)}
+  header h1{margin:0;font-size:21px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+  header h1::before{content:"🩺";font-size:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+  header p{margin:5px 0 0;opacity:.92;font-size:13px;max-width:80ch}
+  .wrap{max-width:980px;margin:22px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .drop{border:2px dashed var(--teal-l);border-radius:12px;padding:34px 18px;text-align:center;
+        background:#f7fbfc;transition:.15s;cursor:pointer}
+  .drop.over{background:#e7f3f5;border-color:var(--accent);transform:scale(1.005)}
+  .drop .big{font-size:16px;font-weight:600;margin-bottom:6px}
+  .drop .small{color:var(--muted);font-size:13px}
+  .btn{appearance:none;border:0;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:600;
+       cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn-primary{background:var(--teal);color:#fff;margin-top:14px}
+  .btn-primary:hover{background:var(--teal-d)}
+  .btn-accent{background:var(--accent);color:#fff;font-size:15px;padding:13px 22px}
+  .btn-accent:hover{filter:brightness(.95)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  #file{display:none}
+  #fileName{display:block;margin-top:12px;color:var(--muted);font-size:13px;min-height:18px}
+  .status{display:none;margin-top:16px;padding:12px 14px;border-radius:9px;font-size:14px}
+  .status.info{background:var(--infobg);color:#0a4a6e}
+  .status.ok{background:var(--okbg);color:var(--ok)}
+  .status.warn{background:var(--warnbg);color:var(--warn)}
+  .status.error{background:var(--errbg);color:var(--err)}
+  .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#eef3f5;border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:13px}
+  .chip b{color:var(--teal-d)}
+  .muted{color:var(--muted);font-size:13px}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm,10px);max-height:420px}
+  table.prev{border-collapse:collapse;width:100%;font-size:12.5px;white-space:nowrap}
+  table.prev th{position:sticky;top:0;background:var(--teal);color:#fff;text-align:left;padding:8px 10px;font-weight:600}
+  table.prev td{padding:6px 10px;border-top:1px solid var(--line)}
+  table.prev tr:nth-child(even) td{background:#f6f9fa}
+  details{margin-top:6px}
+  summary{cursor:pointer;font-weight:600;color:var(--teal-d);padding:6px 0}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
+  @media(max-width:680px){.legend{grid-template-columns:1fr}}
+  .legend h4{margin:0 0 6px;font-size:13px;color:var(--teal-d)}
+  .legend table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .legend td{padding:3px 6px;border-bottom:1px solid #eef1f2;vertical-align:top}
+  .legend td:first-child{font-weight:700;width:64px;color:var(--ink)}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:6px 0 0}
+  .steps li{counter-increment:s;padding:6px 0 6px 34px;position:relative;font-size:14px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:5px;width:22px;height:22px;
+        background:var(--teal);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
+  code{background:#eef3f5;padding:1px 5px;border-radius:4px;font-size:12px}
+  /* --- Registrar mantención --- */
+  .section-title{font-size:16px;font-weight:700;color:var(--teal-d);margin:0 0 4px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  .field .req{color:var(--err)}
+  input[type=text],input[type=date],input[type=file],select,textarea{
+    width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;
+    font-family:inherit;background:#fff;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal-l);box-shadow:0 0 0 3px var(--ring)}
+  input[type=file]{padding:8px 10px;font-size:13px;cursor:pointer}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .row .grow{flex:1;min-width:200px}
+  .reslist{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto}
+  .resitem{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#f9fbfc}
+  .resitem .info{font-size:13px}
+  .resitem .info b{color:var(--teal-d)}
+  .resitem .meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .btn-sm{padding:7px 12px;font-size:13px;margin-top:0}
+  .btn-ghost{background:#eef3f5;color:var(--teal-d)}
+  .btn-ghost:hover{background:#e0eaed}
+  .btn-del{background:transparent;color:var(--err);padding:2px 8px;font-size:16px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,30,35,.55);display:none;
+    align-items:flex-start;justify-content:center;padding:24px;z-index:50;overflow:auto}
+  .modal-overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:22px;
+    box-shadow:0 18px 50px rgba(0,0,0,.3);margin:auto}
+  .modal h3{margin:0 0 4px;color:var(--teal-d);font-size:18px}
+  .eqbox{background:linear-gradient(180deg,#f3f9fa,#eef6f8);border:1px solid var(--line);border-left:3px solid var(--teal-l);border-radius:10px;padding:11px 13px;margin:10px 0;font-size:13px}
+  .eqbox b{color:var(--teal-d)}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  .inline-msg{padding:9px 11px;border-radius:8px;font-size:13px;margin-top:6px;display:none}
+  .inline-msg.show{display:block}
+  .inline-msg.ok{background:var(--okbg);color:var(--ok)}
+  .inline-msg.err{background:var(--errbg);color:var(--err)}
+  .tipo-box{background:#fff6df;border:1px solid #f0e2b8;border-radius:8px;padding:9px 11px;font-size:13px;margin-top:8px}
+  fieldset.formfields{border:0;padding:0;margin:0}
+  fieldset.formfields[disabled]{opacity:.45}
+  .badge{display:inline-block;background:linear-gradient(180deg,var(--teal-l),var(--teal));color:#fff;border-radius:20px;padding:3px 11px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(14,94,110,.22)}
+  .disc-head{font-weight:700;color:var(--err);margin-bottom:8px;font-size:14px}
+  table.prev tr.err td{background:#fdecea !important}
+  table.prev tr.warn td{background:#fff6df !important}
+  pre.code{background:#0e2b30;color:#cfe8ec;border-radius:8px;padding:12px;overflow:auto;
+    max-height:300px;font-size:12px;line-height:1.4;font-family:Consolas,"Courier New",monospace;white-space:pre;margin:10px 0 0}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink)}
+  .chk input{width:auto}
+  .filter{margin-top:10px}
+  .scope-note{margin-top:8px;font-size:12.5px}
+  .scope-note .chiptag{display:inline-flex;align-items:center;gap:6px;background:#eaf3f5;border:1px solid var(--line);color:var(--teal-d);border-radius:20px;padding:3px 10px;font-weight:600}
+  .scope-note .verall{appearance:none;border:0;background:transparent;color:var(--accent-d);font-weight:700;cursor:pointer;text-decoration:underline;font-size:12.5px;margin-left:8px}
+  .nomatch{padding:10px 12px;color:var(--muted);font-size:13px}
+  .suggest{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--line);
+    border-radius:0 0 9px 9px;box-shadow:0 10px 24px rgba(0,0,0,.14);max-height:300px;overflow:auto;display:none}
+  .suggest.show{display:block}
+  .sg-item{padding:8px 12px;cursor:pointer;font-size:13px;border-top:1px solid #eef1f2}
+  .sg-item:first-child{border-top:0}
+  .sg-item:hover,.sg-item.active{background:#e7f3f5}
+  .sg-item b{color:var(--teal-d)}
+  .sg-item .meta{color:var(--muted);font-size:12px;margin-top:1px}
+  .sg-empty{padding:10px 12px;color:var(--muted);font-size:13px}
+  .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 24px;margin:8px 0}
+  .fi{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted #e3e9eb;padding:4px 0;font-size:13px}
+  .fi .k{color:var(--muted)}
+  .fi .v{font-weight:600;text-align:right;word-break:break-word}
+  .fi-obs{margin:8px 0;font-size:13px;background:#f1f7f8;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .fi-obs .k{color:var(--muted);display:block;margin-bottom:2px}
+  .fi-obs .vv{font-weight:600}
+  /* ===================== Mejoras UI/UX ===================== */
+  :root{ --radius:16px; --radius-sm:10px; --shadow:0 1px 2px rgba(16,42,52,.04), 0 8px 24px rgba(16,42,52,.06); --shadow-lg:0 24px 60px rgba(8,28,36,.30); }
+  html{scroll-behavior:smooth}
+  body{background:radial-gradient(1200px 520px at 50% -220px, #e6f0f2, var(--bg)) fixed;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:1000px}
+  .appnav{position:sticky;top:0;z-index:40;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+    background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:8px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .appnav a{font-size:13px;font-weight:600;color:var(--teal-d);text-decoration:none;padding:7px 11px;border-radius:8px}
+  .appnav a:hover{background:#eaf3f5}
+  .appnav .sp{flex:1}
+  .card{border-radius:var(--radius);box-shadow:var(--shadow);transition:box-shadow .18s ease,border-color .18s ease}
+  .btn{border-radius:11px;letter-spacing:.2px;transition:transform .12s ease,box-shadow .18s ease,background .15s ease,filter .15s ease}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{transform:none;box-shadow:none}
+  .btn-primary{background:linear-gradient(180deg,var(--teal-l),var(--teal));box-shadow:0 4px 14px rgba(14,94,110,.26)}
+  .btn-primary:hover{background:linear-gradient(180deg,var(--teal),var(--teal-d))}
+  .btn-accent{background:linear-gradient(180deg,#ff9a45,var(--accent));box-shadow:0 5px 16px rgba(245,124,31,.30)}
+  .btn-accent:hover{filter:brightness(1.04)}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--teal-d)}
+  .btn-ghost:hover{background:var(--line-soft);border-color:var(--teal-l)}
+  :focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+  .drop{border-radius:var(--radius);background:linear-gradient(180deg,#fbfeff,#eef7f9);border-width:2px}
+  .drop:hover{border-color:var(--accent);background:linear-gradient(180deg,#fbfeff,#e9f4f6)}
+  .section-title{display:flex;align-items:center;gap:8px}
+  /* status flotante (toast) */
+  .status{position:fixed;right:18px;bottom:18px;max-width:400px;margin:0;z-index:90;display:none;
+    border-radius:12px;box-shadow:var(--shadow-lg);border-left:5px solid transparent;cursor:pointer;animation:slidein .18s ease}
+  .status::after{content:"  ✕";opacity:.45;font-weight:700}
+  .status.info{border-left-color:#0a4a6e}.status.ok{border-left-color:var(--ok)}
+  .status.warn{border-left-color:var(--warn)}.status.error{border-left-color:var(--err)}
+  @keyframes slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media(max-width:560px){.status{left:12px;right:12px;max-width:none;bottom:12px}}
+  /* tarjetas de estadísticas */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(124px,1fr));gap:12px;margin-bottom:14px}
+  .stat{position:relative;background:linear-gradient(180deg,#ffffff,#f1f7f9);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);overflow:hidden}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--teal-l),var(--teal))}
+  .stat .n{font-size:25px;font-weight:800;color:var(--teal-d);line-height:1;letter-spacing:-.3px}
+  .stat .l{font-size:11px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  /* pastilla de estado */
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  /* modal */
+  .modal{border-radius:18px;box-shadow:var(--shadow-lg);border:1px solid rgba(255,255,255,.6)}
+  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line-soft);padding-bottom:12px;margin-bottom:6px}
+  .modal .x{appearance:none;border:0;background:var(--line-soft);color:var(--ink);border-radius:9px;width:32px;height:32px;
+    font-size:16px;line-height:1;cursor:pointer;flex:0 0 auto;transition:background .15s}
+  .modal .x:hover{background:#e0eaed}
+  table.prev th{background:linear-gradient(180deg,var(--teal-l),var(--teal));text-transform:uppercase;letter-spacing:.4px;font-size:11px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08)}
+  table.prev tr:hover td{background:#eaf5f7}
+  /* pestañas */
+  .tabs{position:sticky;top:0;z-index:40;display:flex;gap:6px;flex-wrap:wrap;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:6px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .tab{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;
+    padding:9px 14px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .tab:hover{background:#eef6f8;color:var(--teal-d)}
+  .tab.active{background:var(--teal);color:#fff}
+  .tabpanel{display:none}
+  .tabpanel.active{display:block;animation:fadein .16s ease}
+  @keyframes fadein{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}
+  #registrarHint{color:var(--muted);font-size:14px}
+  .efbanner{border-radius:12px;padding:13px 16px;margin:0 0 14px;font-size:15px;font-weight:700;border:1px solid rgba(0,0,0,.06);box-shadow:var(--shadow)}
+  .efbanner .efmeta{font-weight:600;opacity:.85;font-size:12.5px}
+  .efbanner.efnone{background:#eef3f5;color:var(--muted);font-weight:600}
+  /* Matriz de Eisenhower */
+  .eisen{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:680px){.eisen{grid-template-columns:1fr}}
+  .quad{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .quad h4{margin:0;font-size:14px;display:flex;align-items:center;gap:8px}
+  .quad .qcount{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px;color:var(--teal-d)}
+  .quad .qsub{font-size:11.5px;margin:2px 0 8px}
+  .quad.q1{background:#fff5f5;border-color:#f3c9c9} .quad.q1 h4{color:#b3261e}
+  .quad.q2{background:#f3f9fb;border-color:#cfe2e7} .quad.q2 h4{color:#0e4651}
+  .quad.q3{background:#fff8ec;border-color:#f0e2b8} .quad.q3 h4{color:#8a6d00}
+  .quad.q4{background:#f6f7f8;border-color:#e2e6e8} .quad.q4 h4{color:#555}
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+  .pcard .pe{font-weight:700;color:var(--teal-d)}
+  .pcard .pf{font-weight:700;margin-top:2px}
+  .pcard .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .pcard .venc{color:#b3261e;font-weight:700}
+  .quad .empty{color:var(--muted);font-size:12.5px}
+  .pcard{cursor:pointer}
+  .pcard:hover{border-color:var(--teal-l);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .gsec{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  .glist{max-height:160px;overflow:auto}
+  .titem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px;border-bottom:1px dotted #eef1f2}
+  .titem label{display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;font-weight:500}
+  .titem input{width:auto}
+  .aitem{font-size:13px;padding:5px 0;border-bottom:1px dotted #eef1f2}
+  .aitem .af{font-weight:700;color:var(--teal-d);margin-right:6px}
+  /* triple foco */
+  .pviews{display:flex;gap:6px;flex-wrap:wrap;background:#eef3f5;border-radius:10px;padding:4px;width:fit-content}
+  .pview{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .pview.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .pview-panel{display:none}
+  .pview-panel.active{display:block}
+  .pitem{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .pitem:hover{border-color:var(--teal-l);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .pitem .pnum{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+  .pitem .pbody{flex:1;font-size:12.5px}
+  .pitem .pe{font-weight:700;color:var(--teal-d)}
+  .pitem .pf{font-weight:700;margin-top:2px}.pitem .pf .venc{color:#b3261e}
+  .pitem .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
+  .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
+  /* ===================== Panel lateral (sidebar) ===================== */
+  .wrap{max-width:none;padding:0 22px}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .sidebar{flex:0 0 244px;position:sticky;top:14px;align-self:flex-start;
+    background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border:1px solid var(--line);
+    border-radius:16px;padding:12px;box-shadow:var(--shadow);transition:flex-basis .18s ease}
+  .content{flex:1 1 auto;min-width:0}
+  .side-toggle{appearance:none;border:1px solid var(--line);background:var(--line-soft);color:var(--teal-d);
+    border-radius:10px;width:100%;height:34px;cursor:pointer;font-size:14px;font-weight:700;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 10px;transition:background .15s}
+  .side-toggle:hover{background:#e7f1f3}
+  .sidenav{display:flex;flex-direction:column;gap:2px}
+  .navgrp{font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);
+    padding:12px 10px 5px;margin-top:6px;border-top:1px solid var(--line-soft)}
+  .navgrp:first-of-type{border-top:0;margin-top:0}
+  .sidebar .tab,.invcat{appearance:none;border:0;background:transparent;color:var(--ink);font-weight:600;font-size:13.5px;
+    width:100%;text-align:left;padding:10px 11px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:11px;
+    position:relative;transition:background .14s ease,color .14s ease}
+  .sidebar .tab:hover,.invcat:hover{background:var(--line-soft);color:var(--teal-d)}
+  .sidebar .tab.active{background:linear-gradient(180deg,var(--teal-l),var(--teal));color:#fff;box-shadow:0 4px 12px rgba(14,94,110,.24)}
+  .sidebar .tab.active .ico{filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+  .invcat.active{background:#e3eff1;color:var(--teal-d)}
+  .invcat.active::before{content:"";position:absolute;left:3px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--teal-l)}
+  .sidebar .tab .ico,.invcat .ico{flex:0 0 auto;width:20px;text-align:center;font-size:15px}
+  .sidebar .tab .lbl,.invcat .lbl{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navcount{flex:0 0 auto;font-style:normal;font-size:11px;font-weight:800;background:var(--line-soft);color:var(--teal-d);
+    border-radius:20px;padding:1px 8px;min-width:20px;text-align:center}
+  .sidebar .tab.active .navcount{background:rgba(255,255,255,.28);color:#fff}
+  .navcount:empty{display:none}
+  /* Contraído: solo íconos */
+  .layout.collapsed .sidebar{flex-basis:60px}
+  .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:none}
+  .layout.collapsed .sidebar .tab,.layout.collapsed .invcat{justify-content:center;padding:10px 6px}
+  .layout.collapsed .sidebar .ico{width:auto}
+  .layout.collapsed .side-toggle{justify-content:center;padding:0}
+  .layout.collapsed .side-toggle .lbl{display:none}
+  @media(max-width:880px){
+    .layout{flex-direction:column}
+    .sidebar{position:static;flex-basis:auto;width:100%}
+    .sidenav{flex-direction:row;flex-wrap:wrap}
+    .sidebar .tab,.invcat{width:auto}
+    .navgrp{width:100%;border-top:0;padding:6px 8px 2px}
+    .side-toggle{display:none}
+    .layout.collapsed .sidebar{flex-basis:auto}
+    .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:initial}
+  }
+  /* Tabla de inventario: filas clicables, estado coloreado */
+  table.prev tr.clik{cursor:pointer}
+  table.prev tr.clik:hover td{background:#e7f3f5 !important}
+  .estpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .est-op{background:#C6EFCE;color:#136b30}.est-no{background:#FFC7CE;color:#b3261e}
+  .est-st{background:#FFE0B2;color:#8a5a00}.est-baja{background:#D9D9D9;color:#444}.est-na{background:#eef3f5;color:#5e7177}
+  /* ===== Vista Equipo: pestañas de estado + tabla sin scroll horizontal ===== */
+  .estabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;background:var(--line-soft);border:1px solid var(--line);border-radius:12px;padding:5px}
+  .estab{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;
+    padding:7px 12px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .14s,color .14s}
+  .estab:hover{background:#fff;color:var(--teal-d)}
+  .estab.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .estab .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .estab .ec{font-style:normal;font-size:11px;font-weight:800;background:var(--line);color:var(--teal-d);border-radius:20px;padding:0 7px;min-width:18px;text-align:center}
+  .estab.active .ec{background:var(--teal);color:#fff}
+  /* tabla sin scroll horizontal: ancho 100%, el texto se ajusta */
+  .eqwrap{margin-top:10px;border:1px solid var(--line);border-radius:var(--radius-sm,10px);overflow-x:hidden;overflow-y:auto;max-height:600px}
+  table.eqtable{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12.5px}
+  table.eqtable th{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,var(--teal-l),var(--teal));color:#fff;
+    text-align:left;padding:8px 9px;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;vertical-align:top}
+  table.eqtable td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+  table.eqtable tr:nth-child(even) td{background:#f6f9fa}
+  table.eqtable tbody tr{cursor:pointer}
+  table.eqtable tbody tr:hover td{background:#eaf5f7}
+  .th-in{display:flex;align-items:center;gap:4px;justify-content:space-between}
+  .th-f{appearance:none;border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:6px;cursor:pointer;
+    font-size:11px;line-height:1;padding:3px 5px;flex:0 0 auto}
+  .th-f:hover{background:rgba(255,255,255,.34)}
+  .th-f.on{background:var(--accent);color:#fff}
+  /* anchos relativos por columna para repartir el espacio */
+  table.eqtable col.c-id{width:4%}table.eqtable col.c-inv{width:9%}table.eqtable col.c-carp{width:6%}
+  table.eqtable col.c-eq{width:15%}table.eqtable col.c-serie{width:10%}table.eqtable col.c-serv{width:12%}
+  table.eqtable col.c-uni{width:11%}table.eqtable col.c-ubi{width:9%}table.eqtable col.c-est{width:9%}
+  table.eqtable col.c-pend{width:7%}table.eqtable col.c-act{width:8%}
+  /* popover de filtro por columna (estilo Excel) */
+  .colfilter{position:fixed;z-index:120;width:248px;max-width:92vw;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow-lg);padding:10px}
+  .cf-search{width:100%;margin-bottom:8px}
+  .cf-all{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-d);padding:4px 2px;cursor:pointer}
+  .cf-all input{width:auto}
+  .cf-list{max-height:240px;overflow:auto;border:1px solid var(--line-soft);border-radius:8px;padding:4px 2px;margin:6px 0}
+  .cf-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 6px;border-radius:6px;cursor:pointer}
+  .cf-item:hover{background:var(--line-soft)}
+  .cf-item input{width:auto}
+  .cf-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cf-foot{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+  @media(max-width:760px){
+    table.eqtable col.c-carp,table.eqtable col.c-uni,table.eqtable col.c-ubi{width:0}
+    table.eqtable .h-carp,table.eqtable .h-uni,table.eqtable .h-ubi,
+    table.eqtable td.d-carp,table.eqtable td.d-uni,table.eqtable td.d-ubi{display:none}
+  }
+  /* Resumen: celdas-botón clicables */
+  .rcell{appearance:none;border:0;background:transparent;color:var(--teal-d);font-weight:800;font-size:13px;
+    cursor:pointer;padding:3px 9px;border-radius:7px;min-width:34px}
+  .rcell:hover{background:#e7f3f5}
+  .rcell.zero{color:var(--muted);font-weight:600;cursor:default}
+  .rcell.zero:hover{background:transparent}
+  .rcell.active{background:var(--teal);color:#fff}
+  table.prev td.mescell{font-weight:700;color:var(--ink)}
+  .drillhead{font-weight:700;color:var(--teal-d);margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* Archivos en la ficha del equipo */
+  .arch-sec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .arch-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+  .arch-item{display:flex;align-items:center;gap:8px;font-size:13px;background:#f7fbfc;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .arch-item a{color:#0b61a4;font-weight:600;text-decoration:none;word-break:break-all}
+  .arch-item a:hover{text-decoration:underline}
+  .arch-item .ac{flex:0 0 auto;font-size:11px;font-weight:700;background:#eef3f5;color:var(--teal-d);border-radius:20px;padding:1px 8px}
+  .arch-item .ab{flex:1 1 auto;display:flex;flex-direction:column;min-width:0}
+  .arch-item .ad{color:var(--muted);font-size:11.5px;word-break:break-word}
+  .arch-item .am{flex:0 0 auto;color:var(--muted);font-size:11.5px;margin-left:auto;white-space:nowrap}
+  .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
+  .arch-up .fld{min-width:150px}
+  .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
+  .quickdates{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  /* Utilidades PDF */
+  .pdflist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .pdfitem{display:flex;align-items:center;gap:8px;font-size:13px;background:#f7fbfc;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .pdfitem .ord{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
+  .pdfitem .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--teal-d)}
+  .pdfitem .sz{flex:0 0 auto;color:var(--muted);font-size:11.5px}
+  .pdfitem .pbtns{flex:0 0 auto;display:flex;gap:2px}
+  .pdfitem .pbtns button{appearance:none;background:transparent;border:0;cursor:pointer;font-size:14px;color:var(--teal-d);padding:2px 5px;border-radius:6px}
+  .pdfitem .pbtns button:hover{background:#e0eaed}
+  .pdfitem .pbtns button:disabled{opacity:.3;cursor:not-allowed}
+  /* ===================== Responsivo (tablet / móvil) ===================== */
+  @media(max-width:880px){
+    .layout{gap:10px}
+    .sidenav{gap:4px}
+    .sidebar{padding:8px}
+    /* el panel se vuelve una barra horizontal desplazable arriba */
+    .sidebar .tab,.invcat{font-size:13px;padding:8px 10px}
+  }
+  @media(max-width:640px){
+    header{padding:16px 14px}
+    header h1{font-size:17px}
+    header p{font-size:12px}
+    .wrap{padding:0 12px;margin:14px auto}
+    .card{padding:14px;margin-bottom:14px}
+    .row{gap:8px}
+    .row .grow{min-width:0;flex:1 1 100%}
+    #searchBtn,#sheetsSave,#sheetsTest,#sheetsSendAll,#sheetsPull{width:100%}
+    .actions .btn{flex:1 1 auto}
+    .modal-overlay{padding:10px}
+    .modal{padding:16px;border-radius:14px}
+    table.prev{font-size:12px}
+    table.prev th,table.prev td{padding:6px 8px}
+    .stat .n{font-size:19px}
+    .eisen{grid-template-columns:1fr}
+  }
+  @media(max-width:420px){
+    .sidebar .tab .lbl,.invcat .lbl{font-size:12.5px}
+    header h1{font-size:15.5px}
+    .btn{padding:10px 14px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Generador de Eventos · Mantención Preventiva 2026</h1>
+  <p>Hospital Hernán Henríquez Aravena — convierte la Programación MP 2026 en un Excel con <b>una fila por evento</b>.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
+    <button class="side-toggle" id="sideToggle" type="button" title="Contraer/expandir panel" aria-label="Contraer panel"><span class="ico">⮜</span></button>
+    <nav class="sidenav" role="tablist" aria-label="Secciones">
+      <div class="navgrp">General</div>
+      <button class="tab active" type="button" data-tab="cargar"><span class="ico">📂</span><span class="lbl">Cargar y generar</span></button>
+      <button class="tab" type="button" data-tab="inventario"><span class="ico">🩺</span><span class="lbl">Equipo</span><em class="navcount" id="navEqCount"></em></button>
+      <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
+      <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
+      <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
+      <button class="tab" type="button" data-tab="utilidades"><span class="ico">🧰</span><span class="lbl">Utilidades PDF</span></button>
+      <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
+      <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
+    </nav>
+  </aside>
+  <div class="content">
+
+  <section class="tabpanel active" id="tab-cargar">
+  <div class="card" id="card-cargar">
+    <ol class="steps">
+      <li>Suba el archivo <b>Programación MP 2026</b> (<code>.xlsm</code> o <code>.xlsx</code>).</li>
+      <li>El sistema lee las hojas <b>PMP_2026</b> y <b>Registro_MP-2026</b> y arma los eventos.</li>
+      <li>Descargue el Excel: una fila por equipo y mes con programación o resultado.</li>
+      <li><b>(Opcional)</b> Registre mantenciones ejecutadas: busque el equipo por serie/inventario, valide el mes y complete los datos.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div id="drop" class="drop">
+      <div class="big">📂 Arrastre aquí el archivo o haga clic para seleccionarlo</div>
+      <div class="small">Formatos aceptados: .xlsm / .xlsx · El procesamiento ocurre 100% en su navegador (sus datos no se envían a ningún servidor).</div>
+      <button id="pick" class="btn btn-primary" type="button">Seleccionar archivo</button>
+      <input id="file" type="file" accept=".xlsm,.xlsx" />
+      <span id="fileName"></span>
+    </div>
+  </div>
+
+  <div id="result" class="card" style="display:none"></div>
+
+  <div class="card">
+    <div class="actions">
+      <button id="download" class="btn btn-accent" type="button" disabled>⬇️ Descargar Excel (una fila por evento)</button>
+      <span class="muted">Incluye hojas <b>Eventos</b>, <b>Catalogos</b> y <b>Resumen</b>, con desplegables de Resultado, Estado Final y Ejecutor. <b>Consolida</b> las mantenciones que registres en la fila del equipo y mes correspondiente.</span>
+    </div>
+  </div>
+  </section>
+
+  <section class="tabpanel" id="tab-registrar">
+  <div id="registrarHint" class="card">📂 Primero cargue el archivo en la pestaña <b>Cargar y generar</b>.</div>
+
+  <div id="discrepanciasCard" class="card" style="display:none">
+    <p class="section-title">🔍 Comparación: registrado vs. archivo</p>
+    <div id="discrepancias"></div>
+  </div>
+
+  <div id="registrar" class="card" style="display:none">
+    <p class="section-title">🔧 Registrar mantención</p>
+    <p class="muted" style="margin:0 0 12px">Busque un equipo por su <b>N° de Serie</b> o <b>N° de Inventario</b> y registre una mantención ejecutada.</p>
+    <div class="row">
+      <div class="grow" style="position:relative">
+        <input id="searchInput" type="text" placeholder="Escriba N° de Serie o N° de Inventario… (sugerencias automáticas)" autocomplete="off" />
+        <div id="suggest" class="suggest"></div>
+      </div>
+      <button id="searchBtn" class="btn btn-primary" type="button" style="margin-top:0">Buscar</button>
+    </div>
+    <div id="searchMsg" class="inline-msg"></div>
+    <div id="equipoDetalle" style="display:none;margin-top:12px"></div>
+
+    <div id="registryWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Mantenciones registradas: <span class="badge" id="registryCount">0</span></span>
+        <span style="display:flex;gap:8px">
+          <button id="downloadReg" class="btn btn-accent btn-sm" type="button">⬇️ Descargar registro (Excel)</button>
+          <button id="clearReg" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+        </span>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Tus registros se guardan en este navegador y se mantienen aunque vuelvas a cargar el archivo.</p>
+      <input id="registryFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, mes, ejecutor, estado…" />
+      <div id="registryScope" class="scope-note"></div>
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="registryTable"></table>
+      </div>
+    </div>
+
+    <div id="correctivosWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Eventos correctivos: <span class="badge" id="correctivosCount">0</span></span>
+        <button id="clearCorr" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Correctivos</b> al descargar / enviar a Google Sheets.</p>
+      <input id="correctivosFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, tipo de evento, empresa, ejecutor, estado…" />
+      <div id="correctivosScope" class="scope-note"></div>
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="correctivosTable"></table>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="tabpanel" id="tab-pendientes">
+    <div class="card" id="pendManageCard" style="display:none">
+      <p class="section-title">📌 Gestión de pendientes — triple foco</p>
+      <div class="pviews">
+        <button class="pview active" type="button" data-pview="matriz">🧭 Matriz Eisenhower</button>
+        <button class="pview" type="button" data-pview="ivy">📋 Ivy Lee (Top 6)</button>
+        <button class="pview" type="button" data-pview="sapo">🐸 Cómete el sapo</button>
+      </div>
+      <div id="view-matriz" class="pview-panel active">
+        <p class="muted" style="margin:8px 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico). Ordenados por fecha dentro de cada cuadrante.</p>
+        <div id="eisenhower" class="eisen"></div>
+      </div>
+      <div id="view-ivy" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Los <b>6 pendientes</b> más prioritarios para hoy, en orden. Enfócate en el <b>#1</b> hasta terminarlo, luego sigue.</p>
+        <div id="ivy"></div>
+      </div>
+      <div id="view-sapo" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Tu <b>“sapo”</b> es lo más prioritario: hazlo <b>primero</b>. Luego el resto, en orden.</p>
+        <div id="sapo"></div>
+      </div>
+    </div>
+    <div class="card" id="pendNone">📌 No hay pendientes registrados. Regístralos desde la <b>ficha del equipo</b> (pestaña 🔧 Registrar).</div>
+    <div class="card" id="pendTableCard" style="display:none">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Pendientes: <span class="badge" id="pendientesCount">0</span></span>
+        <button id="clearPend" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Pendientes</b> al descargar / enviar a Google Sheets.</p>
+      <input id="pendientesFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, responsable, observación…" />
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="pendientesTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-resumen">
+    <div class="card" id="resumenHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el resumen mensual.</div>
+    <div class="card" id="resumenCard" style="display:none">
+      <p class="section-title">📊 Resumen mensual de mantenciones</p>
+      <p class="muted" style="margin:0 0 12px">Programadas, realizadas y pendientes por mes. <b>Haz clic en cualquier número</b> para ver la lista de equipos de ese grupo; luego clic en un equipo para ver su detalle.</p>
+      <div class="tablewrap"><table class="prev" id="resumenTable"></table></div>
+      <div id="resumenDrill" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-inventario">
+    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> (o espere a que se traiga de Google Sheets) para ver los equipos.</div>
+    <div class="card" id="inventarioCard" style="display:none">
+      <div class="actions" style="justify-content:space-between;align-items:center">
+        <span class="section-title" id="inventarioTitle" style="font-size:15px">🩺 Equipo</span>
+        <span class="muted" style="font-size:12.5px">Mostrando <b id="inventarioCount">0</b> equipo(s) · clic en una fila para ver el detalle</span>
+      </div>
+      <div class="estabs" id="estabs"></div>
+      <div class="actions" style="margin-top:10px">
+        <input id="inventarioFilter" type="text" class="filter" style="margin-top:0;flex:1;min-width:220px" autocomplete="off" placeholder="🔎 Buscar en todas las columnas…" />
+        <button id="invClearFilters" class="btn btn-ghost btn-sm" type="button">✕ Quitar filtros</button>
+      </div>
+      <div class="eqwrap" id="eqwrap"><table class="eqtable" id="inventarioTable"></table></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-utilidades">
+    <div class="card">
+      <p class="section-title">🔗 Unir PDF</p>
+      <p class="muted" style="margin:0 0 10px">Selecciona varios PDF, ordénalos y combínalos en <b>uno solo</b>. Todo ocurre en tu navegador (los archivos no se envían a ningún servidor).</p>
+      <input id="mergeFiles" type="file" accept="application/pdf,.pdf" multiple />
+      <div id="mergeList" class="pdflist"></div>
+      <div class="actions" style="margin-top:6px">
+        <button id="mergeBtn" class="btn btn-accent btn-sm" type="button" disabled>🔗 Unir y descargar</button>
+        <button id="mergeClear" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <div id="mergeMsg" class="inline-msg"></div>
+    </div>
+    <div class="card">
+      <p class="section-title">✂️ Separar PDF</p>
+      <p class="muted" style="margin:0 0 10px">Sube un PDF y divídelo en varios. Se descarga un <b>.zip</b> con los resultados.</p>
+      <input id="splitFile" type="file" accept="application/pdf,.pdf" />
+      <div id="splitInfo" class="muted" style="margin-top:6px"></div>
+      <div class="field" style="margin-top:10px">
+        <label for="splitMode">Cómo separar</label>
+        <select id="splitMode">
+          <option value="each">Una página por archivo</option>
+          <option value="ranges">Por rangos de páginas</option>
+        </select>
+      </div>
+      <div class="field" id="splitRangesField" style="display:none">
+        <label for="splitRanges">Rangos (ej: <code>1-3, 4, 5-8</code>)</label>
+        <input id="splitRanges" type="text" autocomplete="off" placeholder="1-3, 4, 5-8" />
+      </div>
+      <div class="actions" style="margin-top:6px">
+        <button id="splitBtn" class="btn btn-accent btn-sm" type="button" disabled>✂️ Separar y descargar (.zip)</button>
+      </div>
+      <div id="splitMsg" class="inline-msg"></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-sheets">
+  <div id="sheetsCard" class="card">
+    <p class="section-title">☁️ Guardar en Google Sheets</p>
+    <p class="muted" style="margin:0 0 12px">Crea/actualiza en tu Google Sheet las <b>mismas hojas del Excel</b> (Eventos, Catalogos y Resumen), vía Apps Script. Se configura <b>una sola vez</b>. (Este paso sí usa internet.)</p>
+    <div class="field">
+      <label for="sheetsUrl">URL de la app web (Apps Script)</label>
+      <input id="sheetsUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
+    </div>
+    <div class="actions" style="margin-top:0">
+      <button id="sheetsSave" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Guardar URL</button>
+      <button id="sheetsTest" class="btn btn-ghost btn-sm" type="button">Probar conexión</button>
+      <button id="sheetsSendAll" class="btn btn-accent btn-sm" type="button">⬆️ Enviar / actualizar Google Sheets</button>
+      <button id="sheetsPull" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬇️ Traer de Google Sheets</button>
+      <label class="chk"><input id="sheetsAuto" type="checkbox"> Actualizar Google Sheets al registrar</label>
+    </div>
+    <div id="sheetsStatus" class="inline-msg"></div>
+    <details style="margin-top:10px">
+      <summary>¿Cómo conectar? (configuración única)</summary>
+      <ol class="steps">
+        <li>Crea una <b>Google Sheet</b> nueva (o abre la que usarás).</li>
+        <li>Menú <b>Extensiones → Apps Script</b>.</li>
+        <li>Borra el código de ejemplo, <b>pega el script de abajo</b> y guarda (💾).</li>
+        <li><b>Implementar → Nueva implementación → Aplicación web</b>. Ejecutar como: <b>Yo</b>; Acceso: <b>Cualquier persona</b>. Implementar y autoriza los permisos.</li>
+        <li>Copia la <b>URL de la app web</b> (termina en <code>/exec</code>) y pégala arriba; pulsa <b>Guardar URL</b> y <b>Probar conexión</b>.</li>
+      </ol>
+      <div class="actions" style="margin-top:0"><button id="copyScript" class="btn btn-ghost btn-sm" type="button">📋 Copiar script</button></div>
+      <p class="muted" style="margin:8px 0 0">⚠️ Si <b>Probar conexión</b> dice que el script está desactualizado, <b>no copies de aquí</b> (esta copia se sirve desde la misma versión publicada, así que también sería vieja): usa el archivo <code>Code.gs</code> que te entregaron y publica <b>Versión nueva</b>.</p>
+      <pre id="gsScript" class="code"><!--GASCRIPT--></pre>
+    </details>
+  </div>
+
+  </section>
+
+  <section class="tabpanel" id="tab-ayuda">
+  <div class="card" id="card-ayuda">
+    <details>
+      <summary>📖 Diccionario de códigos y reglas</summary>
+      <div class="legend">
+        <div>
+          <h4>Programación (columna P)</h4>
+          <table>
+            <tr><td>X</td><td>Mantención Preventiva Programada</td></tr>
+            <tr><td>R</td><td>Mantención Preventiva Reprogramada</td></tr>
+            <tr><td>RA</td><td>Reprogramada de Año Anterior</td></tr>
+            <tr><td>PM</td><td>Puesta en Marcha</td></tr>
+          </table>
+          <h4 style="margin-top:12px">Resultado (columna R)</h4>
+          <table>
+            <tr><td>Si</td><td>MP Realizada</td></tr>
+            <tr><td>C1–C8</td><td>MP Reprogramada (ver causales)</td></tr>
+            <tr><td>Si-RA</td><td>MP de Año Anterior Realizada</td></tr>
+            <tr><td>FS</td><td>Fuera de Servicio</td></tr>
+            <tr><td>No</td><td>No Realizada</td></tr>
+            <tr><td>NU</td><td>No Ubicable</td></tr>
+            <tr><td>Baja</td><td>Equipo Dado de Baja</td></tr>
+          </table>
+        </div>
+        <div>
+          <h4>Causales de reprogramación</h4>
+          <table>
+            <tr><td>C1</td><td>Imposibilidad de desocupar el equipo por indicación clínica</td></tr>
+            <tr><td>C2</td><td>Equipo en servicio técnico</td></tr>
+            <tr><td>C3</td><td>Equipo no operativo, espera repuestos/accesorios</td></tr>
+            <tr><td>C4</td><td>Equipo en préstamo a otro hospital o institución</td></tr>
+            <tr><td>C5</td><td>No disponibilidad HH funcionario SEC por carga laboral</td></tr>
+            <tr><td>C6</td><td>No disponibilidad HH servicio técnico externo</td></tr>
+            <tr><td>C7</td><td>Ausencia justificada funcionario SEC &gt; 15 días</td></tr>
+            <tr><td>C8</td><td>Contingencia hospitalaria</td></tr>
+          </table>
+          <h4 style="margin-top:12px">Reglas</h4>
+          <table>
+            <tr><td>C2·C3·C4</td><td>Sin nueva fecha; se registra en el mes real de reintegro.</td></tr>
+            <tr><td>C1·C5·C6·C7·C8</td><td>Reprogramar ≤ 30 días: origen X+causal, destino R.</td></tr>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+  </section>
+
+  </div><!-- /.content -->
+  </div><!-- /.layout -->
+
+  <div id="status" class="status"></div>
+</div>
+
+<!-- Filtro de columna estilo Excel (Equipo) -->
+<div id="colFilterPop" class="colfilter" style="display:none">
+  <input id="cfSearch" type="text" class="cf-search" autocomplete="off" placeholder="Buscar valor…" />
+  <label class="cf-all"><input type="checkbox" id="cfAll" /> <span>(Seleccionar todo)</span></label>
+  <div id="cfList" class="cf-list"></div>
+  <div class="cf-foot">
+    <button id="cfClear" class="btn btn-ghost btn-sm" type="button">Quitar filtro</button>
+    <button id="cfApply" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Aplicar</button>
+  </div>
+</div>
+
+<!-- Vista de registro de mantención -->
+<div id="modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalTitle">🔧 Registrar mantención</h3><button id="mClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Complete los datos de la mantención ejecutada.</div>
+    <div id="modalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="mFecha">Fecha de ejecución <span class="req">*</span></label>
+      <input id="mFecha" type="date" min="2026-01-01" max="2026-12-31" />
+      <div id="mFechaMsg" class="inline-msg"></div>
+    </div>
+
+    <div id="mTipo" class="tipo-box" style="display:none"></div>
+
+    <fieldset id="mFields" class="formfields" disabled>
+      <div class="field" style="margin-top:12px">
+        <label for="mResultado">Resultado <span class="req">*</span></label>
+        <select id="mResultado"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field">
+        <label for="mObs">Observación (opcional)</label>
+        <textarea id="mObs" placeholder="Detalle de la mantención, repuestos, etc."></textarea>
+      </div>
+      <div class="field">
+        <label for="mEjecutor">Ejecutor <span class="req">*</span></label>
+        <select id="mEjecutor"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field">
+        <label for="mEstadoFinal" id="mEstadoFinalLabel">Estado final del equipo <span class="req">*</span></label>
+        <select id="mEstadoFinal"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field" id="mAttachField" style="display:none">
+        <label for="mFile">📎 Adjuntar archivo (opcional) — se sube a Drive</label>
+        <input id="mFile" type="file" />
+        <input id="mFileDesc" type="text" autocomplete="off" placeholder="Breve descripción del archivo (se guarda como .txt junto al archivo)" style="margin-top:6px" />
+      </div>
+    </fieldset>
+    <div id="modalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="mCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="mSave" class="btn btn-accent" type="button" disabled>Guardar registro</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de evento correctivo -->
+<div id="cmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>🛠️ Registrar evento correctivo</h3><button id="cClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Seleccione el tipo de evento y complete los datos.</div>
+    <div id="cmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="cTipo">Tipo de evento <span class="req">*</span></label>
+      <select id="cTipo"><option value="">— Seleccione —</option></select>
+    </div>
+
+    <div id="cFields"></div>
+    <div class="field" id="cAttachField" style="display:none">
+      <label for="cFile">📎 Adjuntar archivo (opcional) — se sube a Drive</label>
+      <input id="cFile" type="file" />
+      <input id="cFileDesc" type="text" autocomplete="off" placeholder="Breve descripción del archivo (se guarda como .txt junto al archivo)" style="margin-top:6px" />
+    </div>
+    <div id="cmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="cCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="cSave" class="btn btn-accent" type="button" disabled>Guardar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de pendiente -->
+<div id="pmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>📌 Registrar pendiente</h3><button id="pClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Complete los datos del pendiente.</div>
+    <div id="pmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="pTipo">Tipo de pendiente <span class="req">*</span></label>
+      <select id="pTipo"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pFecha">Fecha de compromiso <span class="req">*</span></label>
+      <input id="pFecha" type="date" />
+      <div class="quickdates">
+        <button id="pQuick3" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +3 días hábiles</button>
+        <button id="pQuick7" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +1 semana</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="pRespAdmin">Responsable administrativo <span class="req">*</span></label>
+      <select id="pRespAdmin"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pRespEjec">Responsable de ejecución <span class="req">*</span></label>
+      <select id="pRespEjec"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pObs">Observación <span class="req">*</span></label>
+      <textarea id="pObs" placeholder="Describa el pendiente"></textarea>
+    </div>
+    <div class="field" id="pAttachField" style="display:none">
+      <label for="pFile">📎 Adjuntar archivo (opcional) — se sube a Drive</label>
+      <input id="pFile" type="file" />
+      <input id="pFileDesc" type="text" autocomplete="off" placeholder="Breve descripción del archivo (se guarda como .txt junto al archivo)" style="margin-top:6px" />
+    </div>
+    <div id="pmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="pCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="pSave" class="btn btn-accent" type="button" disabled>Guardar pendiente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gestión de un pendiente -->
+<div id="gmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>⚙️ Gestionar pendiente</h3><button id="gClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div id="gmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="gEstado">Estado</label>
+      <select id="gEstado"></select>
+    </div>
+
+    <div class="gsec">
+      <div class="section-title" style="font-size:14px">✅ Tareas <span id="gTareaResumen" class="muted" style="font-weight:600"></span></div>
+      <div id="gTareaLista" class="glist"></div>
+      <div class="row" style="margin-top:6px">
+        <div class="grow"><input id="gTareaTexto" type="text" autocomplete="off" placeholder="Nueva tarea…" /></div>
+        <button id="gTareaAdd" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Agregar</button>
+      </div>
+    </div>
+
+    <div class="gsec">
+      <div class="section-title" style="font-size:14px">📝 Bitácora de actualizaciones</div>
+      <div id="gActLista" class="glist"></div>
+      <div class="row" style="margin-top:6px">
+        <input id="gActFecha" type="date" style="max-width:150px" />
+        <div class="grow"><input id="gActTexto" type="text" autocomplete="off" placeholder="Nueva actualización…" /></div>
+        <button id="gActAdd" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Agregar</button>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button id="gCerrar" class="btn btn-accent" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<footer>Funciona sin conexión a internet · Procesamiento local en el navegador · ExcelJS</footer>
+
+<!--EXCELJS-->
+<!--CORE-->
+<!--OUTPUT-->
+<!--APP-->
+</body>
+</html>
