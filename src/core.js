@@ -86,6 +86,9 @@
   // Estados de un pendiente (ciclo de vida).
   const ESTADO_PENDIENTE_OPCIONES = ['Abierto', 'En progreso', 'Resuelto'];
 
+  // Tipos de pendiente (lista desplegable).
+  const PENDIENTE_TIPOS = ['Pauta de Monitoreo Diario', 'Reporte Interno MP', 'Reporte externo MP', 'Firma', 'Documento', 'Otro'];
+
   // Categorías para clasificar archivos adjuntos del equipo.
   const ARCHIVO_CATEGORIAS = ['Informe de servicio', 'Foto', 'Guía de despacho', 'Cotización', 'Manual', 'Orden de trabajo', 'Otro'];
 
@@ -319,6 +322,7 @@
     return {
       familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
       servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      tipo: data.tipo || '',
       fechaCompromiso: data.fechaCompromiso || '',
       respAdministrativo: data.respAdministrativo || '',
       respEjecucion: data.respEjecucion || '',
@@ -355,6 +359,6 @@
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
     CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente,
-    ESTADO_PENDIENTE_OPCIONES, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
+    ESTADO_PENDIENTE_OPCIONES, PENDIENTE_TIPOS, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
   };
 });

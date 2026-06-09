@@ -33,7 +33,12 @@ solo, sin pegar ninguna URL).
 1. En tu planilla: **Extensiones → Apps Script**.
 2. Pega el contenido de `google-apps-script.gs` en `Código.gs`.
 3. Crea un archivo HTML llamado **exactamente `index`** (**+ → HTML**) y pega
-   dentro **todo** el contenido de `index.html` (reemplaza lo que traiga).
+   dentro **todo** el contenido de **`index-appsscript.html`** (reemplaza lo que
+   traiga). ⚠️ Para Apps Script usa **`index-appsscript.html`**, *no* el
+   `index.html` grande: dentro del iframe protegido de Apps Script el ExcelJS
+   incrustado (≈930 KB) no se ejecuta bien y la app diría *“No se cargó la
+   librería ExcelJS”*. La versión `-appsscript` carga ExcelJS desde un CDN
+   (archivo liviano, ~180 KB) y funciona.
 4. **Implementar → Gestionar implementaciones → Editar (lápiz) → Nueva versión**
    (o **Nueva implementación** la primera vez), tipo **Aplicación web**,
    *Ejecutar como* **Yo**, *Acceso* **Cualquier persona**. Autoriza.
@@ -45,6 +50,10 @@ solo, sin pegar ninguna URL).
 > bloqueado por el entorno protegido (iframe); si lo necesitas, usa la misma app
 > publicada por la Opción A o B para descargar. La sincronización con Google
 > Sheets funciona igual en los tres casos.
+
+> **Dos archivos generados** (`node build.js`): **`index.html`** (ExcelJS
+> incrustada, 100% offline → GitHub Pages / Netlify / abrir local) e
+> **`index-appsscript.html`** (ExcelJS por CDN, liviano → pegar en Apps Script).
 
 > Es seguro publicarlo: la app no guarda datos en ningún servidor. El archivo
 > de equipos lo sube cada usuario en su navegador, y los registros quedan en el

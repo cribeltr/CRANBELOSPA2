@@ -362,6 +362,7 @@
     const PEND_COLS = [
       ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
       ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['tipo', 'Tipo', 22, 's'],
       ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd'],
       ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
       ['respEjecucion', 'Responsable de Ejecución', 26, 's'],

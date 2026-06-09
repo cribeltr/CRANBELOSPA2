@@ -295,6 +295,7 @@
   .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
   .arch-up .fld{min-width:150px}
   .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
+  .quickdates{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 </style>
 </head>
 <body>
@@ -514,7 +515,9 @@
  *
  *  -- OPCIONAL: servir la app DESDE aquí (el link /exec abre el programa) --
  *   a. En el editor de Apps Script: "+" -&gt; HTML -&gt; nómbralo EXACTAMENTE "index".
- *   b. Pega dentro TODO el contenido de index.html (reemplaza lo que traiga).
+ *   b. Pega dentro TODO el contenido de "index-appsscript.html" (NO el index.html
+ *      grande: dentro de Apps Script el ExcelJS incrustado no se ejecuta bien;
+ *      la versión -appsscript lo carga por CDN y sí funciona).
  *   c. Implementar -&gt; Nueva versión. La URL /exec abre la app ya conectada a
  *      esta planilla (escribe y lee con google.script.run, sin pegar la URL).
  *   Nota: dentro de Apps Script el botón "Descargar Excel" puede quedar
@@ -873,8 +876,16 @@ function json(obj) {
     <div id="pmodalEq" class="eqbox"></div>
 
     <div class="field">
+      <label for="pTipo">Tipo de pendiente <span class="req">*</span></label>
+      <select id="pTipo"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
       <label for="pFecha">Fecha de compromiso <span class="req">*</span></label>
       <input id="pFecha" type="date" />
+      <div class="quickdates">
+        <button id="pQuick3" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +3 días hábiles</button>
+        <button id="pQuick7" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +1 semana</button>
+      </div>
     </div>
     <div class="field">
       <label for="pRespAdmin">Responsable administrativo <span class="req">*</span></label>
@@ -1070,6 +1081,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   // Estados de un pendiente (ciclo de vida).
   const ESTADO_PENDIENTE_OPCIONES = ['Abierto', 'En progreso', 'Resuelto'];
+
+  // Tipos de pendiente (lista desplegable).
+  const PENDIENTE_TIPOS = ['Pauta de Monitoreo Diario', 'Reporte Interno MP', 'Reporte externo MP', 'Firma', 'Documento', 'Otro'];
 
   // Categorías para clasificar archivos adjuntos del equipo.
   const ARCHIVO_CATEGORIAS = ['Informe de servicio', 'Foto', 'Guía de despacho', 'Cotización', 'Manual', 'Orden de trabajo', 'Otro'];
@@ -1304,6 +1318,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return {
       familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
       servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      tipo: data.tipo || '',
       fechaCompromiso: data.fechaCompromiso || '',
       respAdministrativo: data.respAdministrativo || '',
       respEjecucion: data.respEjecucion || '',
@@ -1340,7 +1355,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     parseWorkbook, buildStats, makeEvent,
     findEquipos, programmedMonths, buildRegistro,
     CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente,
-    ESTADO_PENDIENTE_OPCIONES, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
+    ESTADO_PENDIENTE_OPCIONES, PENDIENTE_TIPOS, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
   };
 });
 
@@ -1710,6 +1725,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const PEND_COLS = [
       ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
       ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['tipo', 'Tipo', 22, 's'],
       ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd'],
       ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
       ['respEjecucion', 'Responsable de Ejecución', 26, 's'],
@@ -2025,6 +2041,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function pendientesExtras() {
     return {
       validations: [
+        { header: 'Tipo', values: MP.PENDIENTE_TIPOS },
         { header: 'Responsable Administrativo', values: MP.EJECUTORES },
         { header: 'Responsable de Ejecución', values: MP.EJECUTORES },
         { header: 'Estado', values: MP.ESTADO_PENDIENTE_OPCIONES }
@@ -2113,7 +2130,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     })).filter(c => c.id || c.equipo);
     const pend = rowsToObjs(tablas.Pendientes).map(o => ({
       id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']), equipo: o['Equipo'] || '',
-      servicio: o['Servicio'] || '', unidad: o['Unidad'] || '', fechaCompromiso: asDate(o['Fecha de Compromiso']),
+      servicio: o['Servicio'] || '', unidad: o['Unidad'] || '', tipo: o['Tipo'] || '', fechaCompromiso: asDate(o['Fecha de Compromiso']),
       respAdministrativo: o['Responsable Administrativo'] || '', respEjecucion: o['Responsable de Ejecución'] || '',
       observacion: o['Observación'] || '', estado: o['Estado'] || 'Abierto', tareas: [], actualizaciones: []
     })).filter(p => p.id || p.equipo);
@@ -2749,10 +2766,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const pend = state.pendientes.filter(p => p.id === eq.id);
     let pendBody = '';
     if (pend.length) {
-      const pc = ['Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación'];
+      const pc = ['Tipo', 'Fecha compromiso', 'Resp. administrativo', 'Resp. ejecución', 'Observación'];
       const ph = '<tr>' + pc.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
       const pr = pend.map(p =>
-        '<tr><td>' + esc(fmtDate(p.fechaCompromiso)) + '</td><td>' + esc(p.respAdministrativo) + '</td><td>' +
+        '<tr><td>' + esc(p.tipo || '—') + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) + '</td><td>' + esc(p.respAdministrativo) + '</td><td>' +
         esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) + '</td></tr>'
       ).join('');
       pendBody = '<div class="muted" style="margin:10px 0 4px">Pendientes registrados</div>' +
@@ -2790,6 +2807,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     fillSelect($('#mEjecutor'), MP.EJECUTORES);
     fillSelect($('#mEstadoFinal'), MP.ESTADO_FINAL_OPCIONES);
     fillSelect($('#cTipo'), MP.CORRECTIVO_TIPOS);
+    fillSelect($('#pTipo'), MP.PENDIENTE_TIPOS);
     fillSelect($('#pRespAdmin'), MP.EJECUTORES);
     fillSelect($('#pRespEjec'), MP.EJECUTORES);
     fillSelect($('#gEstado'), MP.ESTADO_PENDIENTE_OPCIONES);
@@ -3198,15 +3216,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     $('#pendNone').style.display = has ? 'none' : 'block';
     if (!has) { touch(); return; }
     const term = ($('#pendientesFilter') ? $('#pendientesFilter').value : '').trim().toLowerCase();
-    const cols = ['#', 'ID', 'Equipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', '', ''];
+    const cols = ['#', 'ID', 'Equipo', 'Tipo', 'Fecha compromiso', 'Estado', 'Tareas', 'Resp. ejecución', 'Observación', '', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.pendientes.map((p, i) => {
-      const hay = [p.id, p.equipo, p.serie, p.inv, fmtDate(p.fechaCompromiso), p.estado, p.respAdministrativo, p.respEjecucion, p.observacion].join(' ').toLowerCase();
+      const hay = [p.id, p.equipo, p.serie, p.inv, p.tipo, fmtDate(p.fechaCompromiso), p.estado, p.respAdministrativo, p.respEjecucion, p.observacion].join(' ').toLowerCase();
       if (term && hay.indexOf(term) === -1) return '';
       shown++;
       const tr = tareasResumen(p);
-      return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.id) + '</td><td>' + esc(p.equipo) + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) +
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.id) + '</td><td>' + esc(p.equipo) + '</td><td>' + esc(p.tipo || '—') + '</td><td>' + esc(fmtDate(p.fechaCompromiso)) +
         '</td><td><span class="pill" style="' + estadoPendStyle(p.estado) + '">' + esc(p.estado || 'Abierto') + '</span></td><td>' + esc(tr || '—') +
         '</td><td>' + esc(p.respEjecucion) + '</td><td>' + esc(p.observacion) +
         '</td><td><button class="btn btn-ghost btn-sm" title="Gestionar" data-gest="' + i + '">⚙️ Gestionar</button></td>' +
@@ -3214,7 +3232,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }).join('');
     $('#pendientesCount').textContent = term ? (shown + ' / ' + state.pendientes.length) : state.pendientes.length;
     const t = $('#pendientesTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="10" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="11" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
     t.querySelectorAll('button[data-gest]').forEach(b =>
       b.addEventListener('click', () => openGModal(state.pendientes[+b.dataset.gest])));
     t.querySelectorAll('button[data-del]').forEach(b =>
@@ -3228,26 +3246,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   // ---- Modal de pendiente -------------------------------------------------
   function updatePSave() {
-    $('#pSave').disabled = !(state.pEq && $('#pFecha').value && $('#pRespAdmin').value && $('#pRespEjec').value && $('#pObs').value.trim());
+    $('#pSave').disabled = !(state.pEq && $('#pTipo').value && $('#pFecha').value && $('#pRespAdmin').value && $('#pRespEjec').value && $('#pObs').value.trim());
   }
   function openPModal(eq) {
     state.pEq = eq;
     $('#pmodalEq').innerHTML = '<b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · Serie: <b>' +
       esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
-    $('#pFecha').value = ''; $('#pRespAdmin').value = ''; $('#pRespEjec').value = ''; $('#pObs').value = '';
+    $('#pTipo').value = ''; $('#pFecha').value = ''; $('#pRespAdmin').value = ''; $('#pRespEjec').value = ''; $('#pObs').value = '';
     showInline($('#pmodalMsg'), '', '');
     $('#pSave').disabled = true;
     $('#pmodal').classList.add('show');
   }
+  // Fija la fecha de compromiso a N días hábiles (o N días corridos) desde hoy.
+  function addBusinessDays(base, n) { const r = new Date(base); let added = 0; while (added < n) { r.setDate(r.getDate() + 1); const wd = r.getDay(); if (wd !== 0 && wd !== 6) added++; } return r; }
+  function setPFecha(d) { $('#pFecha').value = isoDate(d); updatePSave(); }
   function closePModal() { $('#pmodal').classList.remove('show'); state.pEq = null; }
   function savePendiente() {
     const eq = state.pEq;
     if (!eq) return;
-    if (!$('#pFecha').value || !$('#pRespAdmin').value || !$('#pRespEjec').value || !$('#pObs').value.trim()) {
+    if (!$('#pTipo').value || !$('#pFecha').value || !$('#pRespAdmin').value || !$('#pRespEjec').value || !$('#pObs').value.trim()) {
       showInline($('#pmodalMsg'), 'err', 'Complete todos los campos.'); return;
     }
     const x = $('#pFecha').value.split('-');
     state.pendientes.push(MP.buildPendiente(eq, {
+      tipo: $('#pTipo').value,
       fechaCompromiso: new Date(+x[0], +x[1] - 1, +x[2]),
       respAdministrativo: $('#pRespAdmin').value,
       respEjecucion: $('#pRespEjec').value,
@@ -3272,7 +3294,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function renderGModal() {
     const p = state.gPend; if (!p) return;
     $('#gmodalEq').innerHTML = '<b>' + esc(p.equipo) + '</b> (ID ' + esc(p.id) + ') · Inv: <b>' + esc(p.inv || '—') +
-      '</b><br>📅 Compromiso: <b>' + esc(fmtDate(p.fechaCompromiso)) + '</b> · Ejec.: ' + esc(p.respEjecucion || '—') +
+      '</b>' + (p.tipo ? ' · Tipo: <b>' + esc(p.tipo) + '</b>' : '') +
+      '<br>📅 Compromiso: <b>' + esc(fmtDate(p.fechaCompromiso)) + '</b> · Ejec.: ' + esc(p.respEjecucion || '—') +
       ' · Adm.: ' + esc(p.respAdministrativo || '—') + (p.observacion ? '<br>' + esc(p.observacion) : '');
     // Estado
     $('#gEstado').value = p.estado || 'Abierto';
@@ -3410,9 +3433,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   });
 
   // Pendientes
-  ['#pFecha', '#pRespAdmin', '#pRespEjec', '#pObs'].forEach(s => {
+  ['#pTipo', '#pFecha', '#pRespAdmin', '#pRespEjec', '#pObs'].forEach(s => {
     $(s).addEventListener('input', updatePSave); $(s).addEventListener('change', updatePSave);
   });
+  $('#pQuick3').addEventListener('click', () => { const t = new Date(); t.setHours(0, 0, 0, 0); setPFecha(addBusinessDays(t, 3)); });
+  $('#pQuick7').addEventListener('click', () => { const t = new Date(); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() + 7); setPFecha(t); });
   $('#pSave').addEventListener('click', savePendiente);
   $('#pCancel').addEventListener('click', closePModal);
   $('#pClose').addEventListener('click', closePModal);

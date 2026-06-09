@@ -20,7 +20,9 @@
  *
  *  -- OPCIONAL: servir la app DESDE aquí (el link /exec abre el programa) --
  *   a. En el editor de Apps Script: "+" -> HTML -> nómbralo EXACTAMENTE "index".
- *   b. Pega dentro TODO el contenido de index.html (reemplaza lo que traiga).
+ *   b. Pega dentro TODO el contenido de "index-appsscript.html" (NO el index.html
+ *      grande: dentro de Apps Script el ExcelJS incrustado no se ejecuta bien;
+ *      la versión -appsscript lo carga por CDN y sí funciona).
  *   c. Implementar -> Nueva versión. La URL /exec abre la app ya conectada a
  *      esta planilla (escribe y lee con google.script.run, sin pegar la URL).
  *   Nota: dentro de Apps Script el botón "Descargar Excel" puede quedar

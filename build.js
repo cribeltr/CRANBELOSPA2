@@ -1,6 +1,14 @@
 /* ============================================================================
- *  build.js — Ensambla un index.html autocontenido (sin dependencias externas)
+ *  build.js — Ensambla index.html autocontenido (sin dependencias externas).
  *  Inserta ExcelJS (vendor) + core.js + output.js + app.js dentro del template.
+ *
+ *  Genera DOS archivos:
+ *   - index.html               : ExcelJS INCRUSTADA (funciona 100% sin internet;
+ *                                ideal para GitHub Pages / Netlify / abrir local).
+ *   - index-appsscript.html    : ExcelJS desde CDN (archivo liviano y fiable para
+ *                                PEGAR dentro de Apps Script; el iframe protegido
+ *                                de Apps Script no ejecuta bien el script gigante
+ *                                incrustado, así que ahí cargamos ExcelJS por CDN).
  *  Uso:  node build.js
  * ==========================================================================*/
 const fs = require('fs');
@@ -23,21 +31,35 @@ function inlineText(p) {
   return read(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-let html = read('src/template.html');
-const replacements = {
-  '<!--EXCELJS-->': inlineScript('vendor/exceljs.min.js'),
-  '<!--CORE-->':    inlineScript('src/core.js'),
-  '<!--OUTPUT-->':  inlineScript('src/output.js'),
-  '<!--APP-->':     inlineScript('src/app.js'),
+// ExcelJS desde CDN, con un segundo CDN de respaldo si el primero falla.
+const EXCELJS_CDN =
+  '<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>\n' +
+  '<script>if(typeof ExcelJS==="undefined"){document.write(\'<scr\'+\'ipt src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"><\\/scr\'+\'ipt>\')}</script>';
+
+const template = read('src/template.html');
+const shared = {
+  '<!--CORE-->':     inlineScript('src/core.js'),
+  '<!--OUTPUT-->':   inlineScript('src/output.js'),
+  '<!--APP-->':      inlineScript('src/app.js'),
   '<!--GASCRIPT-->': inlineText('google-apps-script.gs')
 };
-for (const [marker, content] of Object.entries(replacements)) {
-  if (!html.includes(marker)) throw new Error('Marcador no encontrado en template: ' + marker);
-  // Reemplazo con función: evita la interpretación de patrones "$" del JS minificado.
-  html = html.replace(marker, () => content);
+
+function assemble(exceljsBlock) {
+  let html = template;
+  const reps = Object.assign({ '<!--EXCELJS-->': exceljsBlock }, shared);
+  for (const [marker, content] of Object.entries(reps)) {
+    if (!html.includes(marker)) throw new Error('Marcador no encontrado en template: ' + marker);
+    html = html.replace(marker, () => content);   // función: no interpreta "$" del JS minificado
+  }
+  return html;
 }
 
-const out = path.join(root, 'index.html');
-fs.writeFileSync(out, html);
-const kb = (fs.statSync(out).size / 1024).toFixed(0);
-console.log('index.html generado (' + kb + ' KB).');
+function write(name, html) {
+  const out = path.join(root, name);
+  fs.writeFileSync(out, html);
+  const kb = (fs.statSync(out).size / 1024).toFixed(0);
+  console.log(name + ' generado (' + kb + ' KB).');
+}
+
+write('index.html', assemble(inlineScript('vendor/exceljs.min.js')));
+write('index-appsscript.html', assemble(EXCELJS_CDN));

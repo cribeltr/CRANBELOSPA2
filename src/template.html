@@ -295,6 +295,7 @@
   .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
   .arch-up .fld{min-width:150px}
   .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
+  .quickdates{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 </style>
 </head>
 <body>
@@ -623,8 +624,16 @@
     <div id="pmodalEq" class="eqbox"></div>
 
     <div class="field">
+      <label for="pTipo">Tipo de pendiente <span class="req">*</span></label>
+      <select id="pTipo"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
       <label for="pFecha">Fecha de compromiso <span class="req">*</span></label>
       <input id="pFecha" type="date" />
+      <div class="quickdates">
+        <button id="pQuick3" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +3 días hábiles</button>
+        <button id="pQuick7" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +1 semana</button>
+      </div>
     </div>
     <div class="field">
       <label for="pRespAdmin">Responsable administrativo <span class="req">*</span></label>

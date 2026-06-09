@@ -1,3 +1,1781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de Eventos — Programación MP 2026</title>
+<style>
+  :root{
+    --teal:#15616d; --teal-d:#0e4651; --teal-l:#2a8a99; --accent:#ff7d00;
+    --bg:#eef3f5; --card:#ffffff; --ink:#1f2a2e; --muted:#5e7177; --line:#d6dee1;
+    --ok:#1b7f3b; --okbg:#e7f6ec; --warn:#9a6b00; --warnbg:#fff6df;
+    --err:#b3261e; --errbg:#fdecea; --info:#0b5; --infobg:#eef7ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.45}
+  header{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;
+         padding:22px 20px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px}
+  header p{margin:4px 0 0;opacity:.9;font-size:13px}
+  .wrap{max-width:980px;margin:22px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .drop{border:2px dashed var(--teal-l);border-radius:12px;padding:34px 18px;text-align:center;
+        background:#f7fbfc;transition:.15s;cursor:pointer}
+  .drop.over{background:#e7f3f5;border-color:var(--accent);transform:scale(1.005)}
+  .drop .big{font-size:16px;font-weight:600;margin-bottom:6px}
+  .drop .small{color:var(--muted);font-size:13px}
+  .btn{appearance:none;border:0;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:600;
+       cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn-primary{background:var(--teal);color:#fff;margin-top:14px}
+  .btn-primary:hover{background:var(--teal-d)}
+  .btn-accent{background:var(--accent);color:#fff;font-size:15px;padding:13px 22px}
+  .btn-accent:hover{filter:brightness(.95)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  #file{display:none}
+  #fileName{display:block;margin-top:12px;color:var(--muted);font-size:13px;min-height:18px}
+  .status{display:none;margin-top:16px;padding:12px 14px;border-radius:9px;font-size:14px}
+  .status.info{background:var(--infobg);color:#0a4a6e}
+  .status.ok{background:var(--okbg);color:var(--ok)}
+  .status.warn{background:var(--warnbg);color:var(--warn)}
+  .status.error{background:var(--errbg);color:var(--err)}
+  .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#eef3f5;border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:13px}
+  .chip b{color:var(--teal-d)}
+  .muted{color:var(--muted);font-size:13px}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:420px}
+  table.prev{border-collapse:collapse;width:100%;font-size:12.5px;white-space:nowrap}
+  table.prev th{position:sticky;top:0;background:var(--teal);color:#fff;text-align:left;padding:8px 10px;font-weight:600}
+  table.prev td{padding:6px 10px;border-top:1px solid var(--line)}
+  table.prev tr:nth-child(even) td{background:#f6f9fa}
+  details{margin-top:6px}
+  summary{cursor:pointer;font-weight:600;color:var(--teal-d);padding:6px 0}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
+  @media(max-width:680px){.legend{grid-template-columns:1fr}}
+  .legend h4{margin:0 0 6px;font-size:13px;color:var(--teal-d)}
+  .legend table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .legend td{padding:3px 6px;border-bottom:1px solid #eef1f2;vertical-align:top}
+  .legend td:first-child{font-weight:700;width:64px;color:var(--ink)}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:6px 0 0}
+  .steps li{counter-increment:s;padding:6px 0 6px 34px;position:relative;font-size:14px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:5px;width:22px;height:22px;
+        background:var(--teal);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
+  code{background:#eef3f5;padding:1px 5px;border-radius:4px;font-size:12px}
+  /* --- Registrar mantención --- */
+  .section-title{font-size:16px;font-weight:700;color:var(--teal-d);margin:0 0 4px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  .field .req{color:var(--err)}
+  input[type=text],input[type=date],select,textarea{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;
+    font-family:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--teal-l);border-color:var(--teal-l)}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .row .grow{flex:1;min-width:200px}
+  .reslist{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto}
+  .resitem{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#f9fbfc}
+  .resitem .info{font-size:13px}
+  .resitem .info b{color:var(--teal-d)}
+  .resitem .meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .btn-sm{padding:7px 12px;font-size:13px;margin-top:0}
+  .btn-ghost{background:#eef3f5;color:var(--teal-d)}
+  .btn-ghost:hover{background:#e0eaed}
+  .btn-del{background:transparent;color:var(--err);padding:2px 8px;font-size:16px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,30,35,.55);display:none;
+    align-items:flex-start;justify-content:center;padding:24px;z-index:50;overflow:auto}
+  .modal-overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:22px;
+    box-shadow:0 18px 50px rgba(0,0,0,.3);margin:auto}
+  .modal h3{margin:0 0 4px;color:var(--teal-d);font-size:18px}
+  .eqbox{background:#f1f7f8;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;font-size:13px}
+  .eqbox b{color:var(--teal-d)}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  .inline-msg{padding:9px 11px;border-radius:8px;font-size:13px;margin-top:6px;display:none}
+  .inline-msg.show{display:block}
+  .inline-msg.ok{background:var(--okbg);color:var(--ok)}
+  .inline-msg.err{background:var(--errbg);color:var(--err)}
+  .tipo-box{background:#fff6df;border:1px solid #f0e2b8;border-radius:8px;padding:9px 11px;font-size:13px;margin-top:8px}
+  fieldset.formfields{border:0;padding:0;margin:0}
+  fieldset.formfields[disabled]{opacity:.45}
+  .badge{display:inline-block;background:var(--teal);color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700}
+  .disc-head{font-weight:700;color:var(--err);margin-bottom:8px;font-size:14px}
+  table.prev tr.err td{background:#fdecea !important}
+  table.prev tr.warn td{background:#fff6df !important}
+  pre.code{background:#0e2b30;color:#cfe8ec;border-radius:8px;padding:12px;overflow:auto;
+    max-height:300px;font-size:12px;line-height:1.4;font-family:Consolas,"Courier New",monospace;white-space:pre;margin:10px 0 0}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink)}
+  .chk input{width:auto}
+  .filter{margin-top:10px}
+  .nomatch{padding:10px 12px;color:var(--muted);font-size:13px}
+  .suggest{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--line);
+    border-radius:0 0 9px 9px;box-shadow:0 10px 24px rgba(0,0,0,.14);max-height:300px;overflow:auto;display:none}
+  .suggest.show{display:block}
+  .sg-item{padding:8px 12px;cursor:pointer;font-size:13px;border-top:1px solid #eef1f2}
+  .sg-item:first-child{border-top:0}
+  .sg-item:hover,.sg-item.active{background:#e7f3f5}
+  .sg-item b{color:var(--teal-d)}
+  .sg-item .meta{color:var(--muted);font-size:12px;margin-top:1px}
+  .sg-empty{padding:10px 12px;color:var(--muted);font-size:13px}
+  .ficha{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin:8px 0}
+  @media(max-width:560px){.ficha{grid-template-columns:1fr}}
+  .fi{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted #e3e9eb;padding:4px 0;font-size:13px}
+  .fi .k{color:var(--muted)}
+  .fi .v{font-weight:600;text-align:right;word-break:break-word}
+  .fi-obs{margin:8px 0;font-size:13px;background:#f1f7f8;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .fi-obs .k{color:var(--muted);display:block;margin-bottom:2px}
+  .fi-obs .vv{font-weight:600}
+  /* ===================== Mejoras UI/UX ===================== */
+  :root{ --radius:14px; --shadow:0 6px 22px rgba(15,40,50,.07); --shadow-lg:0 18px 50px rgba(0,0,0,.28); }
+  html{scroll-behavior:smooth}
+  body{background:radial-gradient(1100px 460px at 50% -180px, #e9f2f4, var(--bg))}
+  .wrap{max-width:1000px}
+  .appnav{position:sticky;top:0;z-index:40;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+    background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:8px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .appnav a{font-size:13px;font-weight:600;color:var(--teal-d);text-decoration:none;padding:7px 11px;border-radius:8px}
+  .appnav a:hover{background:#eaf3f5}
+  .appnav .sp{flex:1}
+  .card{border-radius:var(--radius);box-shadow:var(--shadow)}
+  .btn{border-radius:10px;letter-spacing:.2px}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{box-shadow:0 4px 12px rgba(21,97,109,.22)}
+  .btn-accent{box-shadow:0 4px 14px rgba(255,125,0,.26)}
+  :focus-visible{outline:3px solid rgba(42,138,153,.45);outline-offset:1px}
+  .drop{border-radius:var(--radius);background:linear-gradient(180deg,#fbfeff,#f1f9fb)}
+  .section-title{display:flex;align-items:center;gap:8px}
+  /* status flotante (toast) */
+  .status{position:fixed;right:18px;bottom:18px;max-width:400px;margin:0;z-index:90;display:none;
+    border-radius:12px;box-shadow:var(--shadow-lg);border-left:5px solid transparent;cursor:pointer;animation:slidein .18s ease}
+  .status::after{content:"  ✕";opacity:.45;font-weight:700}
+  .status.info{border-left-color:#0a4a6e}.status.ok{border-left-color:var(--ok)}
+  .status.warn{border-left-color:var(--warn)}.status.error{border-left-color:var(--err)}
+  @keyframes slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media(max-width:560px){.status{left:12px;right:12px;max-width:none;bottom:12px}}
+  /* tarjetas de estadísticas */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:10px;margin-bottom:12px}
+  .stat{background:linear-gradient(180deg,#f7fbfc,#eef6f8);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat .n{font-size:22px;font-weight:800;color:var(--teal-d);line-height:1}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:4px}
+  /* pastilla de estado */
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  /* modal */
+  .modal{border-radius:16px;box-shadow:var(--shadow-lg)}
+  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .modal .x{appearance:none;border:0;background:#eef3f5;color:var(--ink);border-radius:8px;width:30px;height:30px;
+    font-size:16px;line-height:1;cursor:pointer;flex:0 0 auto}
+  .modal .x:hover{background:#e0eaed}
+  table.prev th{background:linear-gradient(180deg,var(--teal-l),var(--teal))}
+  /* pestañas */
+  .tabs{position:sticky;top:0;z-index:40;display:flex;gap:6px;flex-wrap:wrap;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:6px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .tab{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;
+    padding:9px 14px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .tab:hover{background:#eef6f8;color:var(--teal-d)}
+  .tab.active{background:var(--teal);color:#fff}
+  .tabpanel{display:none}
+  .tabpanel.active{display:block;animation:fadein .16s ease}
+  @keyframes fadein{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}
+  #registrarHint{color:var(--muted);font-size:14px}
+  .efbanner{border-radius:10px;padding:11px 14px;margin:0 0 12px;font-size:15px;font-weight:700;border:1px solid rgba(0,0,0,.06)}
+  .efbanner .efmeta{font-weight:600;opacity:.85;font-size:12.5px}
+  .efbanner.efnone{background:#eef3f5;color:var(--muted);font-weight:600}
+  /* Matriz de Eisenhower */
+  .eisen{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:680px){.eisen{grid-template-columns:1fr}}
+  .quad{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .quad h4{margin:0;font-size:14px;display:flex;align-items:center;gap:8px}
+  .quad .qcount{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px;color:var(--teal-d)}
+  .quad .qsub{font-size:11.5px;margin:2px 0 8px}
+  .quad.q1{background:#fff5f5;border-color:#f3c9c9} .quad.q1 h4{color:#b3261e}
+  .quad.q2{background:#f3f9fb;border-color:#cfe2e7} .quad.q2 h4{color:#0e4651}
+  .quad.q3{background:#fff8ec;border-color:#f0e2b8} .quad.q3 h4{color:#8a6d00}
+  .quad.q4{background:#f6f7f8;border-color:#e2e6e8} .quad.q4 h4{color:#555}
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+  .pcard .pe{font-weight:700;color:var(--teal-d)}
+  .pcard .pf{font-weight:700;margin-top:2px}
+  .pcard .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .pcard .venc{color:#b3261e;font-weight:700}
+  .quad .empty{color:var(--muted);font-size:12.5px}
+  .pcard{cursor:pointer}
+  .pcard:hover{border-color:var(--teal-l);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .gsec{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  .glist{max-height:160px;overflow:auto}
+  .titem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px;border-bottom:1px dotted #eef1f2}
+  .titem label{display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;font-weight:500}
+  .titem input{width:auto}
+  .aitem{font-size:13px;padding:5px 0;border-bottom:1px dotted #eef1f2}
+  .aitem .af{font-weight:700;color:var(--teal-d);margin-right:6px}
+  /* triple foco */
+  .pviews{display:flex;gap:6px;flex-wrap:wrap;background:#eef3f5;border-radius:10px;padding:4px;width:fit-content}
+  .pview{appearance:none;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .pview.active{background:#fff;color:var(--teal-d);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .pview-panel{display:none}
+  .pview-panel.active{display:block}
+  .pitem{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .pitem:hover{border-color:var(--teal-l);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .pitem .pnum{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+  .pitem .pbody{flex:1;font-size:12.5px}
+  .pitem .pe{font-weight:700;color:var(--teal-d)}
+  .pitem .pf{font-weight:700;margin-top:2px}.pitem .pf .venc{color:#b3261e}
+  .pitem .pm{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
+  .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
+  /* ===================== Panel lateral (sidebar) ===================== */
+  .wrap{max-width:1240px}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .sidebar{flex:0 0 232px;position:sticky;top:12px;align-self:flex-start;
+    background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:14px;padding:10px;box-shadow:var(--shadow);transition:flex-basis .18s ease}
+  .content{flex:1 1 auto;min-width:0}
+  .side-toggle{appearance:none;border:1px solid var(--line);background:#f3f8f9;color:var(--teal-d);
+    border-radius:9px;width:100%;height:34px;cursor:pointer;font-size:14px;font-weight:700;margin-bottom:8px;
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 10px}
+  .side-toggle:hover{background:#e7f1f3}
+  .sidenav{display:flex;flex-direction:column;gap:3px}
+  .navgrp{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+    padding:10px 8px 4px;margin-top:4px;border-top:1px solid var(--line)}
+  .navgrp:first-of-type{border-top:0;margin-top:0}
+  .sidebar .tab,.invcat{appearance:none;border:0;background:transparent;color:var(--ink);font-weight:600;font-size:13.5px;
+    width:100%;text-align:left;padding:9px 10px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:10px}
+  .sidebar .tab:hover,.invcat:hover{background:#eef6f8;color:var(--teal-d)}
+  .sidebar .tab.active{background:var(--teal);color:#fff}
+  .invcat.active{background:#e7f1f3;color:var(--teal-d)}
+  .sidebar .tab .ico,.invcat .ico{flex:0 0 auto;width:20px;text-align:center;font-size:15px}
+  .sidebar .tab .lbl,.invcat .lbl{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navcount{flex:0 0 auto;font-style:normal;font-size:11px;font-weight:800;background:#eef3f5;color:var(--teal-d);
+    border-radius:20px;padding:1px 8px;min-width:20px;text-align:center}
+  .sidebar .tab.active .navcount{background:rgba(255,255,255,.25);color:#fff}
+  .navcount:empty{display:none}
+  /* Contraído: solo íconos */
+  .layout.collapsed .sidebar{flex-basis:60px}
+  .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:none}
+  .layout.collapsed .sidebar .tab,.layout.collapsed .invcat{justify-content:center;padding:10px 6px}
+  .layout.collapsed .sidebar .ico{width:auto}
+  .layout.collapsed .side-toggle{justify-content:center;padding:0}
+  .layout.collapsed .side-toggle .lbl{display:none}
+  @media(max-width:880px){
+    .layout{flex-direction:column}
+    .sidebar{position:static;flex-basis:auto;width:100%}
+    .sidenav{flex-direction:row;flex-wrap:wrap}
+    .sidebar .tab,.invcat{width:auto}
+    .navgrp{width:100%;border-top:0;padding:6px 8px 2px}
+    .side-toggle{display:none}
+    .layout.collapsed .sidebar{flex-basis:auto}
+    .layout.collapsed .sidebar .lbl,.layout.collapsed .sidebar .navcount,.layout.collapsed .sidebar .navgrp{display:initial}
+  }
+  /* Tabla de inventario: filas clicables, estado coloreado */
+  table.prev tr.clik{cursor:pointer}
+  table.prev tr.clik:hover td{background:#e7f3f5 !important}
+  .estpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .est-op{background:#C6EFCE;color:#136b30}.est-no{background:#FFC7CE;color:#b3261e}
+  .est-st{background:#FFE0B2;color:#8a5a00}.est-baja{background:#D9D9D9;color:#444}.est-na{background:#eef3f5;color:#5e7177}
+  /* Resumen: celdas-botón clicables */
+  .rcell{appearance:none;border:0;background:transparent;color:var(--teal-d);font-weight:800;font-size:13px;
+    cursor:pointer;padding:3px 9px;border-radius:7px;min-width:34px}
+  .rcell:hover{background:#e7f3f5}
+  .rcell.zero{color:var(--muted);font-weight:600;cursor:default}
+  .rcell.zero:hover{background:transparent}
+  .rcell.active{background:var(--teal);color:#fff}
+  table.prev td.mescell{font-weight:700;color:var(--ink)}
+  .drillhead{font-weight:700;color:var(--teal-d);margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* Archivos en la ficha del equipo */
+  .arch-sec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .arch-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+  .arch-item{display:flex;align-items:center;gap:8px;font-size:13px;background:#f7fbfc;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .arch-item a{color:#0b61a4;font-weight:600;text-decoration:none;word-break:break-all}
+  .arch-item a:hover{text-decoration:underline}
+  .arch-item .ac{flex:0 0 auto;font-size:11px;font-weight:700;background:#eef3f5;color:var(--teal-d);border-radius:20px;padding:1px 8px}
+  .arch-item .am{color:var(--muted);font-size:11.5px;margin-left:auto}
+  .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
+  .arch-up .fld{min-width:150px}
+  .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
+  .quickdates{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Generador de Eventos · Mantención Preventiva 2026</h1>
+  <p>Hospital Hernán Henríquez Aravena — convierte la Programación MP 2026 en un Excel con <b>una fila por evento</b>.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
+    <button class="side-toggle" id="sideToggle" type="button" title="Contraer/expandir panel" aria-label="Contraer panel"><span class="ico">⮜</span></button>
+    <nav class="sidenav" role="tablist" aria-label="Secciones">
+      <div class="navgrp">General</div>
+      <button class="tab active" type="button" data-tab="cargar"><span class="ico">📂</span><span class="lbl">Cargar y generar</span></button>
+      <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
+      <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
+      <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
+      <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
+      <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
+      <div class="navgrp">Inventario por estado</div>
+      <button class="invcat active" type="button" data-cat="todos"><span class="ico">📋</span><span class="lbl">Todos</span><em class="navcount" id="catTodos"></em></button>
+      <button class="invcat" type="button" data-cat="Operativo"><span class="ico">🟢</span><span class="lbl">Operativos</span><em class="navcount" id="catOperativo"></em></button>
+      <button class="invcat" type="button" data-cat="No operativo"><span class="ico">🔴</span><span class="lbl">No operativos</span><em class="navcount" id="catNoOp"></em></button>
+      <button class="invcat" type="button" data-cat="En servicio técnico"><span class="ico">🛠️</span><span class="lbl">En servicio técnico</span><em class="navcount" id="catST"></em></button>
+      <button class="invcat" type="button" data-cat="Baja"><span class="ico">⚫</span><span class="lbl">Baja</span><em class="navcount" id="catBaja"></em></button>
+      <button class="invcat" type="button" data-cat="pendientes"><span class="ico">📎</span><span class="lbl">Con pendientes</span><em class="navcount" id="catPend"></em></button>
+    </nav>
+  </aside>
+  <div class="content">
+
+  <section class="tabpanel active" id="tab-cargar">
+  <div class="card" id="card-cargar">
+    <ol class="steps">
+      <li>Suba el archivo <b>Programación MP 2026</b> (<code>.xlsm</code> o <code>.xlsx</code>).</li>
+      <li>El sistema lee las hojas <b>PMP_2026</b> y <b>Registro_MP-2026</b> y arma los eventos.</li>
+      <li>Descargue el Excel: una fila por equipo y mes con programación o resultado.</li>
+      <li><b>(Opcional)</b> Registre mantenciones ejecutadas: busque el equipo por serie/inventario, valide el mes y complete los datos.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div id="drop" class="drop">
+      <div class="big">📂 Arrastre aquí el archivo o haga clic para seleccionarlo</div>
+      <div class="small">Formatos aceptados: .xlsm / .xlsx · El procesamiento ocurre 100% en su navegador (sus datos no se envían a ningún servidor).</div>
+      <button id="pick" class="btn btn-primary" type="button">Seleccionar archivo</button>
+      <input id="file" type="file" accept=".xlsm,.xlsx" />
+      <span id="fileName"></span>
+    </div>
+  </div>
+
+  <div id="result" class="card" style="display:none"></div>
+
+  <div class="card">
+    <div class="actions">
+      <button id="download" class="btn btn-accent" type="button" disabled>⬇️ Descargar Excel (una fila por evento)</button>
+      <span class="muted">Incluye hojas <b>Eventos</b>, <b>Catalogos</b> y <b>Resumen</b>, con desplegables de Resultado, Estado Final y Ejecutor. <b>Consolida</b> las mantenciones que registres en la fila del equipo y mes correspondiente.</span>
+    </div>
+  </div>
+  </section>
+
+  <section class="tabpanel" id="tab-registrar">
+  <div id="registrarHint" class="card">📂 Primero cargue el archivo en la pestaña <b>Cargar y generar</b>.</div>
+
+  <div id="discrepanciasCard" class="card" style="display:none">
+    <p class="section-title">🔍 Comparación: registrado vs. archivo</p>
+    <div id="discrepancias"></div>
+  </div>
+
+  <div id="registrar" class="card" style="display:none">
+    <p class="section-title">🔧 Registrar mantención</p>
+    <p class="muted" style="margin:0 0 12px">Busque un equipo por su <b>N° de Serie</b> o <b>N° de Inventario</b> y registre una mantención ejecutada.</p>
+    <div class="row">
+      <div class="grow" style="position:relative">
+        <input id="searchInput" type="text" placeholder="Escriba N° de Serie o N° de Inventario… (sugerencias automáticas)" autocomplete="off" />
+        <div id="suggest" class="suggest"></div>
+      </div>
+      <button id="searchBtn" class="btn btn-primary" type="button" style="margin-top:0">Buscar</button>
+    </div>
+    <div id="searchMsg" class="inline-msg"></div>
+    <div id="equipoDetalle" style="display:none;margin-top:12px"></div>
+
+    <div id="registryWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Mantenciones registradas: <span class="badge" id="registryCount">0</span></span>
+        <span style="display:flex;gap:8px">
+          <button id="downloadReg" class="btn btn-accent btn-sm" type="button">⬇️ Descargar registro (Excel)</button>
+          <button id="clearReg" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+        </span>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Tus registros se guardan en este navegador y se mantienen aunque vuelvas a cargar el archivo.</p>
+      <input id="registryFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, mes, ejecutor, estado…" />
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="registryTable"></table>
+      </div>
+    </div>
+
+    <div id="correctivosWrap" style="display:none;margin-top:18px">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Eventos correctivos: <span class="badge" id="correctivosCount">0</span></span>
+        <button id="clearCorr" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Correctivos</b> al descargar / enviar a Google Sheets.</p>
+      <input id="correctivosFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, tipo de evento, empresa, ejecutor, estado…" />
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="correctivosTable"></table>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="tabpanel" id="tab-pendientes">
+    <div class="card" id="pendManageCard" style="display:none">
+      <p class="section-title">📌 Gestión de pendientes — triple foco</p>
+      <div class="pviews">
+        <button class="pview active" type="button" data-pview="matriz">🧭 Matriz Eisenhower</button>
+        <button class="pview" type="button" data-pview="ivy">📋 Ivy Lee (Top 6)</button>
+        <button class="pview" type="button" data-pview="sapo">🐸 Cómete el sapo</button>
+      </div>
+      <div id="view-matriz" class="pview-panel active">
+        <p class="muted" style="margin:8px 0 10px">Urgencia por <b>fecha de compromiso</b> (vencido o ≤ 7 días). Importancia por <b>estado del equipo</b> (No operativo / En servicio técnico). Ordenados por fecha dentro de cada cuadrante.</p>
+        <div id="eisenhower" class="eisen"></div>
+      </div>
+      <div id="view-ivy" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Los <b>6 pendientes</b> más prioritarios para hoy, en orden. Enfócate en el <b>#1</b> hasta terminarlo, luego sigue.</p>
+        <div id="ivy"></div>
+      </div>
+      <div id="view-sapo" class="pview-panel">
+        <p class="muted" style="margin:8px 0 10px">Tu <b>“sapo”</b> es lo más prioritario: hazlo <b>primero</b>. Luego el resto, en orden.</p>
+        <div id="sapo"></div>
+      </div>
+    </div>
+    <div class="card" id="pendNone">📌 No hay pendientes registrados. Regístralos desde la <b>ficha del equipo</b> (pestaña 🔧 Registrar).</div>
+    <div class="card" id="pendTableCard" style="display:none">
+      <div class="actions" style="justify-content:space-between">
+        <span class="section-title" style="font-size:14px">Pendientes: <span class="badge" id="pendientesCount">0</span></span>
+        <button id="clearPend" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Pendientes</b> al descargar / enviar a Google Sheets.</p>
+      <input id="pendientesFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, responsable, observación…" />
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="prev" id="pendientesTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-resumen">
+    <div class="card" id="resumenHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el resumen mensual.</div>
+    <div class="card" id="resumenCard" style="display:none">
+      <p class="section-title">📊 Resumen mensual de mantenciones</p>
+      <p class="muted" style="margin:0 0 12px">Programadas, realizadas y pendientes por mes. <b>Haz clic en cualquier número</b> para ver la lista de equipos de ese grupo; luego clic en un equipo para ver su detalle.</p>
+      <div class="tablewrap"><table class="prev" id="resumenTable"></table></div>
+      <div id="resumenDrill" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-inventario">
+    <div class="card" id="inventarioHint" style="display:none">📂 Primero cargue el archivo en <b>Cargar y generar</b> para ver el inventario.</div>
+    <div class="card" id="inventarioCard" style="display:none">
+      <div class="actions" style="justify-content:space-between;align-items:flex-start">
+        <span class="section-title" id="inventarioTitle" style="font-size:15px">📋 Inventario</span>
+        <span class="badge" id="inventarioCount">0</span>
+      </div>
+      <p class="muted" style="margin:6px 0 0">Todas las columnas del equipo + estado actual (según el último evento), fecha de última actualización y pendientes asociados. <b>Clic en una fila</b> para ver el detalle.</p>
+      <input id="inventarioFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, servicio, marca, modelo…" />
+      <div class="tablewrap" style="margin-top:8px;max-height:560px"><table class="prev" id="inventarioTable"></table></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-sheets">
+  <div id="sheetsCard" class="card">
+    <p class="section-title">☁️ Guardar en Google Sheets</p>
+    <p class="muted" style="margin:0 0 12px">Crea/actualiza en tu Google Sheet las <b>mismas hojas del Excel</b> (Eventos, Catalogos y Resumen), vía Apps Script. Se configura <b>una sola vez</b>. (Este paso sí usa internet.)</p>
+    <div class="field">
+      <label for="sheetsUrl">URL de la app web (Apps Script)</label>
+      <input id="sheetsUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
+    </div>
+    <div class="actions" style="margin-top:0">
+      <button id="sheetsSave" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Guardar URL</button>
+      <button id="sheetsTest" class="btn btn-ghost btn-sm" type="button">Probar conexión</button>
+      <button id="sheetsSendAll" class="btn btn-accent btn-sm" type="button">⬆️ Enviar / actualizar Google Sheets</button>
+      <button id="sheetsPull" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬇️ Traer de Google Sheets</button>
+      <label class="chk"><input id="sheetsAuto" type="checkbox"> Actualizar Google Sheets al registrar</label>
+    </div>
+    <div id="sheetsStatus" class="inline-msg"></div>
+    <details style="margin-top:10px">
+      <summary>¿Cómo conectar? (configuración única)</summary>
+      <ol class="steps">
+        <li>Crea una <b>Google Sheet</b> nueva (o abre la que usarás).</li>
+        <li>Menú <b>Extensiones → Apps Script</b>.</li>
+        <li>Borra el código de ejemplo, <b>pega el script de abajo</b> y guarda (💾).</li>
+        <li><b>Implementar → Nueva implementación → Aplicación web</b>. Ejecutar como: <b>Yo</b>; Acceso: <b>Cualquier persona</b>. Implementar y autoriza los permisos.</li>
+        <li>Copia la <b>URL de la app web</b> (termina en <code>/exec</code>) y pégala arriba; pulsa <b>Guardar URL</b> y <b>Probar conexión</b>.</li>
+      </ol>
+      <div class="actions" style="margin-top:0"><button id="copyScript" class="btn btn-ghost btn-sm" type="button">📋 Copiar script</button></div>
+      <pre id="gsScript" class="code">/****************************************************************************
+ *  Puente Google Sheets — Programación MP 2026
+ *  --------------------------------------------------------------------------
+ *  Crea/actualiza en tu planilla las MISMAS hojas que el Excel:
+ *  "Eventos", "Catalogos" y "Resumen", con desplegables (Resultado, Estado
+ *  Final, Ejecutor) y coloreado por Estado en la hoja Eventos.
+ *
+ *  Cómo usarlo (configuración única):
+ *   1. Crea (o abre) una Google Sheet.
+ *   2. Menú: Extensiones -&gt; Apps Script.
+ *   3. Borra el contenido y pega ESTE archivo completo. Guarda (icono de disco).
+ *   4. Implementar -&gt; Nueva implementación -&gt; tipo "Aplicación web".
+ *        - Ejecutar como: Yo
+ *        - Quién tiene acceso: Cualquier persona
+ *      Implementar y autorizar los permisos.
+ *   5. Copia la "URL de la aplicación web" (termina en /exec) y pégala en la
+ *      app (sección "Guardar en Google Sheets").
+ *
+ *  Cada hoja se REEMPLAZA con el contenido enviado (las demás hojas no se tocan).
+ *
+ *  -- OPCIONAL: servir la app DESDE aquí (el link /exec abre el programa) --
+ *   a. En el editor de Apps Script: "+" -&gt; HTML -&gt; nómbralo EXACTAMENTE "index".
+ *   b. Pega dentro TODO el contenido de "index-appsscript.html" (NO el index.html
+ *      grande: dentro de Apps Script el ExcelJS incrustado no se ejecuta bien;
+ *      la versión -appsscript lo carga por CDN y sí funciona).
+ *   c. Implementar -&gt; Nueva versión. La URL /exec abre la app ya conectada a
+ *      esta planilla (escribe y lee con google.script.run, sin pegar la URL).
+ *   Nota: dentro de Apps Script el botón "Descargar Excel" puede quedar
+ *   bloqueado por el iframe protegido; para descargar usa la app alojada aparte.
+ *
+ *  -- Subir archivos a Drive (opcional) --
+ *   La app puede subir archivos del equipo a tu Drive: crea la carpeta
+ *   "MP 2026 - Archivos" con una subcarpeta por equipo y agrega el ENLACE a la
+ *   hoja "Archivos". La PRIMERA vez pedirá un permiso adicional de Drive: vuelve
+ *   a "Implementar -&gt; Nueva versión" y autoriza cuando lo solicite.
+ ****************************************************************************/
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try {
+    var body = JSON.parse(e.postData.contents);
+    if (body &amp;&amp; body.action === 'upload') return json(uploadArchivo(body));   // subir archivo a Drive
+    return json(writeAll(body));
+  }
+  catch (err) { return json({ ok: false, error: String(err) }); }
+  finally { lock.releaseLock(); }
+}
+
+// Llamado desde la app cuando se sirve DESDE Apps Script (google.script.run)
+function appPush(body) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
+  finally { lock.releaseLock(); }
+}
+function appPull() { return readAll(); }
+// Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
+function appUpload(body) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try { return uploadArchivo(typeof body === 'string' ? JSON.parse(body) : body); }
+  finally { lock.releaseLock(); }
+}
+
+/* ------------------------- Subida de archivos a Drive -------------------------
+ *  Crea (si no existe) la carpeta raíz "MP 2026 - Archivos" y, dentro, una
+ *  subcarpeta por equipo. Guarda el archivo, lo comparte como "cualquiera con el
+ *  enlace puede ver" y agrega una fila con el ENLACE a la hoja "Archivos".
+ *  payload: { equipoId, equipo, inv, serie, servicio, categoria, nombre, mime, dataBase64 }
+ *  Requiere autorización de Drive (al implementar pedirá el permiso una vez).
+ * ----------------------------------------------------------------------------- */
+var ARCHIVOS_ROOT = 'MP 2026 - Archivos';
+
+function getOrCreateFolder(parent, name) {
+  var it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+function sanitizeName(s) { return String(s == null ? '' : s).replace(/[\\/:*?"&lt;&gt;|]/g, '-').trim() || 'Equipo'; }
+
+function uploadArchivo(p) {
+  if (!p || !p.dataBase64) return { ok: false, error: 'Sin datos de archivo.' };
+  var root = getOrCreateFolder(DriveApp.getRootFolder(), ARCHIVOS_ROOT);
+  var carpetaEquipo = sanitizeName(
+    (p.equipoId ? p.equipoId + ' - ' : '') + (p.equipo || 'Equipo') +
+    (p.inv ? ' (Inv ' + p.inv + ')' : (p.serie ? ' (Serie ' + p.serie + ')' : ''))
+  );
+  var folder = getOrCreateFolder(root, carpetaEquipo);
+
+  var nombre = sanitizeName(p.nombre || 'archivo');
+  var bytes = Utilities.base64Decode(p.dataBase64);
+  var blob = Utilities.newBlob(bytes, p.mime || 'application/octet-stream', nombre);
+  var file = folder.createFile(blob);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e2) {}
+  var url = file.getUrl();
+
+  // Registrar el enlace en la hoja "Archivos"
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Archivos');
+  if (!sh) {
+    sh = ss.insertSheet('Archivos');
+    sh.getRange(1, 1, 1, 9).setValues([[
+      'ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Nombre del archivo', 'Enlace', 'Fecha de carga'
+    ]]);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+  }
+  var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Santiago', 'yyyy-MM-dd HH:mm');
+  // Guardar el ENLACE como texto (Google Sheets lo hace clicable automáticamente)
+  // y además legible al volver a leer la hoja (round-trip de doble vía).
+  sh.appendRow([
+    p.equipoId || '', p.inv || '', p.serie || '', p.equipo || '', p.servicio || '',
+    p.categoria || '', nombre, url, fecha
+  ]);
+
+  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', fecha: fecha };
+}
+
+function writeAll(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var written = [];
+
+    (body.sheets || []).forEach(function (spec) {
+      var name = spec.name || 'Hoja';
+      var sh = ss.getSheetByName(name) || ss.insertSheet(name);
+
+      // Limpiar contenido, validaciones y formato condicional previos
+      sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).clearDataValidations();
+      sh.setConditionalFormatRules([]);
+      sh.clearContents();
+
+      var rows = spec.rows || [];
+      if (rows.length &gt; 0) {
+        var maxc = 1;
+        rows.forEach(function (r) { if (r.length &gt; maxc) maxc = r.length; });
+        rows.forEach(function (r) { while (r.length &lt; maxc) r.push(''); });
+        sh.getRange(1, 1, rows.length, maxc).setValues(rows);
+        sh.setFrozenRows(1);
+        applyValidations(sh, spec.validations);
+        applyColors(sh, spec.colors);
+      }
+      written.push(name);
+    });
+
+    // Snapshot de datos de la app (para poder LEERLOS al reabrir el programa)
+    if (body.data !== undefined &amp;&amp; body.data !== null) {
+      var ds = ss.getSheetByName('_datos') || ss.insertSheet('_datos');
+      ds.getRange(1, 1).setValue(typeof body.data === 'string' ? body.data : JSON.stringify(body.data));
+      try { ds.hideSheet(); } catch (e2) {}
+    }
+
+    return { ok: true, sheets: written };
+}
+
+// Columna (1-based) cuyo encabezado (fila 1) coincide con 'header'
+function colByHeader(sh, header) {
+  var lastC = sh.getLastColumn();
+  var hdr = sh.getRange(1, 1, 1, lastC).getValues()[0];
+  for (var i = 0; i &lt; hdr.length; i++) { if (String(hdr[i]) === header) return i + 1; }
+  return 0;
+}
+
+// Desplegables (validación de datos por lista) en las columnas indicadas
+function applyValidations(sh, validations) {
+  if (!validations) return;
+  var n = sh.getLastRow() - 1;
+  if (n &lt; 1) return;
+  validations.forEach(function (v) {
+    var c = colByHeader(sh, v.header);
+    if (!c) return;
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(v.values, true)
+      .setAllowInvalid(true)
+      .build();
+    sh.getRange(2, c, n, 1).setDataValidation(rule);
+  });
+}
+
+// Número de columna -&gt; letra (1 -&gt; A, 27 -&gt; AA)
+function columnToLetter(col) {
+  var s = '';
+  while (col &gt; 0) { var m = (col - 1) % 26; s = String.fromCharCode(65 + m) + s; col = Math.floor((col - 1) / 26); }
+  return s;
+}
+
+// Coloreado por valor (formato condicional). Si la regla es wholeRow, colorea
+// TODA la fila usando una fórmula que mira la columna del encabezado indicado.
+function applyColors(sh, colors) {
+  if (!colors) return;
+  var n = sh.getLastRow() - 1;
+  if (n &lt; 1) return;
+  var lastCol = sh.getLastColumn();
+  var rules = [];
+  colors.forEach(function (cf) {
+    var c = colByHeader(sh, cf.header);
+    if (!c) return;
+    if (cf.wholeRow) {
+      var rowRange = sh.getRange(2, 1, n, lastCol);    // todas las columnas, filas de datos
+      var colL = columnToLetter(c);
+      (cf.rules || []).forEach(function (r) {
+        var formula = '=$' + colL + '2="' + r.value + '"';
+        rules.push(SpreadsheetApp.newConditionalFormatRule()
+          .whenFormulaSatisfied(formula).setBackground(r.color).setRanges([rowRange]).build());
+      });
+    } else {
+      var rng = sh.getRange(2, c, n, 1);
+      (cf.rules || []).forEach(function (r) {
+        var b = SpreadsheetApp.newConditionalFormatRule().setBackground(r.color).setRanges([rng]);
+        b = (r.mode === 'startsWith') ? b.whenTextStartsWith(r.value) : b.whenTextEqualTo(r.value);
+        rules.push(b.build());
+      });
+    }
+  });
+  if (rules.length) sh.setConditionalFormatRules(rules);
+}
+
+function sheetVals(ss, name) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) return [];
+  var lr = sh.getLastRow(), lc = sh.getLastColumn();
+  return (lr &gt;= 1 &amp;&amp; lc &gt;= 1) ? sh.getRange(1, 1, lr, lc).getValues() : [];
+}
+function readAll() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Eventos');
+  var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
+  var ds = ss.getSheetByName('_datos');
+  var data = ds ? ds.getRange(1, 1).getValue() : '';
+  return {
+    ok: true, count: n, data: data,
+    tablas: {
+      Pendientes: sheetVals(ss, 'Pendientes'),
+      Correctivos: sheetVals(ss, 'Correctivos'),
+      Tareas: sheetVals(ss, 'Tareas'),
+      Bitacora: sheetVals(ss, 'Bitacora'),
+      Archivos: sheetVals(ss, 'Archivos')
+    }
+  };
+}
+// doGet: con ?api=1 devuelve los datos (JSON); sin parámetros sirve la app.
+function doGet(e) {
+  if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api) return json(readAll());
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('Gestión MP 2026')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function json(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+</pre>
+    </details>
+  </div>
+
+  </section>
+
+  <section class="tabpanel" id="tab-ayuda">
+  <div class="card" id="card-ayuda">
+    <details>
+      <summary>📖 Diccionario de códigos y reglas</summary>
+      <div class="legend">
+        <div>
+          <h4>Programación (columna P)</h4>
+          <table>
+            <tr><td>X</td><td>Mantención Preventiva Programada</td></tr>
+            <tr><td>R</td><td>Mantención Preventiva Reprogramada</td></tr>
+            <tr><td>RA</td><td>Reprogramada de Año Anterior</td></tr>
+            <tr><td>PM</td><td>Puesta en Marcha</td></tr>
+          </table>
+          <h4 style="margin-top:12px">Resultado (columna R)</h4>
+          <table>
+            <tr><td>Si</td><td>MP Realizada</td></tr>
+            <tr><td>C1–C8</td><td>MP Reprogramada (ver causales)</td></tr>
+            <tr><td>Si-RA</td><td>MP de Año Anterior Realizada</td></tr>
+            <tr><td>FS</td><td>Fuera de Servicio</td></tr>
+            <tr><td>No</td><td>No Realizada</td></tr>
+            <tr><td>NU</td><td>No Ubicable</td></tr>
+            <tr><td>Baja</td><td>Equipo Dado de Baja</td></tr>
+          </table>
+        </div>
+        <div>
+          <h4>Causales de reprogramación</h4>
+          <table>
+            <tr><td>C1</td><td>Imposibilidad de desocupar el equipo por indicación clínica</td></tr>
+            <tr><td>C2</td><td>Equipo en servicio técnico</td></tr>
+            <tr><td>C3</td><td>Equipo no operativo, espera repuestos/accesorios</td></tr>
+            <tr><td>C4</td><td>Equipo en préstamo a otro hospital o institución</td></tr>
+            <tr><td>C5</td><td>No disponibilidad HH funcionario SEC por carga laboral</td></tr>
+            <tr><td>C6</td><td>No disponibilidad HH servicio técnico externo</td></tr>
+            <tr><td>C7</td><td>Ausencia justificada funcionario SEC &gt; 15 días</td></tr>
+            <tr><td>C8</td><td>Contingencia hospitalaria</td></tr>
+          </table>
+          <h4 style="margin-top:12px">Reglas</h4>
+          <table>
+            <tr><td>C2·C3·C4</td><td>Sin nueva fecha; se registra en el mes real de reintegro.</td></tr>
+            <tr><td>C1·C5·C6·C7·C8</td><td>Reprogramar ≤ 30 días: origen X+causal, destino R.</td></tr>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+  </section>
+
+  </div><!-- /.content -->
+  </div><!-- /.layout -->
+
+  <div id="status" class="status"></div>
+</div>
+
+<!-- Vista de registro de mantención -->
+<div id="modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalTitle">🔧 Registrar mantención</h3><button id="mClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Complete los datos de la mantención ejecutada.</div>
+    <div id="modalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="mFecha">Fecha de ejecución <span class="req">*</span></label>
+      <input id="mFecha" type="date" min="2026-01-01" max="2026-12-31" />
+      <div id="mFechaMsg" class="inline-msg"></div>
+    </div>
+
+    <div id="mTipo" class="tipo-box" style="display:none"></div>
+
+    <fieldset id="mFields" class="formfields" disabled>
+      <div class="field" style="margin-top:12px">
+        <label for="mResultado">Resultado <span class="req">*</span></label>
+        <select id="mResultado"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field">
+        <label for="mObs">Observación (opcional)</label>
+        <textarea id="mObs" placeholder="Detalle de la mantención, repuestos, etc."></textarea>
+      </div>
+      <div class="field">
+        <label for="mEjecutor">Ejecutor <span class="req">*</span></label>
+        <select id="mEjecutor"><option value="">— Seleccione —</option></select>
+      </div>
+      <div class="field">
+        <label for="mEstadoFinal" id="mEstadoFinalLabel">Estado final del equipo <span class="req">*</span></label>
+        <select id="mEstadoFinal"><option value="">— Seleccione —</option></select>
+      </div>
+    </fieldset>
+    <div id="modalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="mCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="mSave" class="btn btn-accent" type="button" disabled>Guardar registro</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de evento correctivo -->
+<div id="cmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>🛠️ Registrar evento correctivo</h3><button id="cClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Seleccione el tipo de evento y complete los datos.</div>
+    <div id="cmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="cTipo">Tipo de evento <span class="req">*</span></label>
+      <select id="cTipo"><option value="">— Seleccione —</option></select>
+    </div>
+
+    <div id="cFields"></div>
+    <div id="cmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="cCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="cSave" class="btn btn-accent" type="button" disabled>Guardar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de registro de pendiente -->
+<div id="pmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>📌 Registrar pendiente</h3><button id="pClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="muted">Complete los datos del pendiente.</div>
+    <div id="pmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="pTipo">Tipo de pendiente <span class="req">*</span></label>
+      <select id="pTipo"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pFecha">Fecha de compromiso <span class="req">*</span></label>
+      <input id="pFecha" type="date" />
+      <div class="quickdates">
+        <button id="pQuick3" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +3 días hábiles</button>
+        <button id="pQuick7" class="btn btn-ghost btn-sm" type="button" style="margin-top:0">📅 +1 semana</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="pRespAdmin">Responsable administrativo <span class="req">*</span></label>
+      <select id="pRespAdmin"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pRespEjec">Responsable de ejecución <span class="req">*</span></label>
+      <select id="pRespEjec"><option value="">— Seleccione —</option></select>
+    </div>
+    <div class="field">
+      <label for="pObs">Observación <span class="req">*</span></label>
+      <textarea id="pObs" placeholder="Describa el pendiente"></textarea>
+    </div>
+    <div id="pmodalMsg" class="inline-msg"></div>
+
+    <div class="modal-foot">
+      <button id="pCancel" class="btn btn-ghost" type="button">Cancelar</button>
+      <button id="pSave" class="btn btn-accent" type="button" disabled>Guardar pendiente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gestión de un pendiente -->
+<div id="gmodal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3>⚙️ Gestionar pendiente</h3><button id="gClose" class="x" type="button" aria-label="Cerrar">✕</button></div>
+    <div id="gmodalEq" class="eqbox"></div>
+
+    <div class="field">
+      <label for="gEstado">Estado</label>
+      <select id="gEstado"></select>
+    </div>
+
+    <div class="gsec">
+      <div class="section-title" style="font-size:14px">✅ Tareas <span id="gTareaResumen" class="muted" style="font-weight:600"></span></div>
+      <div id="gTareaLista" class="glist"></div>
+      <div class="row" style="margin-top:6px">
+        <div class="grow"><input id="gTareaTexto" type="text" autocomplete="off" placeholder="Nueva tarea…" /></div>
+        <button id="gTareaAdd" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Agregar</button>
+      </div>
+    </div>
+
+    <div class="gsec">
+      <div class="section-title" style="font-size:14px">📝 Bitácora de actualizaciones</div>
+      <div id="gActLista" class="glist"></div>
+      <div class="row" style="margin-top:6px">
+        <input id="gActFecha" type="date" style="max-width:150px" />
+        <div class="grow"><input id="gActTexto" type="text" autocomplete="off" placeholder="Nueva actualización…" /></div>
+        <button id="gActAdd" class="btn btn-primary btn-sm" type="button" style="margin-top:0">Agregar</button>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button id="gCerrar" class="btn btn-accent" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<footer>Funciona sin conexión a internet · Procesamiento local en el navegador · ExcelJS</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>if(typeof ExcelJS==="undefined"){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"><\/scr'+'ipt>')}</script>
+<script>
+/* ============================================================================
+ *  Núcleo de procesamiento — Programación MP 2026
+ *  Funciona igual en Node (require('exceljs')) y en el navegador (ExcelJS UMD).
+ *  Expone: window.MP / module.exports = { parseWorkbook, buildOutputWorkbook,
+ *           EJECUTORES, CAUSAL, ... }
+ * ==========================================================================*/
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.MP = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // ---- Constantes de estructura ------------------------------------------
+  const HEADER_ROW = 7;
+  const FIRST_DATA_ROW = 8;
+
+  const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // Columnas de datos del equipo (1-based). Se excluye S(19)=Responsable MP.
+  // Q(17)=Observación se incluye a pedido del usuario.
+  const COL = {
+    fam: 1, id: 2, carpeta: 3, inv: 4, equipo: 5, servicio: 6, unidad: 7,
+    ubicacion: 8, procedencia: 9, marca: 10, modelo: 11, serie: 12,
+    anio: 13, vur: 14, clasif: 15, enubaja: 16, observacion: 17, frecuencia: 18
+  };
+  // PMP_2026: meses en columnas únicas T..AE (20..31)
+  const pmpMonthCol = i => 20 + i;
+  // Registro_MP-2026: cada mes con dos subcolumnas P (programa) y R (resultado)
+  const regPCol = i => 20 + i * 2;   // T, V, X, ...
+  const regRCol = i => 21 + i * 2;   // U, W, Y, ...
+
+  const PMP_SHEET = 'PMP_2026';
+  const REG_SHEET = 'Registro_MP-2026';
+
+  // ---- Diccionarios de decodificación ------------------------------------
+  const PROG = {
+    'X':  'Mantención Preventiva Programada',
+    'R':  'Mantención Preventiva Reprogramada',
+    'RA': 'Mantención Preventiva Reprogramada de Año Anterior',
+    'PM': 'Puesta en Marcha'
+  };
+
+  const CAUSAL = {
+    C1: 'Imposibilidad de desocupar el equipo del paciente por indicación clínica',
+    C2: 'Equipo en servicio técnico',
+    C3: 'Equipo no operativo, a la espera de repuestos o accesorios',
+    C4: 'Equipo en préstamo a otro hospital o institución',
+    C5: 'No disponibilidad de horas hombre del funcionario SEC por alta carga laboral',
+    C6: 'No disponibilidad de horas hombre del servicio técnico externo',
+    C7: 'Ausencia justificada del funcionario SEC superior a 15 días',
+    C8: 'Contingencia hospitalaria'
+  };
+  const CAUSAL_30 = new Set(['C1','C5','C6','C7','C8']);   // reprogramar <= 30 días
+  const CAUSAL_REINTEGRO = new Set(['C2','C3','C4']);      // sin nueva fecha
+
+  const RESULT_TXT = {
+    'SI': 'Mantención Preventiva Realizada',
+    'SI-RA': 'Mantención de Año Anterior Realizada',
+    'FS': 'Fuera de Servicio',
+    'NO': 'No Realizada',
+    'NU': 'No Ubicable',
+    'BAJA': 'Equipo Dado de Baja'
+  };
+
+  const EJECUTORES = [
+    'Carlos Bahamondes Seguel',
+    'Cristián Beltrán Oviedo',
+    'Cristina Rozas Urrutia',
+    'Daniel Díaz Neira',
+    'Ignacio Berner Bergara',
+    'Macarena Toledo',
+    'Marco Ulloa',
+    'Matías Soazo Garrido',
+    'Ricardo Matus Aroca',
+    'Tito Millapán Riquelme',
+    'Personal Externo'
+  ];
+
+  // Opciones del desplegable "Estado Final del Equipo" (se llena manualmente).
+  const ESTADO_FINAL_OPCIONES = ['Operativo', 'No operativo', 'En servicio técnico'];
+
+  // Opciones del desplegable "Resultado (R)".
+  const RESULTADO_OPCIONES = ['Si', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'Si-RA', 'FS', 'No', 'NU', 'Baja'];
+
+  // Estados de un pendiente (ciclo de vida).
+  const ESTADO_PENDIENTE_OPCIONES = ['Abierto', 'En progreso', 'Resuelto'];
+
+  // Tipos de pendiente (lista desplegable).
+  const PENDIENTE_TIPOS = ['Pauta de Monitoreo Diario', 'Reporte Interno MP', 'Reporte externo MP', 'Firma', 'Documento', 'Otro'];
+
+  // Categorías para clasificar archivos adjuntos del equipo.
+  const ARCHIVO_CATEGORIAS = ['Informe de servicio', 'Foto', 'Guía de despacho', 'Cotización', 'Manual', 'Orden de trabajo', 'Otro'];
+
+  // Estado actual del equipo según su último evento (para el panel/inventario).
+  const ESTADO_EQUIPO_CATS = ['Operativo', 'No operativo', 'En servicio técnico', 'Baja'];
+
+  // ---- Helpers de lectura de celdas (ExcelJS) ----------------------------
+  // Devuelve el valor MOSTRADO de la celda como texto (resuelve fórmulas con
+  // su resultado en caché y conserva ceros a la izquierda guardados como texto).
+  function cellText(cell) {
+    if (!cell) return '';
+    let v = cell.value;
+    if (v === null || v === undefined) {
+      const t = cell.text;
+      return (t === null || t === undefined) ? '' : String(t).trim();
+    }
+    if (typeof v === 'object') {
+      if (v.richText) return v.richText.map(p => p.text).join('').trim();
+      if ('result' in v) v = v.result;
+      else if ('text' in v) v = v.text;
+      else if ('hyperlink' in v) v = v.text || v.hyperlink;
+      else { const t = cell.text; return (t == null) ? '' : String(t).trim(); }
+    }
+    if (v === null || v === undefined) return '';
+    return String(v).trim();
+  }
+  // "vacío" = celda sin contenido útil ("" o "0")
+  function isEmpty(s) { return s === '' || s === '0'; }
+  function toNum(s) { const n = Number(s); return isNaN(n) ? null : n; }
+
+  function isDataRow(ws, r) {
+    const id = cellText(ws.getRow(r).getCell(COL.id));
+    const eq = cellText(ws.getRow(r).getCell(COL.equipo));
+    return toNum(id) !== null && !isEmpty(eq);
+  }
+
+  function readEquipo(ws, r) {
+    const g = c => cellText(ws.getRow(r).getCell(c));
+    return {
+      familia: g(COL.fam), id: g(COL.id), carpeta: g(COL.carpeta), inv: g(COL.inv),
+      equipo: g(COL.equipo), servicio: g(COL.servicio), unidad: g(COL.unidad),
+      ubicacion: g(COL.ubicacion), procedencia: g(COL.procedencia), marca: g(COL.marca),
+      modelo: g(COL.modelo), serie: g(COL.serie), anio: g(COL.anio), vur: g(COL.vur),
+      clasif: g(COL.clasif), enubaja: g(COL.enubaja),
+      observacion: g(COL.observacion), frecuencia: g(COL.frecuencia)
+    };
+  }
+
+  // ---- Decodificadores ----------------------------------------------------
+  function decodeResultado(rRaw) {
+    if (isEmpty(rRaw)) return '';
+    const u = rRaw.toUpperCase();
+    if (/^C[1-8]$/.test(u)) return 'Mantención Preventiva Reprogramada';
+    return RESULT_TXT[u] || rRaw;
+  }
+  function causalCode(rRaw) {
+    const u = (rRaw || '').toUpperCase();
+    return /^C[1-8]$/.test(u) ? u : '';
+  }
+  function reglaReprog(cCode) {
+    if (!cCode) return '';
+    if (CAUSAL_30.has(cCode)) return 'Reprogramar dentro de los 30 días (mes origen mantiene X + causal; mes destino lleva R)';
+    if (CAUSAL_REINTEGRO.has(cCode)) return 'Sin nueva fecha; registrar en el mes real de ejecución al reintegrarse el equipo';
+    return '';
+  }
+  function estado(pRaw, rRaw) {
+    const u = (rRaw || '').toUpperCase();
+    if (!isEmpty(rRaw)) {
+      if (u === 'SI') return 'Realizada';
+      if (u === 'SI-RA') return 'Realizada (Año Anterior)';
+      if (/^C[1-8]$/.test(u)) return 'Reprogramada';
+      if (u === 'FS') return 'Fuera de Servicio';
+      if (u === 'NO') return 'No Realizada';
+      if (u === 'NU') return 'No Ubicable';
+      if (u === 'BAJA') return 'Baja';
+      return rRaw;
+    }
+    const p = (pRaw || '').toUpperCase();
+    if (p === 'PM') return 'Puesta en Marcha';
+    if (p === 'R')  return 'Pendiente (Reprogramada)';
+    if (p === 'RA') return 'Pendiente (Año Anterior)';
+    if (p === 'X')  return 'Pendiente';
+    return 'Pendiente';
+  }
+
+  // ---- Construcción de un evento (fila) ----------------------------------
+  // Centraliza el armado del objeto-evento para reutilizarlo tanto en la
+  // generación masiva como en el registro manual de mantenciones.
+  function makeEvent(eq, i, pVal, rVal, extra) {
+    extra = extra || {};
+    pVal = pVal || ''; rVal = rVal || '';
+    const cCode = causalCode(rVal);
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv,
+      equipo: eq.equipo, servicio: eq.servicio, unidad: eq.unidad,
+      ubicacion: eq.ubicacion, procedencia: eq.procedencia, marca: eq.marca,
+      modelo: eq.modelo, serie: eq.serie, anio: eq.anio, vur: eq.vur,
+      clasif: eq.clasif, enubaja: eq.enubaja,
+      observacion: ('observacion' in extra) ? extra.observacion : eq.observacion,
+      frecuencia: eq.frecuencia,
+      mes: MONTHS_FULL[i], nMes: i + 1,
+      programa: pVal,
+      tipoPrograma: PROG[pVal.toUpperCase()] || (pVal || ''),
+      resultado: rVal,
+      detalleResultado: decodeResultado(rVal),
+      fechaEjecucion: ('fechaEjecucion' in extra) ? extra.fechaEjecucion : '',
+      causal: cCode,
+      causalDesc: cCode ? CAUSAL[cCode] : '',
+      regla: reglaReprog(cCode),
+      estado: estado(pVal, rVal),
+      estadoFinal: ('estadoFinal' in extra) ? extra.estadoFinal : '',
+      ejecutor: ('ejecutor' in extra) ? extra.ejecutor : ''
+    };
+  }
+
+  // ---- Parseo principal: workbook -> equipos + eventos -------------------
+  function parseWorkbook(wb) {
+    const pmp = wb.getWorksheet(PMP_SHEET);
+    const reg = wb.getWorksheet(REG_SHEET);
+    if (!pmp) throw new Error('No se encontró la hoja "' + PMP_SHEET + '".');
+
+    const warnings = [];
+    if (!reg) warnings.push('No se encontró la hoja "' + REG_SHEET + '"; no se incluirán resultados de ejecución.');
+
+    // Mapa de resultados (R) del Registro, por ID
+    const regResByID = new Map();
+    if (reg) {
+      const lastR = reg.rowCount;
+      for (let r = FIRST_DATA_ROW; r <= lastR; r++) {
+        if (!isDataRow(reg, r)) continue;
+        const id = cellText(reg.getRow(r).getCell(COL.id));
+        const arr = [];
+        for (let i = 0; i < 12; i++) {
+          const v = cellText(reg.getRow(r).getCell(regRCol(i)));
+          arr.push(isEmpty(v) ? '' : v);
+        }
+        regResByID.set(id, arr);
+      }
+    }
+
+    const equipos = [];
+    const events = [];
+    const last = pmp.rowCount;
+    for (let r = FIRST_DATA_ROW; r <= last; r++) {
+      if (!isDataRow(pmp, r)) continue;
+      const eq = readEquipo(pmp, r);
+      const res = regResByID.get(eq.id) || [];
+      const prog = [];
+      for (let i = 0; i < 12; i++) {
+        const v = cellText(pmp.getRow(r).getCell(pmpMonthCol(i)));
+        prog.push(isEmpty(v) ? '' : v);
+      }
+      eq.prog = prog;                                   // 12 valores de programación (X/R/RA/PM)
+      eq.res = [];
+      for (let i = 0; i < 12; i++) eq.res.push(res[i] || '');
+      equipos.push(eq);
+
+      for (let i = 0; i < 12; i++) {
+        const pVal = eq.prog[i], rVal = eq.res[i];
+        if (isEmpty(pVal) && isEmpty(rVal)) continue;   // sin evento ese mes
+        events.push(makeEvent(eq, i, pVal, rVal));
+      }
+    }
+
+    // Ordenar por ID y luego por mes
+    events.sort((a, b) => (toNum(a.id) - toNum(b.id)) || (a.nMes - b.nMes));
+
+    return { events, equipos, warnings };
+  }
+
+  // ---- Helpers para el registro manual de mantenciones -------------------
+  // Busca equipos por N° de Serie o N° de Inventario (exacto y luego parcial).
+  function findEquipos(equipos, query) {
+    const q = String(query == null ? '' : query).trim().toLowerCase();
+    if (!q) return [];
+    const norm = s => String(s == null ? '' : s).trim().toLowerCase();
+    const exact = equipos.filter(e => norm(e.serie) === q || norm(e.inv) === q);
+    if (exact.length) return exact;
+    return equipos.filter(e =>
+      norm(e.serie).includes(q) || norm(e.inv).includes(q) || norm(e.id) === q);
+  }
+
+  // Meses (0-11) en que el equipo tiene mantención programada (P no vacío).
+  function programmedMonths(eq) {
+    const out = [];
+    if (eq && eq.prog) for (let i = 0; i < 12; i++) if (!isEmpty(eq.prog[i])) out.push(i);
+    return out;
+  }
+
+  // Arma un evento a partir del formulario de registro manual.
+  function buildRegistro(eq, monthIndex, data) {
+    data = data || {};
+    const pVal = (eq.prog && eq.prog[monthIndex]) ? eq.prog[monthIndex] : '';
+    return makeEvent(eq, monthIndex, pVal, data.resultado || '', {
+      fechaEjecucion: data.fecha || '',
+      observacion: data.observacion || '',
+      ejecutor: data.ejecutor || '',
+      estadoFinal: data.estadoFinal || ''
+    });
+  }
+
+  // ---- Eventos correctivos -----------------------------------------------
+  const CORRECTIVO_TIPOS = ['Solicitud de trabajo', 'Envío a servicio técnico', 'Recepción', 'Reporte de servicio'];
+  // Campos solicitados por cada tipo de evento correctivo (en orden)
+  const CORRECTIVO_CAMPOS = {
+    'Solicitud de trabajo': ['fecha', 'folioSolicitud', 'ejecutor', 'descripcion', 'estadoFinal'],
+    'Envío a servicio técnico': ['fecha', 'folioSolicitud', 'nEnvio', 'ejecutor', 'empresa', 'estadoFinal'],
+    'Recepción': ['fecha', 'folioGuia', 'empresa', 'estadoFinal'],
+    'Reporte de servicio': ['fecha', 'empresa', 'descripcion', 'estadoFinal']
+  };
+  const CORRECTIVO_LABELS = {
+    fecha: 'Fecha', folioSolicitud: 'Folio de la solicitud', folioGuia: 'Folio de la guía de despacho',
+    nEnvio: 'N° de envío', empresa: 'Empresa', ejecutor: 'Ejecutor', descripcion: 'Descripción',
+    estadoFinal: 'Estado final del equipo'
+  };
+  function buildCorrectivo(eq, data) {
+    data = data || {};
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
+      servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      tipoEvento: data.tipoEvento || '', fecha: data.fecha || '',
+      folioSolicitud: data.folioSolicitud || '', nEnvio: data.nEnvio || '', folioGuia: data.folioGuia || '',
+      empresa: data.empresa || '', ejecutor: data.ejecutor || '', descripcion: data.descripcion || '',
+      estadoFinal: data.estadoFinal || ''
+    };
+  }
+
+  // ---- Pendientes ---------------------------------------------------------
+  function buildPendiente(eq, data) {
+    data = data || {};
+    return {
+      familia: eq.familia, id: eq.id, carpeta: eq.carpeta, inv: eq.inv, equipo: eq.equipo,
+      servicio: eq.servicio, unidad: eq.unidad, ubicacion: eq.ubicacion, marca: eq.marca, modelo: eq.modelo, serie: eq.serie,
+      tipo: data.tipo || '',
+      fechaCompromiso: data.fechaCompromiso || '',
+      respAdministrativo: data.respAdministrativo || '',
+      respEjecucion: data.respEjecucion || '',
+      observacion: data.observacion || '',
+      estado: data.estado || 'Abierto',
+      actualizaciones: data.actualizaciones || [],   // [{fecha, texto}]
+      tareas: data.tareas || []                       // [{texto, hecha}]
+    };
+  }
+
+  // ---- Estadísticas para hoja Resumen ------------------------------------
+  function buildStats(events) {
+    const byEstado = new Map();
+    const byMes = MONTHS_FULL.map(() => ({ prog: 0, real: 0, reprog: 0, pend: 0, otras: 0 }));
+    for (const e of events) {
+      byEstado.set(e.estado, (byEstado.get(e.estado) || 0) + 1);
+      const m = byMes[e.nMes - 1];
+      if (e.programa) m.prog++;
+      const st = e.estado;
+      if (st.startsWith('Realizada')) m.real++;
+      else if (st === 'Reprogramada') m.reprog++;
+      else if (st.startsWith('Pendiente') || st === 'Puesta en Marcha') m.pend++;
+      else m.otras++;
+    }
+    return { byEstado, byMes };
+  }
+
+  return {
+    HEADER_ROW, FIRST_DATA_ROW, MONTHS, MONTHS_FULL, COL,
+    PROG, CAUSAL, CAUSAL_30, CAUSAL_REINTEGRO, RESULT_TXT,
+    EJECUTORES, ESTADO_FINAL_OPCIONES, RESULTADO_OPCIONES,
+    cellText, isEmpty, toNum, isDataRow, readEquipo,
+    decodeResultado, causalCode, reglaReprog, estado,
+    parseWorkbook, buildStats, makeEvent,
+    findEquipos, programmedMonths, buildRegistro,
+    CORRECTIVO_TIPOS, CORRECTIVO_CAMPOS, CORRECTIVO_LABELS, buildCorrectivo, buildPendiente,
+    ESTADO_PENDIENTE_OPCIONES, PENDIENTE_TIPOS, ARCHIVO_CATEGORIAS, ESTADO_EQUIPO_CATS
+  };
+});
+
+</script>
+<script>
+/* ============================================================================
+ *  Constructor del Excel de salida (una fila por evento) — ExcelJS.
+ *  buildOutputWorkbook(ExcelJS, MP, events, meta) -> ExcelJS.Workbook
+ * ==========================================================================*/
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.MPOUT = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const COLOR = {
+    header: 'FF15616D', headerText: 'FFFFFFFF',
+    realizada: 'FFC6EFCE', reprogramada: 'FFFCE4A6', pendiente: 'FFFFF2CC',
+    pm: 'FFDDEBF7', fueraServicio: 'FFFFC7CE', noReal: 'FFFFC7CE',
+    nu: 'FFE4DFEC', baja: 'FFD9D9D9', band: 'FFF2F7F8',
+    catTitle: 'FF2A6F77'
+  };
+  function estadoFill(st) {
+    if (st.startsWith('Realizada')) return COLOR.realizada;
+    if (st === 'Reprogramada') return COLOR.reprogramada;
+    if (st === 'Puesta en Marcha') return COLOR.pm;
+    if (st === 'Fuera de Servicio') return COLOR.fueraServicio;
+    if (st === 'No Realizada') return COLOR.noReal;
+    if (st === 'No Ubicable') return COLOR.nu;
+    if (st === 'Baja') return COLOR.baja;
+    if (st.startsWith('Pendiente')) return COLOR.pendiente;
+    return null;
+  }
+  const solid = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
+  const thin = { style: 'thin', color: { argb: 'FFD0D7DE' } };
+  const borderAll = { top: thin, left: thin, bottom: thin, right: thin };
+
+  // Definición de columnas de la hoja Eventos
+  const COLS = [
+    { key: 'familia',          header: 'Familia',                 w: 16, t: 's' },
+    { key: 'id',               header: 'ID',                      w: 7,  t: 'n' },
+    { key: 'carpeta',          header: 'N° Carpeta',              w: 12, t: 's' },
+    { key: 'inv',              header: 'N° Inventario',           w: 14, t: 's' },
+    { key: 'equipo',           header: 'Equipo',                  w: 26, t: 's' },
+    { key: 'servicio',         header: 'Servicio',                w: 22, t: 's' },
+    { key: 'unidad',           header: 'Unidad',                  w: 22, t: 's' },
+    { key: 'ubicacion',        header: 'Ubicación',               w: 16, t: 's' },
+    { key: 'procedencia',      header: 'Procedencia',             w: 13, t: 's' },
+    { key: 'marca',            header: 'Marca',                   w: 18, t: 's' },
+    { key: 'modelo',           header: 'Modelo',                  w: 20, t: 's' },
+    { key: 'serie',            header: 'N° Serie',                w: 18, t: 's' },
+    { key: 'anio',             header: 'Año Instalación',         w: 10, t: 'n' },
+    { key: 'vur',              header: 'Vida Útil Residual',      w: 10, t: 'n' },
+    { key: 'clasif',           header: 'Clasificación',           w: 14, t: 's' },
+    { key: 'enubaja',          header: 'ENU / Baja',              w: 11, t: 's' },
+    { key: 'frecuencia',       header: 'Frecuencia MP',           w: 13, t: 's' },
+    { key: 'observacion',      header: 'Observación',             w: 44, t: 's' },
+    { key: 'mes',              header: 'Mes',                     w: 12, t: 's' },
+    { key: 'nMes',             header: 'N° Mes',                  w: 7,  t: 'n' },
+    { key: 'programa',         header: 'Programa (P)',            w: 11, t: 's' },
+    { key: 'tipoPrograma',     header: 'Tipo de Programación',    w: 34, t: 's' },
+    { key: 'resultado',        header: 'Resultado (R)',           w: 12, t: 's' },
+    { key: 'detalleResultado', header: 'Detalle del Resultado',   w: 34, t: 's' },
+    { key: 'fechaEjecucion',   header: 'Fecha de Ejecución',      w: 16, t: 'd' },
+    { key: 'causal',           header: 'Causal Reprog.',          w: 11, t: 's' },
+    { key: 'causalDesc',       header: 'Descripción de la Causal',w: 42, t: 's' },
+    { key: 'regla',            header: 'Regla de Reprogramación', w: 42, t: 's' },
+    { key: 'estado',           header: 'Estado',                  w: 22, t: 's' },
+    { key: 'estadoFinal',      header: 'Estado Final del Equipo', w: 20, t: 's' },
+    { key: 'ejecutor',         header: 'Ejecutor',                w: 24, t: 's' }
+  ];
+  const TEXT_KEYS = new Set(['carpeta', 'inv', 'serie', 'observacion']); // conservar tal cual (ceros a la izq. / texto)
+  const NUM_KEYS = new Set(['id', 'anio', 'vur', 'nMes']);
+  const DATE_KEYS = new Set(['fechaEjecucion']);                          // formato fecha (llenado manual)
+  const DATE_FMT = 'dd-mm-yyyy';
+
+  function styleHeaderRow(row) {
+    row.height = 30;
+    row.eachCell(c => {
+      c.font = { bold: true, color: { argb: COLOR.headerText }, size: 10, name: 'Calibri' };
+      c.fill = solid(COLOR.header);
+      c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      c.border = borderAll;
+    });
+  }
+
+  // Crea una hoja simple (encabezado + filas) con formato por tipo de columna.
+  // cols: [key, header, width, tipo('s'|'n'|'t'|'d')]
+  function simpleSheet(wb, MP, name, cols, dataRows) {
+    const sh = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
+    sh.columns = cols.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(sh.getRow(1));
+    dataRows.forEach((d, idx) => {
+      const row = sh.addRow(d);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = cols[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+    });
+    sh.autoFilter = { from: 'A1', to: sh.getColumn(cols.length).letter + '1' };
+    return sh;
+  }
+
+  function buildOutputWorkbook(ExcelJS, MP, events, meta) {
+    meta = meta || {};
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Generador de Eventos MP';
+    wb.created = new Date();
+
+    /* ---------- Hoja Catálogos (también fuente del desplegable) ---------- */
+    const cat = wb.addWorksheet('Catalogos');
+    cat.getColumn(1).width = 26; // Ejecutores (A) -> origen del dropdown
+    cat.getColumn(2).width = 6;
+    cat.getColumn(3).width = 58;
+    cat.getColumn(5).width = 6;
+    cat.getColumn(6).width = 58;
+    cat.getColumn(8).width = 14;
+
+    // Ejecutores en A1.. (A2:A12 = lista). Encabezado en A1.
+    cat.getCell('A1').value = 'Ejecutores';
+    MP.EJECUTORES.forEach((n, i) => { cat.getCell(i + 2, 1).value = n; }); // (fila, col)=A2..A12
+
+    // Tabla de códigos de Programa (B..C)
+    cat.getCell('B1').value = 'Programa (P)'; cat.getCell('C1').value = 'Significado';
+    let rr = 2;
+    Object.keys(MP.PROG).forEach(k => {
+      cat.getCell(rr, 2).value = k; cat.getCell(rr, 3).value = MP.PROG[k]; rr++;
+    });
+    // Tabla de Resultados (E..F)
+    cat.getCell('E1').value = 'Resultado (R)'; cat.getCell('F1').value = 'Significado';
+    const resList = [
+      ['Si', 'Mantención Preventiva Realizada'],
+      ['C1 - C8', 'Mantención Preventiva Reprogramada (ver causales)'],
+      ['Si-RA', 'Mantención de Año Anterior Realizada'],
+      ['FS', 'Fuera de Servicio'],
+      ['No', 'No Realizada'],
+      ['NU', 'No Ubicable'],
+      ['Baja', 'Equipo Dado de Baja']
+    ];
+    resList.forEach((x, i) => { cat.getCell(i + 2, 5).value = x[0]; cat.getCell(i + 2, 6).value = x[1]; });
+
+    // Tabla de Causales (H..J)
+    cat.getCell('H1').value = 'Causal'; cat.getCell('I1').value = 'Descripción'; cat.getCell('J1').value = 'Regla de reprogramación';
+    cat.getColumn(9).width = 58; cat.getColumn(10).width = 50;
+    let cr = 2;
+    Object.keys(MP.CAUSAL).forEach(k => {
+      cat.getCell(cr, 8).value = k;
+      cat.getCell(cr, 9).value = MP.CAUSAL[k];
+      cat.getCell(cr, 10).value = MP.CAUSAL_30.has(k)
+        ? 'Reprogramar dentro de 30 días'
+        : 'Sin nueva fecha; registrar al reintegrarse';
+      cr++;
+    });
+    // Estilo encabezados catálogo
+    ['A1', 'B1', 'C1', 'E1', 'F1', 'H1', 'I1', 'J1'].forEach(a => {
+      const c = cat.getCell(a);
+      c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      c.fill = solid(COLOR.catTitle);
+    });
+
+    /* ---------- Hoja Eventos -------------------------------------------- */
+    const ws = wb.addWorksheet('Eventos', {
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 1, activeCell: 'A2' }]
+    });
+    ws.columns = COLS.map(c => ({ header: c.header, key: c.key, width: c.w }));
+    styleHeaderRow(ws.getRow(1));
+
+    events.forEach((e, idx) => {
+      const row = ws.addRow(e);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = COLS[col - 1];
+        cell.border = borderAll;
+        cell.font = { size: 10, name: 'Calibri' };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (TEXT_KEYS.has(def.key)) { cell.numFmt = '@'; }            // texto literal
+        else if (NUM_KEYS.has(def.key)) {
+          const n = MP.toNum(cell.value);
+          if (n !== null) cell.value = n;                              // numérico real
+        } else if (DATE_KEYS.has(def.key)) {
+          if (cell.value === '' || cell.value === null) cell.value = null; // celda vacía limpia
+          cell.numFmt = DATE_FMT;                                      // lista para escribir la fecha
+        }
+      });
+      // Conservar N° Serie / Inventario / Carpeta como TEXTO (ceros a la izq.)
+      TEXT_KEYS.forEach(k => {
+        const idxCol = COLS.findIndex(c => c.key === k) + 1;
+        const cell = row.getCell(idxCol);
+        if (cell.value !== null && cell.value !== undefined && cell.value !== '')
+          cell.value = String(cell.value);
+      });
+      // Color del Estado
+      const estCol = COLS.findIndex(c => c.key === 'estado') + 1;
+      const f = estadoFill(e.estado);
+      if (f) { row.getCell(estCol).fill = solid(f); row.getCell(estCol).font = { size: 10, bold: true, name: 'Calibri' }; }
+      // Resaltar causal
+      if (e.causal) {
+        const cCol = COLS.findIndex(c => c.key === 'causal') + 1;
+        row.getCell(cCol).fill = solid(COLOR.reprogramada);
+        row.getCell(cCol).font = { size: 10, bold: true, name: 'Calibri' };
+      }
+    });
+
+    // Autofiltro + congelado ya aplicado
+    const lastColLetter = ws.getColumn(COLS.length).letter;
+    ws.autoFilter = { from: 'A1', to: lastColLetter + '1' };
+
+    // Validación de datos (desplegable) en la columna Ejecutor — un solo rango
+    const ejeCol = ws.getColumn(COLS.findIndex(c => c.key === 'ejecutor') + 1);
+    const ejeLetter = ejeCol.letter;
+    const lastRow = events.length + 1;
+    if (lastRow >= 2) {
+      ws.dataValidations.add(ejeLetter + '2:' + ejeLetter + lastRow, {
+        type: 'list', allowBlank: true,
+        formulae: ['Catalogos!$A$2:$A$' + (MP.EJECUTORES.length + 1)],
+        showErrorMessage: true,
+        errorStyle: 'warning',
+        errorTitle: 'Ejecutor no válido',
+        error: 'Seleccione un ejecutor de la lista.'
+      });
+    }
+
+    // Validación (desplegable) en la columna "Resultado (R)"
+    const resLetter = ws.getColumn(COLS.findIndex(c => c.key === 'resultado') + 1).letter;
+    if (lastRow >= 2) {
+      ws.dataValidations.add(resLetter + '2:' + resLetter + lastRow, {
+        type: 'list', allowBlank: true,
+        formulae: ['"' + MP.RESULTADO_OPCIONES.join(',') + '"'],
+        showErrorMessage: true,
+        errorStyle: 'warning',
+        errorTitle: 'Resultado no válido',
+        error: 'Seleccione un código de resultado de la lista (Si, C1–C8, Si-RA, FS, No, NU, Baja).'
+      });
+    }
+
+    // Validación (desplegable) en "Estado Final del Equipo": Operativo / No operativo
+    const efLetter = ws.getColumn(COLS.findIndex(c => c.key === 'estadoFinal') + 1).letter;
+    if (lastRow >= 2) {
+      const efRange = efLetter + '2:' + efLetter + lastRow;
+      ws.dataValidations.add(efRange, {
+        type: 'list', allowBlank: true,
+        formulae: ['"' + MP.ESTADO_FINAL_OPCIONES.join(',') + '"'],
+        showErrorMessage: true,
+        errorStyle: 'warning',
+        errorTitle: 'Valor no válido',
+        error: 'Seleccione "Operativo", "No operativo" o "En servicio técnico".'
+      });
+      // Coloreado automático según el valor elegido
+      ws.addConditionalFormatting({
+        ref: efRange,
+        rules: [
+          { type: 'cellIs', operator: 'equal', priority: 1, formulae: ['"Operativo"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: COLOR.realizada } },
+                     font: { color: { argb: 'FF1B7F3B' }, bold: true } } },
+          { type: 'cellIs', operator: 'equal', priority: 2, formulae: ['"No operativo"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: COLOR.fueraServicio } },
+                     font: { color: { argb: 'FFB3261E' }, bold: true } } },
+          { type: 'cellIs', operator: 'equal', priority: 3, formulae: ['"En servicio técnico"'],
+            style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFFE0B2' } },
+                     font: { color: { argb: 'FF8A5A00' }, bold: true } } }
+        ]
+      });
+    }
+
+    /* ---------- Hoja Resumen ------------------------------------------- */
+    const stats = MP.buildStats(events);
+    const sum = wb.addWorksheet('Resumen');
+    sum.getColumn(1).width = 26; sum.getColumn(2).width = 14;
+    sum.getColumn(3).width = 14; sum.getColumn(4).width = 14;
+    sum.getColumn(5).width = 14; sum.getColumn(6).width = 14;
+    sum.getCell('A1').value = 'Resumen de Eventos — Programación MP 2026';
+    sum.getCell('A1').font = { bold: true, size: 14, color: { argb: COLOR.catTitle } };
+    sum.getCell('A2').value = 'Generado:';
+    sum.getCell('B2').value = new Date();
+    sum.getCell('B2').numFmt = 'dd-mm-yyyy hh:mm';
+    sum.getCell('A3').value = 'Equipos procesados:'; sum.getCell('B3').value = meta.equipos || 0;
+    sum.getCell('A4').value = 'Total de eventos:';    sum.getCell('B4').value = events.length;
+
+    let r = 6;
+    sum.getCell('A' + r).value = 'Eventos por Estado';
+    sum.getCell('A' + r).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sum.getCell('A' + r).fill = solid(COLOR.header);
+    sum.getCell('B' + r).value = 'Cantidad';
+    sum.getCell('B' + r).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sum.getCell('B' + r).fill = solid(COLOR.header);
+    r++;
+    const estados = [...stats.byEstado.entries()].sort((a, b) => b[1] - a[1]);
+    estados.forEach(([k, v]) => {
+      sum.getCell('A' + r).value = k;
+      sum.getCell('B' + r).value = v;
+      const f = estadoFill(k); if (f) sum.getCell('A' + r).fill = solid(f);
+      r++;
+    });
+
+    r += 1;
+    const head = ['Mes', 'Programadas', 'Realizadas', 'Reprogramadas', 'Pend./PM', 'Otras'];
+    head.forEach((h, i) => {
+      const c = sum.getCell(r, i + 1);
+      c.value = h; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = solid(COLOR.header);
+    });
+    r++;
+    stats.byMes.forEach((m, i) => {
+      sum.getCell(r, 1).value = MP.MONTHS_FULL[i];
+      sum.getCell(r, 2).value = m.prog;
+      sum.getCell(r, 3).value = m.real;
+      sum.getCell(r, 4).value = m.reprog;
+      sum.getCell(r, 5).value = m.pend;
+      sum.getCell(r, 6).value = m.otras;
+      r++;
+    });
+
+    /* ---------- Hoja Correctivos --------------------------------------- */
+    const CORR_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['tipoEvento', 'Tipo de Evento', 22, 's'], ['fecha', 'Fecha', 13, 'd'],
+      ['folioSolicitud', 'Folio Solicitud', 16, 's'], ['nEnvio', 'N° Envío', 12, 's'],
+      ['folioGuia', 'Folio Guía Despacho', 18, 's'], ['empresa', 'Empresa', 22, 's'],
+      ['ejecutor', 'Ejecutor', 24, 's'], ['descripcion', 'Descripción', 44, 's'],
+      ['estadoFinal', 'Estado Final del Equipo', 20, 's']
+    ];
+    const correctivos = meta.correctivos || [];
+    const cs = wb.addWorksheet('Correctivos', { views: [{ state: 'frozen', ySplit: 1 }] });
+    cs.columns = CORR_COLS.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(cs.getRow(1));
+    const efFill = v => v === 'Operativo' ? COLOR.realizada : v === 'No operativo' ? COLOR.fueraServicio
+      : v === 'En servicio técnico' ? 'FFFFE0B2' : null;
+    correctivos.forEach((ev, idx) => {
+      const row = cs.addRow(ev);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = CORR_COLS[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+      const f = efFill(ev.estadoFinal);
+      if (f) {
+        const efCell = row.getCell(CORR_COLS.findIndex(c => c[0] === 'estadoFinal') + 1);
+        efCell.fill = solid(f); efCell.font = { size: 10, bold: true, name: 'Calibri' };
+      }
+    });
+    cs.autoFilter = { from: 'A1', to: cs.getColumn(CORR_COLS.length).letter + '1' };
+    const corrLast = correctivos.length + 1;
+    if (corrLast >= 2) {
+      const addDV = (key, formulae) => {
+        const L = cs.getColumn(CORR_COLS.findIndex(c => c[0] === key) + 1).letter;
+        cs.dataValidations.add(L + '2:' + L + corrLast, { type: 'list', allowBlank: true, formulae: formulae, showErrorMessage: true, errorStyle: 'warning' });
+      };
+      addDV('tipoEvento', ['"' + MP.CORRECTIVO_TIPOS.join(',') + '"']);
+      addDV('ejecutor', ['Catalogos!$A$2:$A$' + (MP.EJECUTORES.length + 1)]);
+      addDV('estadoFinal', ['"' + MP.ESTADO_FINAL_OPCIONES.join(',') + '"']);
+    }
+
+    /* ---------- Hoja Pendientes ---------------------------------------- */
+    const PEND_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'], ['unidad', 'Unidad', 20, 's'],
+      ['tipo', 'Tipo', 22, 's'],
+      ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd'],
+      ['respAdministrativo', 'Responsable Administrativo', 26, 's'],
+      ['respEjecucion', 'Responsable de Ejecución', 26, 's'],
+      ['observacion', 'Observación', 50, 's'],
+      ['estado', 'Estado', 13, 's'],
+      ['tareasResumen', 'Tareas (hechas/total)', 18, 's'],
+      ['ultimaAct', 'Última actualización', 46, 's'],
+      ['cuadrante', 'Cuadrante (Eisenhower)', 18, 's'],
+      ['urgencia', 'Urgencia', 12, 's'],
+      ['importancia', 'Importancia', 13, 's']
+    ];
+    const pendientes = meta.pendientes || [];
+    const ps = wb.addWorksheet('Pendientes', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ps.columns = PEND_COLS.map(c => ({ header: c[1], key: c[0], width: c[2] }));
+    styleHeaderRow(ps.getRow(1));
+    pendientes.forEach((p, idx) => {
+      const row = ps.addRow(p);
+      const band = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        const def = PEND_COLS[col - 1];
+        cell.border = borderAll; cell.font = { size: 10, name: 'Calibri' }; cell.alignment = { vertical: 'middle' };
+        if (band) cell.fill = solid(COLOR.band);
+        if (!def) return;
+        if (def[3] === 't') { cell.numFmt = '@'; if (cell.value != null && cell.value !== '') cell.value = String(cell.value); }
+        else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
+        else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
+      });
+    });
+    ps.autoFilter = { from: 'A1', to: ps.getColumn(PEND_COLS.length).letter + '1' };
+    const pendLast = pendientes.length + 1;
+    if (pendLast >= 2) {
+      const ejeRange = ['Catalogos!$A$2:$A$' + (MP.EJECUTORES.length + 1)];
+      ['respAdministrativo', 'respEjecucion'].forEach(key => {
+        const L = ps.getColumn(PEND_COLS.findIndex(c => c[0] === key) + 1).letter;
+        ps.dataValidations.add(L + '2:' + L + pendLast, { type: 'list', allowBlank: true, formulae: ejeRange, showErrorMessage: true, errorStyle: 'warning' });
+      });
+    }
+
+    /* ---------- Hojas Tareas y Bitácora (de los pendientes) ------------ */
+    const TAREA_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['tarea', 'Tarea', 50, 's'], ['hecha', 'Hecha', 8, 's'],
+      ['estadoPend', 'Estado del Pendiente', 16, 's'], ['fechaCompromiso', 'Fecha de Compromiso', 16, 'd']
+    ];
+    const BIT_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['fecha', 'Fecha', 13, 'd'], ['texto', 'Actualización', 60, 's'], ['estadoPend', 'Estado del Pendiente', 16, 's']
+    ];
+    const tareasRows = [], bitRows = [];
+    pendientes.forEach(p => {
+      (p.tareas || []).forEach(t => tareasRows.push({
+        id: p.id, inv: p.inv, serie: p.serie, equipo: p.equipo, servicio: p.servicio,
+        tarea: t.texto, hecha: t.hecha ? 'Sí' : 'No', estadoPend: p.estado || '', fechaCompromiso: p.fechaCompromiso
+      }));
+      (p.actualizaciones || []).forEach(a => bitRows.push({
+        id: p.id, inv: p.inv, serie: p.serie, equipo: p.equipo, servicio: p.servicio,
+        fecha: a.fecha, texto: a.texto, estadoPend: p.estado || ''
+      }));
+    });
+    simpleSheet(wb, MP, 'Tareas', TAREA_COLS, tareasRows);
+    simpleSheet(wb, MP, 'Bitacora', BIT_COLS, bitRows);
+
+    /* ---------- Hoja Archivos (enlaces a Drive) ------------------------ */
+    const ARCH_COLS = [
+      ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
+      ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
+      ['categoria', 'Categoría', 18, 's'], ['nombre', 'Nombre del archivo', 30, 's'],
+      ['enlace', 'Enlace', 48, 's'], ['fecha', 'Fecha de carga', 16, 's']
+    ];
+    const archivos = meta.archivos || [];
+    const ash = simpleSheet(wb, MP, 'Archivos', ARCH_COLS, archivos.map(a => ({
+      id: a.id, inv: a.inv, serie: a.serie, equipo: a.equipo, servicio: a.servicio,
+      categoria: a.categoria, nombre: a.nombre, enlace: a.enlace, fecha: a.fecha
+    })));
+    // Convertir la columna Enlace en hipervínculo clicable
+    const enlCol = ARCH_COLS.findIndex(c => c[0] === 'enlace') + 1;
+    archivos.forEach((a, i) => {
+      if (!a.enlace) return;
+      const cell = ash.getRow(i + 2).getCell(enlCol);
+      cell.value = { text: a.nombre || a.enlace, hyperlink: a.enlace };
+      cell.font = { size: 10, name: 'Calibri', color: { argb: 'FF0B61A4' }, underline: true };
+    });
+
+    // Orden de hojas: Eventos primero
+    wb.worksheets.forEach((w, i) => { w.orderNo = i; });
+    return wb;
+  }
+
+  return { buildOutputWorkbook };
+});
+
+</script>
+<script>
 /* ============================================================================
  *  Interfaz de usuario — Generador de Eventos MP 2026
  *  Usa los globales: ExcelJS, MP (core), MPOUT (output)
@@ -1690,3 +3468,7 @@
   // Traer automáticamente lo guardado en Google Sheets (si hay URL configurada)
   if (sheetsReady()) pullFromSheets(true);
 })();
+
+</script>
+</body>
+</html>
