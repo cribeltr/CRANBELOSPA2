@@ -121,8 +121,7 @@
   .sg-item b{color:var(--teal-d)}
   .sg-item .meta{color:var(--muted);font-size:12px;margin-top:1px}
   .sg-empty{padding:10px 12px;color:var(--muted);font-size:13px}
-  .ficha{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin:8px 0}
-  @media(max-width:560px){.ficha{grid-template-columns:1fr}}
+  .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 24px;margin:8px 0}
   .fi{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted #e3e9eb;padding:4px 0;font-size:13px}
   .fi .k{color:var(--muted)}
   .fi .v{font-weight:600;text-align:right;word-break:break-word}
@@ -227,7 +226,7 @@
   .sapocard{border:2px solid #8a6d00;background:#fff8ec;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:14px}
   .sapocard:hover{box-shadow:0 4px 14px rgba(138,109,0,.18)}
   /* ===================== Panel lateral (sidebar) ===================== */
-  .wrap{max-width:1240px}
+  .wrap{max-width:none;padding:0 22px}
   .layout{display:flex;gap:16px;align-items:flex-start}
   .sidebar{flex:0 0 232px;position:sticky;top:12px;align-self:flex-start;
     background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid var(--line);
