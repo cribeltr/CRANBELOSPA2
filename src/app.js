@@ -324,6 +324,7 @@
     return rowsToObjs(grid).map(o => ({
       id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']),
       equipo: o['Equipo'] || '', servicio: o['Servicio'] || '', categoria: o['Categoría'] || '',
+      descripcion: o['Descripción'] || '',
       nombre: o['Nombre del archivo'] || '', enlace: o['Enlace'] || '', fecha: o['Fecha de carga'] || ''
     })).filter(a => a.enlace);
   }
@@ -363,11 +364,11 @@
     });
   }
   // Sube un archivo a Drive (vía Apps Script) y registra el enlace en la hoja "Archivos"
-  async function uploadArchivoFile(eq, file, categoria) {
+  async function uploadArchivoFile(eq, file, categoria, descripcion) {
     const dataBase64 = await readFileB64(file);
     const payload = {
       action: 'upload', equipoId: eq.id, equipo: eq.equipo, inv: eq.inv, serie: eq.serie,
-      servicio: eq.servicio, categoria: categoria || '', nombre: file.name, mime: file.type || 'application/octet-stream', dataBase64
+      servicio: eq.servicio, categoria: categoria || '', descripcion: descripcion || '', nombre: file.name, mime: file.type || 'application/octet-stream', dataBase64
     };
     let j;
     if (GAS) { j = await gasCall('appUpload', payload); }
@@ -378,7 +379,7 @@
       j = JSON.parse(await res.text());
     }
     if (!j || !j.ok) throw new Error((j && j.error) || 'No se pudo subir el archivo.');
-    state.archivos.push({ id: eq.id, inv: eq.inv, serie: eq.serie, equipo: eq.equipo, servicio: eq.servicio, categoria: categoria || '', nombre: j.name || file.name, enlace: j.url, fecha: j.fecha || '' });
+    state.archivos.push({ id: eq.id, inv: eq.inv, serie: eq.serie, equipo: eq.equipo, servicio: eq.servicio, categoria: categoria || '', descripcion: descripcion || '', nombre: j.name || file.name, enlace: j.url, fecha: j.fecha || '' });
     saveArchivos();
     return j;
   }
@@ -855,13 +856,15 @@
     const list = archivosDe(eq);
     const items = list.length ? list.map(a =>
       '<div class="arch-item"><span class="ac">' + esc(a.categoria || 'Archivo') + '</span>' +
-      '<a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
+      '<span class="ab"><a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
+      (a.descripcion ? '<span class="ad">' + esc(a.descripcion) + '</span>' : '') + '</span>' +
       '<span class="am">' + esc(a.fecha || '') + '</span></div>').join('')
       : '<div class="muted" style="font-size:12.5px">Sin archivos adjuntos.</div>';
     let form;
     if (sheetsReady()) {
       form = '<div class="arch-up">' +
         '<div class="fld"><label>Categoría</label><select id="archCat">' + MP.ARCHIVO_CATEGORIAS.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('') + '</select></div>' +
+        '<div class="fld" style="flex:2"><label>Descripción (opcional)</label><input id="archDesc" type="text" autocomplete="off" placeholder="Ej: Informe MP de junio, foto del equipo…"></div>' +
         '<div class="fld" style="flex:1"><label>Archivo</label><input id="archFile" type="file"></div>' +
         '<button id="archUp" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬆️ Subir a Drive</button>' +
         '</div><div id="archMsg" class="inline-msg"></div>';
@@ -877,10 +880,11 @@
       const fi = $('#archFile'); const f = fi && fi.files && fi.files[0];
       if (!f) { showInline($('#archMsg'), 'err', 'Selecciona un archivo.'); return; }
       const cat = $('#archCat') ? $('#archCat').value : '';
+      const desc = $('#archDesc') ? $('#archDesc').value.trim() : '';
       up.disabled = true; const orig = up.textContent; up.textContent = 'Subiendo…';
       showInline($('#archMsg'), 'info', 'Subiendo a Drive… (puede tardar unos segundos)');
       try {
-        const j = await uploadArchivoFile(eq, f, cat);
+        const j = await uploadArchivoFile(eq, f, cat, desc);
         setStatus('✅ Archivo subido a Drive: <b>' + esc(j.name || f.name) + '</b>.', 'ok');
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       } catch (e) {

@@ -291,7 +291,9 @@
   .arch-item a{color:#0b61a4;font-weight:600;text-decoration:none;word-break:break-all}
   .arch-item a:hover{text-decoration:underline}
   .arch-item .ac{flex:0 0 auto;font-size:11px;font-weight:700;background:#eef3f5;color:var(--teal-d);border-radius:20px;padding:1px 8px}
-  .arch-item .am{color:var(--muted);font-size:11.5px;margin-left:auto}
+  .arch-item .ab{flex:1 1 auto;display:flex;flex-direction:column;min-width:0}
+  .arch-item .ad{color:var(--muted);font-size:11.5px;word-break:break-word}
+  .arch-item .am{flex:0 0 auto;color:var(--muted);font-size:11.5px;margin-left:auto;white-space:nowrap}
   .arch-up{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
   .arch-up .fld{min-width:150px}
   .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
@@ -562,7 +564,7 @@ function appUpload(body) {
  *  Crea (si no existe) la carpeta raíz "MP 2026 - Archivos" y, dentro, una
  *  subcarpeta por equipo. Guarda el archivo, lo comparte como "cualquiera con el
  *  enlace puede ver" y agrega una fila con el ENLACE a la hoja "Archivos".
- *  payload: { equipoId, equipo, inv, serie, servicio, categoria, nombre, mime, dataBase64 }
+ *  payload: { equipoId, equipo, inv, serie, servicio, categoria, descripcion, nombre, mime, dataBase64 }
  *  Requiere autorización de Drive (al implementar pedirá el permiso una vez).
  * ----------------------------------------------------------------------------- */
 var ARCHIVOS_ROOT = 'MP 2026 - Archivos';
@@ -590,25 +592,35 @@ function uploadArchivo(p) {
   var url = file.getUrl();
 
   // Registrar el enlace en la hoja "Archivos"
+  var HEADERS = ['ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Descripción', 'Nombre del archivo', 'Enlace', 'Fecha de carga'];
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Archivos');
   if (!sh) {
     sh = ss.insertSheet('Archivos');
-    sh.getRange(1, 1, 1, 9).setValues([[
-      'ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Nombre del archivo', 'Enlace', 'Fecha de carga'
-    ]]);
+    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     sh.setFrozenRows(1);
-    sh.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+    sh.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+  }
+  // Si la hoja ya existía sin la columna "Descripción", insertarla tras "Categoría".
+  var hdr = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String);
+  if (hdr.indexOf('Descripción') === -1) {
+    var catIdx = hdr.indexOf('Categoría');
+    var at = (catIdx &gt;= 0 ? catIdx + 2 : sh.getLastColumn() + 1);
+    sh.insertColumnBefore(at);
+    sh.getRange(1, at).setValue('Descripción').setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+    hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
   }
   var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Santiago', 'yyyy-MM-dd HH:mm');
-  // Guardar el ENLACE como texto (Google Sheets lo hace clicable automáticamente)
-  // y además legible al volver a leer la hoja (round-trip de doble vía).
-  sh.appendRow([
-    p.equipoId || '', p.inv || '', p.serie || '', p.equipo || '', p.servicio || '',
-    p.categoria || '', nombre, url, fecha
-  ]);
+  // Escribir en el ORDEN real del encabezado (el enlace como texto: Google Sheets
+  // lo hace clicable y queda legible al volver a leer la hoja, round-trip).
+  var valByHeader = {
+    'ID': p.equipoId || '', 'N° Inventario': p.inv || '', 'N° Serie': p.serie || '', 'Equipo': p.equipo || '',
+    'Servicio': p.servicio || '', 'Categoría': p.categoria || '', 'Descripción': p.descripcion || '',
+    'Nombre del archivo': nombre, 'Enlace': url, 'Fecha de carga': fecha
+  };
+  sh.appendRow(hdr.map(function (h) { return (h in valByHeader) ? valByHeader[h] : ''; }));
 
-  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', fecha: fecha };
+  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', descripcion: p.descripcion || '', fecha: fecha };
 }
 
 function writeAll(body) {
@@ -1794,13 +1806,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const ARCH_COLS = [
       ['id', 'ID', 8, 'n'], ['inv', 'N° Inventario', 14, 't'], ['serie', 'N° Serie', 16, 't'],
       ['equipo', 'Equipo', 24, 's'], ['servicio', 'Servicio', 20, 's'],
-      ['categoria', 'Categoría', 18, 's'], ['nombre', 'Nombre del archivo', 30, 's'],
+      ['categoria', 'Categoría', 18, 's'], ['descripcion', 'Descripción', 40, 's'], ['nombre', 'Nombre del archivo', 30, 's'],
       ['enlace', 'Enlace', 48, 's'], ['fecha', 'Fecha de carga', 16, 's']
     ];
     const archivos = meta.archivos || [];
     const ash = simpleSheet(wb, MP, 'Archivos', ARCH_COLS, archivos.map(a => ({
       id: a.id, inv: a.inv, serie: a.serie, equipo: a.equipo, servicio: a.servicio,
-      categoria: a.categoria, nombre: a.nombre, enlace: a.enlace, fecha: a.fecha
+      categoria: a.categoria, descripcion: a.descripcion, nombre: a.nombre, enlace: a.enlace, fecha: a.fecha
     })));
     // Convertir la columna Enlace en hipervínculo clicable
     const enlCol = ARCH_COLS.findIndex(c => c[0] === 'enlace') + 1;
@@ -2147,6 +2159,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return rowsToObjs(grid).map(o => ({
       id: sid(o['ID']), inv: sid(o['N° Inventario']), serie: sid(o['N° Serie']),
       equipo: o['Equipo'] || '', servicio: o['Servicio'] || '', categoria: o['Categoría'] || '',
+      descripcion: o['Descripción'] || '',
       nombre: o['Nombre del archivo'] || '', enlace: o['Enlace'] || '', fecha: o['Fecha de carga'] || ''
     })).filter(a => a.enlace);
   }
@@ -2186,11 +2199,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
   }
   // Sube un archivo a Drive (vía Apps Script) y registra el enlace en la hoja "Archivos"
-  async function uploadArchivoFile(eq, file, categoria) {
+  async function uploadArchivoFile(eq, file, categoria, descripcion) {
     const dataBase64 = await readFileB64(file);
     const payload = {
       action: 'upload', equipoId: eq.id, equipo: eq.equipo, inv: eq.inv, serie: eq.serie,
-      servicio: eq.servicio, categoria: categoria || '', nombre: file.name, mime: file.type || 'application/octet-stream', dataBase64
+      servicio: eq.servicio, categoria: categoria || '', descripcion: descripcion || '', nombre: file.name, mime: file.type || 'application/octet-stream', dataBase64
     };
     let j;
     if (GAS) { j = await gasCall('appUpload', payload); }
@@ -2201,7 +2214,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       j = JSON.parse(await res.text());
     }
     if (!j || !j.ok) throw new Error((j && j.error) || 'No se pudo subir el archivo.');
-    state.archivos.push({ id: eq.id, inv: eq.inv, serie: eq.serie, equipo: eq.equipo, servicio: eq.servicio, categoria: categoria || '', nombre: j.name || file.name, enlace: j.url, fecha: j.fecha || '' });
+    state.archivos.push({ id: eq.id, inv: eq.inv, serie: eq.serie, equipo: eq.equipo, servicio: eq.servicio, categoria: categoria || '', descripcion: descripcion || '', nombre: j.name || file.name, enlace: j.url, fecha: j.fecha || '' });
     saveArchivos();
     return j;
   }
@@ -2678,13 +2691,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const list = archivosDe(eq);
     const items = list.length ? list.map(a =>
       '<div class="arch-item"><span class="ac">' + esc(a.categoria || 'Archivo') + '</span>' +
-      '<a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
+      '<span class="ab"><a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
+      (a.descripcion ? '<span class="ad">' + esc(a.descripcion) + '</span>' : '') + '</span>' +
       '<span class="am">' + esc(a.fecha || '') + '</span></div>').join('')
       : '<div class="muted" style="font-size:12.5px">Sin archivos adjuntos.</div>';
     let form;
     if (sheetsReady()) {
       form = '<div class="arch-up">' +
         '<div class="fld"><label>Categoría</label><select id="archCat">' + MP.ARCHIVO_CATEGORIAS.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('') + '</select></div>' +
+        '<div class="fld" style="flex:2"><label>Descripción (opcional)</label><input id="archDesc" type="text" autocomplete="off" placeholder="Ej: Informe MP de junio, foto del equipo…"></div>' +
         '<div class="fld" style="flex:1"><label>Archivo</label><input id="archFile" type="file"></div>' +
         '<button id="archUp" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬆️ Subir a Drive</button>' +
         '</div><div id="archMsg" class="inline-msg"></div>';
@@ -2700,10 +2715,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const fi = $('#archFile'); const f = fi && fi.files && fi.files[0];
       if (!f) { showInline($('#archMsg'), 'err', 'Selecciona un archivo.'); return; }
       const cat = $('#archCat') ? $('#archCat').value : '';
+      const desc = $('#archDesc') ? $('#archDesc').value.trim() : '';
       up.disabled = true; const orig = up.textContent; up.textContent = 'Subiendo…';
       showInline($('#archMsg'), 'info', 'Subiendo a Drive… (puede tardar unos segundos)');
       try {
-        const j = await uploadArchivoFile(eq, f, cat);
+        const j = await uploadArchivoFile(eq, f, cat, desc);
         setStatus('✅ Archivo subido a Drive: <b>' + esc(j.name || f.name) + '</b>.', 'ok');
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
       } catch (e) {

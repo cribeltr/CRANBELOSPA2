@@ -67,7 +67,7 @@ function appUpload(body) {
  *  Crea (si no existe) la carpeta raíz "MP 2026 - Archivos" y, dentro, una
  *  subcarpeta por equipo. Guarda el archivo, lo comparte como "cualquiera con el
  *  enlace puede ver" y agrega una fila con el ENLACE a la hoja "Archivos".
- *  payload: { equipoId, equipo, inv, serie, servicio, categoria, nombre, mime, dataBase64 }
+ *  payload: { equipoId, equipo, inv, serie, servicio, categoria, descripcion, nombre, mime, dataBase64 }
  *  Requiere autorización de Drive (al implementar pedirá el permiso una vez).
  * ----------------------------------------------------------------------------- */
 var ARCHIVOS_ROOT = 'MP 2026 - Archivos';
@@ -95,25 +95,35 @@ function uploadArchivo(p) {
   var url = file.getUrl();
 
   // Registrar el enlace en la hoja "Archivos"
+  var HEADERS = ['ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Descripción', 'Nombre del archivo', 'Enlace', 'Fecha de carga'];
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Archivos');
   if (!sh) {
     sh = ss.insertSheet('Archivos');
-    sh.getRange(1, 1, 1, 9).setValues([[
-      'ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Nombre del archivo', 'Enlace', 'Fecha de carga'
-    ]]);
+    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     sh.setFrozenRows(1);
-    sh.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+    sh.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+  }
+  // Si la hoja ya existía sin la columna "Descripción", insertarla tras "Categoría".
+  var hdr = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String);
+  if (hdr.indexOf('Descripción') === -1) {
+    var catIdx = hdr.indexOf('Categoría');
+    var at = (catIdx >= 0 ? catIdx + 2 : sh.getLastColumn() + 1);
+    sh.insertColumnBefore(at);
+    sh.getRange(1, at).setValue('Descripción').setFontWeight('bold').setBackground('#15616d').setFontColor('#ffffff');
+    hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
   }
   var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Santiago', 'yyyy-MM-dd HH:mm');
-  // Guardar el ENLACE como texto (Google Sheets lo hace clicable automáticamente)
-  // y además legible al volver a leer la hoja (round-trip de doble vía).
-  sh.appendRow([
-    p.equipoId || '', p.inv || '', p.serie || '', p.equipo || '', p.servicio || '',
-    p.categoria || '', nombre, url, fecha
-  ]);
+  // Escribir en el ORDEN real del encabezado (el enlace como texto: Google Sheets
+  // lo hace clicable y queda legible al volver a leer la hoja, round-trip).
+  var valByHeader = {
+    'ID': p.equipoId || '', 'N° Inventario': p.inv || '', 'N° Serie': p.serie || '', 'Equipo': p.equipo || '',
+    'Servicio': p.servicio || '', 'Categoría': p.categoria || '', 'Descripción': p.descripcion || '',
+    'Nombre del archivo': nombre, 'Enlace': url, 'Fecha de carga': fecha
+  };
+  sh.appendRow(hdr.map(function (h) { return (h in valByHeader) ? valByHeader[h] : ''; }));
 
-  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', fecha: fecha };
+  return { ok: true, url: url, name: nombre, folder: folder.getUrl(), categoria: p.categoria || '', descripcion: p.descripcion || '', fecha: fecha };
 }
 
 function writeAll(body) {

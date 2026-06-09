@@ -98,8 +98,9 @@ de equipos de ese grupo; clic en un equipo → su detalle.
 
 En la ficha de cada equipo hay una sección **📎 Archivos del equipo (Drive)**.
 Estando **conectado a Google Sheets/Apps Script**, puedes **subir un archivo**
-(informe, foto, guía de despacho, cotización, etc.): se guarda en tu Drive en
-`MP 2026 - Archivos` → *carpeta del equipo*, y su **enlace** queda en la hoja
+(informe, foto, guía de despacho, cotización, etc.) con una **categoría** y una
+**descripción opcional**: se guarda en tu Drive en `MP 2026 - Archivos` →
+*carpeta del equipo*, y su **enlace** (con la descripción) queda en la hoja
 **Archivos** de la planilla (y en la hoja *Archivos* del Excel descargado).
 La primera subida pide un **permiso de Drive**; vuelve a *Implementar → Nueva
 versión* y autoriza.
