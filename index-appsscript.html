@@ -307,6 +307,36 @@
   .pdfitem .pbtns button{appearance:none;background:transparent;border:0;cursor:pointer;font-size:14px;color:var(--teal-d);padding:2px 5px;border-radius:6px}
   .pdfitem .pbtns button:hover{background:#e0eaed}
   .pdfitem .pbtns button:disabled{opacity:.3;cursor:not-allowed}
+  /* ===================== Responsivo (tablet / móvil) ===================== */
+  @media(max-width:880px){
+    .layout{gap:10px}
+    .sidenav{gap:4px}
+    .sidebar{padding:8px}
+    /* el panel se vuelve una barra horizontal desplazable arriba */
+    .sidebar .tab,.invcat{font-size:13px;padding:8px 10px}
+  }
+  @media(max-width:640px){
+    header{padding:16px 14px}
+    header h1{font-size:17px}
+    header p{font-size:12px}
+    .wrap{padding:0 12px;margin:14px auto}
+    .card{padding:14px;margin-bottom:14px}
+    .row{gap:8px}
+    .row .grow{min-width:0;flex:1 1 100%}
+    #searchBtn,#sheetsSave,#sheetsTest,#sheetsSendAll,#sheetsPull{width:100%}
+    .actions .btn{flex:1 1 auto}
+    .modal-overlay{padding:10px}
+    .modal{padding:16px;border-radius:14px}
+    table.prev{font-size:12px}
+    table.prev th,table.prev td{padding:6px 8px}
+    .stat .n{font-size:19px}
+    .eisen{grid-template-columns:1fr}
+  }
+  @media(max-width:420px){
+    .sidebar .tab .lbl,.invcat .lbl{font-size:12.5px}
+    header h1{font-size:15.5px}
+    .btn{padding:10px 14px}
+  }
 </style>
 </head>
 <body>
@@ -708,6 +738,19 @@ function writeAll(body) {
       try { ds.hideSheet(); } catch (e2) {}
     }
 
+    // Inventario de equipos (hoja oculta) para auto-cargar al abrir el link
+    if (body.equipos &amp;&amp; body.equipos.length) {
+      var es = ss.getSheetByName('_equipos') || ss.insertSheet('_equipos');
+      es.clear();
+      var ec = body.equipos[0].length;
+      body.equipos.forEach(function (r) { while (r.length &lt; ec) r.push(''); });
+      var rng = es.getRange(1, 1, body.equipos.length, ec);
+      rng.setNumberFormat('@');                 // texto: conserva ceros a la izquierda
+      rng.setValues(body.equipos);
+      es.setFrozenRows(1);
+      try { es.hideSheet(); } catch (e3) {}
+    }
+
     return { ok: true, sheets: written };
 }
 
@@ -787,6 +830,7 @@ function readAll() {
   var data = ds ? ds.getRange(1, 1).getValue() : '';
   return {
     ok: true, count: n, data: data,
+    equipos: sheetVals(ss, '_equipos'),
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
@@ -2115,8 +2159,56 @@ function json(obj) {
         if (ws.name === 'Pendientes') Object.assign(o, pendientesExtras());
         return o;
       }),
-      data: serializeState()   // snapshot para poder LEER al reabrir
+      data: serializeState(),   // snapshot para poder LEER al reabrir
+      equipos: state.equipos.length ? equiposToRows() : null   // inventario, para auto-cargar al abrir
     };
+  }
+
+  // ---- Inventario de equipos: ida y vuelta con Google Sheets (_equipos) ---
+  // Permite que al abrir el link se restaure el inventario sin volver a subir el Excel.
+  const EQ_COLS = ['id', 'familia', 'carpeta', 'inv', 'equipo', 'servicio', 'unidad', 'ubicacion', 'procedencia', 'marca', 'modelo', 'serie', 'anio', 'vur', 'clasif', 'enubaja', 'observacion', 'frecuencia'];
+  function equiposToRows() {
+    const rows = [EQ_COLS.concat(['prog', 'res'])];
+    state.equipos.forEach(eq => {
+      const r = EQ_COLS.map(k => eq[k] == null ? '' : String(eq[k]));
+      r.push((eq.prog || []).join('|')); r.push((eq.res || []).join('|'));
+      rows.push(r);
+    });
+    return rows;
+  }
+  function equiposFromRows(grid) {
+    if (!grid || grid.length < 2) return [];
+    const h = grid[0].map(x => String(x == null ? '' : x).trim());
+    const idx = {}; h.forEach((k, i) => idx[k] = i);
+    const get = (r, k) => { const i = idx[k]; const v = (i == null ? '' : r[i]); return v == null ? '' : String(v).trim(); };
+    const split12 = s => { let a = (s == null ? '' : String(s)).split('|'); if (a.length === 1 && a[0] === '') a = []; while (a.length < 12) a.push(''); return a; };
+    return grid.slice(1).map(r => {
+      const eq = {}; EQ_COLS.forEach(k => eq[k] = get(r, k));
+      eq.prog = split12(get(r, 'prog')); eq.res = split12(get(r, 'res'));
+      return eq;
+    }).filter(eq => eq.id || eq.equipo);
+  }
+  // Reconstruye state.events a partir de los equipos (igual que parseWorkbook)
+  function rebuildEventsFromEquipos() {
+    const events = [];
+    state.equipos.forEach(eq => {
+      for (let i = 0; i < 12; i++) {
+        const p = eq.prog[i] || '', r = eq.res[i] || '';
+        if (MP.isEmpty(p) && MP.isEmpty(r)) continue;
+        events.push(MP.makeEvent(eq, i, p, r));
+      }
+    });
+    events.sort((a, b) => (MP.toNum(a.id) - MP.toNum(b.id)) || (a.nMes - b.nMes));
+    state.events = events;
+  }
+  // Carga un inventario restaurado y deja la app lista (preview, registro, vistas)
+  function applyEquipos(equipos) {
+    state.equipos = equipos;
+    rebuildEventsFromEquipos();
+    renderPreview(); renderRegistry(); renderCorrectivos(); renderPendientes(); renderDiscrepancias();
+    $('#download').disabled = false;
+    $('#registrar').style.display = 'block';
+    $('#registrarHint').style.display = 'none';
   }
 
   // Snapshot serializable de lo registrado (fechas -> ISO)
@@ -2313,6 +2405,13 @@ function json(obj) {
       else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
       // Archivos: siempre desde la hoja "Archivos" (la gestiona Apps Script)
       if (j.tablas && j.tablas.Archivos) { state.archivos = archivosFromTabla(j.tablas.Archivos); saveArchivos(); }
+      // Inventario de equipos: si no hay uno cargado en esta sesión, restaurarlo
+      let equiposCargados = 0;
+      if (!state.equipos.length && j.equipos) {
+        const eqs = equiposFromRows(j.equipos);
+        if (eqs.length) { applyEquipos(eqs); equiposCargados = eqs.length; }
+      }
+      const eqMsg = equiposCargados ? equiposCargados + ' equipos, ' : '';
       let obj = null;
       if (j.data) { try { obj = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch (_) { obj = null; } }
       if (obj && restoreState(obj)) {
@@ -2321,7 +2420,7 @@ function json(obj) {
         if (state.events.length) { renderPreview(); renderDiscrepancias(); }
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
         revealRegistrarIfData(); touch();
-        showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + state.registros.length +
+        showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + eqMsg + state.registros.length +
           ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.' +
           (state.archivos.length ? ', ' + state.archivos.length + ' archivo(s).' : ''));
       } else if (j.tablas) {
@@ -2334,13 +2433,17 @@ function json(obj) {
           if (state.events.length) { renderPreview(); renderDiscrepancias(); }
           if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
           revealRegistrarIfData(); touch();
-          showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + rec.correctivos.length +
+          showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + eqMsg + rec.correctivos.length +
             ' correctivo(s), ' + rec.pendientes.length + ' pendiente(s)' +
             (state.archivos.length ? ' y ' + state.archivos.length + ' archivo(s)' : '') +
             '. (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
+        } else if (equiposCargados) {
+          showInline($('#sheetsStatus'), 'ok', '✓ Inventario traído de Google Sheets: ' + equiposCargados + ' equipos.');
         } else if (!silent) {
           showInline($('#sheetsStatus'), 'info', 'La planilla no tiene datos de la app para traer.');
         }
+      } else if (equiposCargados) {
+        showInline($('#sheetsStatus'), 'ok', '✓ Inventario traído de Google Sheets: ' + equiposCargados + ' equipos.');
       } else if (!silent) {
         showInline($('#sheetsStatus'), 'info', 'La planilla aún no tiene datos guardados por la app.');
       }

@@ -307,6 +307,36 @@
   .pdfitem .pbtns button{appearance:none;background:transparent;border:0;cursor:pointer;font-size:14px;color:var(--teal-d);padding:2px 5px;border-radius:6px}
   .pdfitem .pbtns button:hover{background:#e0eaed}
   .pdfitem .pbtns button:disabled{opacity:.3;cursor:not-allowed}
+  /* ===================== Responsivo (tablet / móvil) ===================== */
+  @media(max-width:880px){
+    .layout{gap:10px}
+    .sidenav{gap:4px}
+    .sidebar{padding:8px}
+    /* el panel se vuelve una barra horizontal desplazable arriba */
+    .sidebar .tab,.invcat{font-size:13px;padding:8px 10px}
+  }
+  @media(max-width:640px){
+    header{padding:16px 14px}
+    header h1{font-size:17px}
+    header p{font-size:12px}
+    .wrap{padding:0 12px;margin:14px auto}
+    .card{padding:14px;margin-bottom:14px}
+    .row{gap:8px}
+    .row .grow{min-width:0;flex:1 1 100%}
+    #searchBtn,#sheetsSave,#sheetsTest,#sheetsSendAll,#sheetsPull{width:100%}
+    .actions .btn{flex:1 1 auto}
+    .modal-overlay{padding:10px}
+    .modal{padding:16px;border-radius:14px}
+    table.prev{font-size:12px}
+    table.prev th,table.prev td{padding:6px 8px}
+    .stat .n{font-size:19px}
+    .eisen{grid-template-columns:1fr}
+  }
+  @media(max-width:420px){
+    .sidebar .tab .lbl,.invcat .lbl{font-size:12.5px}
+    header h1{font-size:15.5px}
+    .btn{padding:10px 14px}
+  }
 </style>
 </head>
 <body>

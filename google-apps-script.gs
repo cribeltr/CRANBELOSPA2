@@ -166,6 +166,19 @@ function writeAll(body) {
       try { ds.hideSheet(); } catch (e2) {}
     }
 
+    // Inventario de equipos (hoja oculta) para auto-cargar al abrir el link
+    if (body.equipos && body.equipos.length) {
+      var es = ss.getSheetByName('_equipos') || ss.insertSheet('_equipos');
+      es.clear();
+      var ec = body.equipos[0].length;
+      body.equipos.forEach(function (r) { while (r.length < ec) r.push(''); });
+      var rng = es.getRange(1, 1, body.equipos.length, ec);
+      rng.setNumberFormat('@');                 // texto: conserva ceros a la izquierda
+      rng.setValues(body.equipos);
+      es.setFrozenRows(1);
+      try { es.hideSheet(); } catch (e3) {}
+    }
+
     return { ok: true, sheets: written };
 }
 
@@ -245,6 +258,7 @@ function readAll() {
   var data = ds ? ds.getRange(1, 1).getValue() : '';
   return {
     ok: true, count: n, data: data,
+    equipos: sheetVals(ss, '_equipos'),
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),

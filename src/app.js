@@ -246,8 +246,56 @@
         if (ws.name === 'Pendientes') Object.assign(o, pendientesExtras());
         return o;
       }),
-      data: serializeState()   // snapshot para poder LEER al reabrir
+      data: serializeState(),   // snapshot para poder LEER al reabrir
+      equipos: state.equipos.length ? equiposToRows() : null   // inventario, para auto-cargar al abrir
     };
+  }
+
+  // ---- Inventario de equipos: ida y vuelta con Google Sheets (_equipos) ---
+  // Permite que al abrir el link se restaure el inventario sin volver a subir el Excel.
+  const EQ_COLS = ['id', 'familia', 'carpeta', 'inv', 'equipo', 'servicio', 'unidad', 'ubicacion', 'procedencia', 'marca', 'modelo', 'serie', 'anio', 'vur', 'clasif', 'enubaja', 'observacion', 'frecuencia'];
+  function equiposToRows() {
+    const rows = [EQ_COLS.concat(['prog', 'res'])];
+    state.equipos.forEach(eq => {
+      const r = EQ_COLS.map(k => eq[k] == null ? '' : String(eq[k]));
+      r.push((eq.prog || []).join('|')); r.push((eq.res || []).join('|'));
+      rows.push(r);
+    });
+    return rows;
+  }
+  function equiposFromRows(grid) {
+    if (!grid || grid.length < 2) return [];
+    const h = grid[0].map(x => String(x == null ? '' : x).trim());
+    const idx = {}; h.forEach((k, i) => idx[k] = i);
+    const get = (r, k) => { const i = idx[k]; const v = (i == null ? '' : r[i]); return v == null ? '' : String(v).trim(); };
+    const split12 = s => { let a = (s == null ? '' : String(s)).split('|'); if (a.length === 1 && a[0] === '') a = []; while (a.length < 12) a.push(''); return a; };
+    return grid.slice(1).map(r => {
+      const eq = {}; EQ_COLS.forEach(k => eq[k] = get(r, k));
+      eq.prog = split12(get(r, 'prog')); eq.res = split12(get(r, 'res'));
+      return eq;
+    }).filter(eq => eq.id || eq.equipo);
+  }
+  // Reconstruye state.events a partir de los equipos (igual que parseWorkbook)
+  function rebuildEventsFromEquipos() {
+    const events = [];
+    state.equipos.forEach(eq => {
+      for (let i = 0; i < 12; i++) {
+        const p = eq.prog[i] || '', r = eq.res[i] || '';
+        if (MP.isEmpty(p) && MP.isEmpty(r)) continue;
+        events.push(MP.makeEvent(eq, i, p, r));
+      }
+    });
+    events.sort((a, b) => (MP.toNum(a.id) - MP.toNum(b.id)) || (a.nMes - b.nMes));
+    state.events = events;
+  }
+  // Carga un inventario restaurado y deja la app lista (preview, registro, vistas)
+  function applyEquipos(equipos) {
+    state.equipos = equipos;
+    rebuildEventsFromEquipos();
+    renderPreview(); renderRegistry(); renderCorrectivos(); renderPendientes(); renderDiscrepancias();
+    $('#download').disabled = false;
+    $('#registrar').style.display = 'block';
+    $('#registrarHint').style.display = 'none';
   }
 
   // Snapshot serializable de lo registrado (fechas -> ISO)
@@ -444,6 +492,13 @@
       else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
       // Archivos: siempre desde la hoja "Archivos" (la gestiona Apps Script)
       if (j.tablas && j.tablas.Archivos) { state.archivos = archivosFromTabla(j.tablas.Archivos); saveArchivos(); }
+      // Inventario de equipos: si no hay uno cargado en esta sesión, restaurarlo
+      let equiposCargados = 0;
+      if (!state.equipos.length && j.equipos) {
+        const eqs = equiposFromRows(j.equipos);
+        if (eqs.length) { applyEquipos(eqs); equiposCargados = eqs.length; }
+      }
+      const eqMsg = equiposCargados ? equiposCargados + ' equipos, ' : '';
       let obj = null;
       if (j.data) { try { obj = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch (_) { obj = null; } }
       if (obj && restoreState(obj)) {
@@ -452,7 +507,7 @@
         if (state.events.length) { renderPreview(); renderDiscrepancias(); }
         if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
         revealRegistrarIfData(); touch();
-        showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + state.registros.length +
+        showInline($('#sheetsStatus'), 'ok', '✓ Datos traídos de Google Sheets: ' + eqMsg + state.registros.length +
           ' mant., ' + state.correctivos.length + ' corr., ' + state.pendientes.length + ' pend.' +
           (state.archivos.length ? ', ' + state.archivos.length + ' archivo(s).' : ''));
       } else if (j.tablas) {
@@ -465,13 +520,17 @@
           if (state.events.length) { renderPreview(); renderDiscrepancias(); }
           if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
           revealRegistrarIfData(); touch();
-          showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + rec.correctivos.length +
+          showInline($('#sheetsStatus'), 'ok', '✓ Traídos desde las hojas: ' + eqMsg + rec.correctivos.length +
             ' correctivo(s), ' + rec.pendientes.length + ' pendiente(s)' +
             (state.archivos.length ? ' y ' + state.archivos.length + ' archivo(s)' : '') +
             '. (Las mantenciones preventivas requieren el snapshot _datos: vuelve a Enviar con esta versión.)');
+        } else if (equiposCargados) {
+          showInline($('#sheetsStatus'), 'ok', '✓ Inventario traído de Google Sheets: ' + equiposCargados + ' equipos.');
         } else if (!silent) {
           showInline($('#sheetsStatus'), 'info', 'La planilla no tiene datos de la app para traer.');
         }
+      } else if (equiposCargados) {
+        showInline($('#sheetsStatus'), 'ok', '✓ Inventario traído de Google Sheets: ' + equiposCargados + ' equipos.');
       } else if (!silent) {
         showInline($('#sheetsStatus'), 'info', 'La planilla aún no tiene datos guardados por la app.');
       }

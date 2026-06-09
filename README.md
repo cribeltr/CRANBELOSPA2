@@ -46,6 +46,11 @@ solo, sin pegar ninguna URL).
 
 > Detectado el modo Apps Script, la app oculta el campo de URL y muestra
 > “Conectado a esta planilla”: guardar/traer usan `google.script.run` (sin CORS).
+> Al **abrir el link, la app carga sola** lo guardado en la planilla — incluido el
+> **inventario de equipos** (hoja oculta `_equipos`) — así no hace falta volver a
+> subir el Excel cada vez (basta haberlo enviado una vez con *Enviar*). El diseño
+> es **responsivo** (se adapta a computador, tablet y teléfono; el panel lateral
+> se vuelve una barra arriba en pantallas pequeñas).
 > ⚠️ *Dentro* de Apps Script el botón **Descargar Excel** puede quedar
 > bloqueado por el entorno protegido (iframe); si lo necesitas, usa la misma app
 > publicada por la Opción A o B para descargar. La sincronización con Google
