@@ -117,6 +117,9 @@
   .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink)}
   .chk input{width:auto}
   .filter{margin-top:10px}
+  .scope-note{margin-top:8px;font-size:12.5px}
+  .scope-note .chiptag{display:inline-flex;align-items:center;gap:6px;background:#eaf3f5;border:1px solid var(--line);color:var(--teal-d);border-radius:20px;padding:3px 10px;font-weight:600}
+  .scope-note .verall{appearance:none;border:0;background:transparent;color:var(--accent-d);font-weight:700;cursor:pointer;text-decoration:underline;font-size:12.5px;margin-left:8px}
   .nomatch{padding:10px 12px;color:var(--muted);font-size:13px}
   .suggest{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--line);
     border-radius:0 0 9px 9px;box-shadow:0 10px 24px rgba(0,0,0,.14);max-height:300px;overflow:auto;display:none}
@@ -488,6 +491,7 @@
       </div>
       <p class="muted" style="margin:8px 0 0">Tus registros se guardan en este navegador y se mantienen aunque vuelvas a cargar el archivo.</p>
       <input id="registryFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, mes, ejecutor, estado…" />
+      <div id="registryScope" class="scope-note"></div>
       <div class="tablewrap" style="margin-top:8px">
         <table class="prev" id="registryTable"></table>
       </div>
@@ -500,6 +504,7 @@
       </div>
       <p class="muted" style="margin:8px 0 0">Se guardan en este navegador y se incluyen en la hoja <b>Correctivos</b> al descargar / enviar a Google Sheets.</p>
       <input id="correctivosFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, tipo de evento, empresa, ejecutor, estado…" />
+      <div id="correctivosScope" class="scope-note"></div>
       <div class="tablewrap" style="margin-top:8px">
         <table class="prev" id="correctivosTable"></table>
       </div>

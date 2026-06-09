@@ -9,7 +9,7 @@
   'use strict';
 
   const $ = sel => document.querySelector(sel);
-  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], archivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null, invFilter: 'todos', resSel: null, invColFilters: {}, cfCol: null };
+  const state = { equipos: [], events: [], registros: [], correctivos: [], pendientes: [], archivos: [], searchResults: [], selEq: null, selMonth: null, selDetalleEq: null, sgActive: -1, cEq: null, pEq: null, gPend: null, invFilter: 'todos', resSel: null, invColFilters: {}, cfCol: null, tablasTodos: false };
 
   // ---- Utilidades ---------------------------------------------------------
   function esc(s) {
@@ -765,11 +765,25 @@
   function selectEquipo(eq) {
     if (!eq) return;
     state.selDetalleEq = eq;
+    state.tablasTodos = false;   // al elegir un equipo, las tablas se acotan a ese equipo
     $('#searchInput').value = (eq.serie && String(eq.serie).trim()) ? eq.serie : eq.inv;
     hideSuggest();
     showInline($('#searchMsg'), '', '');
     renderDetalle(eq);
+    renderRegistry(); renderCorrectivos();   // reflejar el acotado por equipo
     try { $('#equipoDetalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+  }
+  // Equipo por el que se acotan las tablas del panel Registrar (o null = todos)
+  function scopeEqId() { return (state.selDetalleEq && !state.tablasTodos) ? String(state.selDetalleEq.id) : null; }
+  // Pinta la nota "Solo <equipo> · Ver todos" en la tabla indicada
+  function renderScopeNote(elId, count) {
+    const el = $(elId); if (!el) return;
+    const eq = (state.selDetalleEq && !state.tablasTodos) ? state.selDetalleEq : null;
+    if (!eq) { el.innerHTML = ''; return; }
+    el.innerHTML = '<span class="chiptag">🔎 Solo: ' + esc(eq.equipo) + ' (ID ' + esc(eq.id) + ') — ' + count + '</span>' +
+      '<button type="button" class="verall" data-verall="1">Ver todos</button>';
+    const b = el.querySelector('[data-verall]');
+    if (b) b.addEventListener('click', () => { state.tablasTodos = true; renderRegistry(); renderCorrectivos(); });
   }
 
   // Estilo de la pastilla de Estado Final del equipo
@@ -1281,10 +1295,12 @@
     if (!state.registros.length) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
     const term = ($('#registryFilter') ? $('#registryFilter').value : '').trim().toLowerCase();
+    const eqf = scopeEqId();   // acotar al equipo seleccionado (o null = todos)
     const cols = ['#', 'ID', 'Equipo', 'Serie / Inv', 'Mes', 'Fecha', 'Programa', 'Resultado', 'Ejecutor', 'Estado Final', 'Adjunto', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.registros.map((e, i) => {
+      if (eqf && String(e.id) !== eqf) return '';
       const hay = [e.id, e.equipo, e.serie, e.inv, e.mes, fmtDate(e.fechaEjecucion), e.programa, e.resultado, e.ejecutor, e.estadoFinal, e.estado].join(' ').toLowerCase();
       if (term && hay.indexOf(term) === -1) return '';
       shown++;
@@ -1303,9 +1319,10 @@
         '<td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td>' +
       '</tr>';
     }).join('');
-    $('#registryCount').textContent = term ? (shown + ' / ' + state.registros.length) : state.registros.length;
+    $('#registryCount').textContent = (eqf || term) ? (shown + ' / ' + state.registros.length) : state.registros.length;
+    renderScopeNote('#registryScope', shown);
     const t = $('#registryTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">' + (eqf ? 'Este equipo no tiene mantenciones registradas.' : 'Sin coincidencias para el filtro.') + '</td></tr>');
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.registros.splice(+b.dataset.del, 1);
@@ -1320,10 +1337,12 @@
     if (!state.correctivos.length) { wrap.style.display = 'none'; touch(); return; }
     wrap.style.display = 'block';
     const term = ($('#correctivosFilter') ? $('#correctivosFilter').value : '').trim().toLowerCase();
+    const eqf = scopeEqId();   // acotar al equipo seleccionado (o null = todos)
     const cols = ['#', 'ID', 'Equipo', 'Tipo de Evento', 'Fecha', 'Folio', 'N° Envío', 'Empresa', 'Ejecutor', 'Estado Final', 'Adjunto', ''];
     const head = '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
     let shown = 0;
     const rows = state.correctivos.map((c, i) => {
+      if (eqf && String(c.id) !== eqf) return '';
       const hay = [c.id, c.equipo, c.serie, c.inv, c.tipoEvento, fmtDate(c.fecha), c.folioSolicitud, c.folioGuia, c.nEnvio, c.empresa, c.ejecutor, c.descripcion, c.estadoFinal].join(' ').toLowerCase();
       if (term && hay.indexOf(term) === -1) return '';
       shown++;
@@ -1332,9 +1351,10 @@
         '</td><td>' + esc(c.empresa) + '</td><td>' + esc(c.ejecutor) + '</td><td>' + esc(c.estadoFinal) +
         '</td><td>' + adjCell(c) + '</td><td><button class="btn btn-del" title="Eliminar" data-del="' + i + '">✕</button></td></tr>';
     }).join('');
-    $('#correctivosCount').textContent = term ? (shown + ' / ' + state.correctivos.length) : state.correctivos.length;
+    $('#correctivosCount').textContent = (eqf || term) ? (shown + ' / ' + state.correctivos.length) : state.correctivos.length;
+    renderScopeNote('#correctivosScope', shown);
     const t = $('#correctivosTable');
-    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">Sin coincidencias para el filtro.</td></tr>');
+    t.innerHTML = head + rows + (shown ? '' : '<tr><td colspan="12" class="nomatch">' + (eqf ? 'Este equipo no tiene eventos correctivos.' : 'Sin coincidencias para el filtro.') + '</td></tr>');
     t.querySelectorAll('button[data-del]').forEach(b =>
       b.addEventListener('click', () => {
         state.correctivos.splice(+b.dataset.del, 1);
