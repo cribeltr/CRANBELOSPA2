@@ -94,6 +94,20 @@ fila → ficha del equipo.
 **realizadas** y **pendientes**. **Haz clic en cualquier número** para ver la lista
 de equipos de ese grupo; clic en un equipo → su detalle.
 
+## Utilidades PDF (unir / separar)
+
+La vista **🧰 Utilidades PDF** trae dos herramientas que funcionan **en el
+navegador** (los archivos no se envían a ningún servidor):
+
+- **🔗 Unir PDF:** selecciona varios PDF, **ordénalos** (▲/▼) y los combina en uno
+  solo (`PDF_unido_AAAAMMDD.pdf`).
+- **✂️ Separar PDF:** sube un PDF y divídelo **una página por archivo** o **por
+  rangos** (`1-3, 4, 5-8`); se descarga un **.zip** con los resultados.
+
+> Estas herramientas cargan `pdf-lib` y `JSZip` desde un **CDN** la primera vez que
+> las usas, así que requieren **internet** (a diferencia del resto de la app, que el
+> `index.html` puede usar sin conexión).
+
 ## Archivos del equipo (Drive)
 
 En la ficha de cada equipo hay una sección **📎 Archivos del equipo (Drive)**.

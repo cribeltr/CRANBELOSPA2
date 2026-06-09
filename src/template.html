@@ -298,6 +298,16 @@
   .arch-up .fld{min-width:150px}
   .arch-up label{display:block;font-size:12px;font-weight:600;margin-bottom:3px;color:var(--muted)}
   .quickdates{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  /* Utilidades PDF */
+  .pdflist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .pdfitem{display:flex;align-items:center;gap:8px;font-size:13px;background:#f7fbfc;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .pdfitem .ord{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
+  .pdfitem .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--teal-d)}
+  .pdfitem .sz{flex:0 0 auto;color:var(--muted);font-size:11.5px}
+  .pdfitem .pbtns{flex:0 0 auto;display:flex;gap:2px}
+  .pdfitem .pbtns button{appearance:none;background:transparent;border:0;cursor:pointer;font-size:14px;color:var(--teal-d);padding:2px 5px;border-radius:6px}
+  .pdfitem .pbtns button:hover{background:#e0eaed}
+  .pdfitem .pbtns button:disabled{opacity:.3;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -317,6 +327,7 @@
       <button class="tab" type="button" data-tab="registrar"><span class="ico">🔧</span><span class="lbl">Registrar</span></button>
       <button class="tab" type="button" data-tab="resumen"><span class="ico">📊</span><span class="lbl">Resumen mensual</span></button>
       <button class="tab" type="button" data-tab="pendientes"><span class="ico">📌</span><span class="lbl">Pendientes</span><em class="navcount" id="navPendCount"></em></button>
+      <button class="tab" type="button" data-tab="utilidades"><span class="ico">🧰</span><span class="lbl">Utilidades PDF</span></button>
       <button class="tab" type="button" data-tab="sheets"><span class="ico">☁️</span><span class="lbl">Google Sheets</span></button>
       <button class="tab" type="button" data-tab="ayuda"><span class="ico">📖</span><span class="lbl">Ayuda</span></button>
       <div class="navgrp">Inventario por estado</div>
@@ -466,6 +477,41 @@
       <p class="muted" style="margin:6px 0 0">Todas las columnas del equipo + estado actual (según el último evento), fecha de última actualización y pendientes asociados. <b>Clic en una fila</b> para ver el detalle.</p>
       <input id="inventarioFilter" type="text" class="filter" autocomplete="off" placeholder="🔎 Filtrar por equipo, serie, inventario, servicio, marca, modelo…" />
       <div class="tablewrap" style="margin-top:8px;max-height:560px"><table class="prev" id="inventarioTable"></table></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-utilidades">
+    <div class="card">
+      <p class="section-title">🔗 Unir PDF</p>
+      <p class="muted" style="margin:0 0 10px">Selecciona varios PDF, ordénalos y combínalos en <b>uno solo</b>. Todo ocurre en tu navegador (los archivos no se envían a ningún servidor).</p>
+      <input id="mergeFiles" type="file" accept="application/pdf,.pdf" multiple />
+      <div id="mergeList" class="pdflist"></div>
+      <div class="actions" style="margin-top:6px">
+        <button id="mergeBtn" class="btn btn-accent btn-sm" type="button" disabled>🔗 Unir y descargar</button>
+        <button id="mergeClear" class="btn btn-ghost btn-sm" type="button">🗑️ Limpiar</button>
+      </div>
+      <div id="mergeMsg" class="inline-msg"></div>
+    </div>
+    <div class="card">
+      <p class="section-title">✂️ Separar PDF</p>
+      <p class="muted" style="margin:0 0 10px">Sube un PDF y divídelo en varios. Se descarga un <b>.zip</b> con los resultados.</p>
+      <input id="splitFile" type="file" accept="application/pdf,.pdf" />
+      <div id="splitInfo" class="muted" style="margin-top:6px"></div>
+      <div class="field" style="margin-top:10px">
+        <label for="splitMode">Cómo separar</label>
+        <select id="splitMode">
+          <option value="each">Una página por archivo</option>
+          <option value="ranges">Por rangos de páginas</option>
+        </select>
+      </div>
+      <div class="field" id="splitRangesField" style="display:none">
+        <label for="splitRanges">Rangos (ej: <code>1-3, 4, 5-8</code>)</label>
+        <input id="splitRanges" type="text" autocomplete="off" placeholder="1-3, 4, 5-8" />
+      </div>
+      <div class="actions" style="margin-top:6px">
+        <button id="splitBtn" class="btn btn-accent btn-sm" type="button" disabled>✂️ Separar y descargar (.zip)</button>
+      </div>
+      <div id="splitMsg" class="inline-msg"></div>
     </div>
   </section>
 

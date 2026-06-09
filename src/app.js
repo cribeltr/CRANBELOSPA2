@@ -1517,6 +1517,138 @@
     gPersist(); renderGModal();
   }
 
+  // ---- Utilidades PDF: unir / separar ------------------------------------
+  // Las librerías (pdf-lib, JSZip) se cargan desde CDN solo al usar la vista.
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('No se pudo cargar ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  async function ensureLib(globalName, urls) {
+    if (window[globalName]) return window[globalName];
+    for (const u of urls) { try { await loadScript(u); if (window[globalName]) return window[globalName]; } catch (e) { } }
+    throw new Error('No se pudo cargar la librería (¿hay conexión a internet?).');
+  }
+  const ensurePDFLib = () => ensureLib('PDFLib', ['https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js']);
+  const ensureJSZip = () => ensureLib('JSZip', ['https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js']);
+  function fmtSize(n) { return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+  function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  // --- Unir PDF ---
+  const pdfMerge = [];
+  function renderMergeList() {
+    const cont = $('#mergeList');
+    cont.innerHTML = pdfMerge.map((f, i) =>
+      '<div class="pdfitem"><span class="ord">' + (i + 1) + '</span>' +
+      '<span class="nm">' + esc(f.name) + '</span><span class="sz">' + fmtSize(f.size) + '</span>' +
+      '<span class="pbtns">' +
+      '<button data-up="' + i + '" title="Subir"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+      '<button data-down="' + i + '" title="Bajar"' + (i === pdfMerge.length - 1 ? ' disabled' : '') + '>▼</button>' +
+      '<button data-rm="' + i + '" title="Quitar">✕</button></span></div>').join('');
+    $('#mergeBtn').disabled = pdfMerge.length < 2;
+    cont.querySelectorAll('button[data-up]').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.up; [pdfMerge[i - 1], pdfMerge[i]] = [pdfMerge[i], pdfMerge[i - 1]]; renderMergeList(); }));
+    cont.querySelectorAll('button[data-down]').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.down; [pdfMerge[i + 1], pdfMerge[i]] = [pdfMerge[i], pdfMerge[i + 1]]; renderMergeList(); }));
+    cont.querySelectorAll('button[data-rm]').forEach(b => b.addEventListener('click', () => { pdfMerge.splice(+b.dataset.rm, 1); renderMergeList(); }));
+  }
+  function addMergeFiles(files) {
+    for (const f of files) if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') pdfMerge.push(f);
+    renderMergeList();
+  }
+  async function doMerge() {
+    if (pdfMerge.length < 2) return;
+    const btn = $('#mergeBtn'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Uniendo…';
+    showInline($('#mergeMsg'), 'info', 'Cargando librería y uniendo PDF…');
+    try {
+      const PDFLib = await ensurePDFLib();
+      const out = await PDFLib.PDFDocument.create();
+      let totalPaginas = 0;
+      for (const f of pdfMerge) {
+        const buf = await readFile(f);
+        const src = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+        const pages = await out.copyPages(src, src.getPageIndices());
+        pages.forEach(p => out.addPage(p)); totalPaginas += pages.length;
+      }
+      const bytes = await out.save();
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'PDF_unido_' + stamp() + '.pdf');
+      showInline($('#mergeMsg'), 'ok', '✓ Unidos ' + pdfMerge.length + ' PDF (' + totalPaginas + ' páginas). Descarga iniciada.');
+    } catch (e) {
+      showInline($('#mergeMsg'), 'err', '❌ ' + (e.message || e));
+    } finally { btn.textContent = orig; btn.disabled = pdfMerge.length < 2; }
+  }
+
+  // --- Separar PDF ---
+  let pdfSplitFile = null, pdfSplitPages = 0;
+  async function onSplitFile(f) {
+    pdfSplitFile = f || null; pdfSplitPages = 0;
+    $('#splitBtn').disabled = true;
+    if (!f) { $('#splitInfo').textContent = ''; return; }
+    $('#splitInfo').textContent = 'Leyendo…';
+    try {
+      const PDFLib = await ensurePDFLib();
+      const doc = await PDFLib.PDFDocument.load(await readFile(f), { ignoreEncryption: true });
+      pdfSplitPages = doc.getPageCount();
+      $('#splitInfo').innerHTML = '<b>' + esc(f.name) + '</b> · ' + pdfSplitPages + ' página(s) · ' + fmtSize(f.size);
+      $('#splitBtn').disabled = false;
+    } catch (e) { $('#splitInfo').innerHTML = '<span style="color:var(--err)">No se pudo leer el PDF: ' + esc(e.message || e) + '</span>'; }
+  }
+  // "1-3, 4, 5-8" -> [{label, idx:[0-based...]}], validando contra max páginas
+  function parseRanges(str, max) {
+    const out = [];
+    String(str || '').split(',').forEach(tok => {
+      tok = tok.trim(); if (!tok) return;
+      const m = tok.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (m) {
+        const a = +m[1], b = +m[2];
+        if (a < 1 || b < 1 || a > max || b > max || a > b) throw new Error('Rango inválido: "' + tok + '" (el PDF tiene ' + max + ' páginas).');
+        const idx = []; for (let p = a; p <= b; p++) idx.push(p - 1); out.push({ label: a + '-' + b, idx });
+      } else if (/^\d+$/.test(tok)) {
+        const a = +tok; if (a < 1 || a > max) throw new Error('Página fuera de rango: "' + tok + '" (1–' + max + ').');
+        out.push({ label: String(a), idx: [a - 1] });
+      } else throw new Error('No entiendo "' + tok + '". Usa por ejemplo 1-3, 4, 5-8.');
+    });
+    if (!out.length) throw new Error('Indica al menos un rango (ej: 1-3, 4, 5-8).');
+    return out;
+  }
+  async function doSplit() {
+    if (!pdfSplitFile) return;
+    const btn = $('#splitBtn'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Separando…';
+    showInline($('#splitMsg'), 'info', 'Cargando librerías y separando…');
+    try {
+      const PDFLib = await ensurePDFLib();
+      const buf = await readFile(pdfSplitFile);
+      const src = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+      const n = src.getPageCount();
+      let partes;
+      if ($('#splitMode').value === 'ranges') {
+        partes = parseRanges($('#splitRanges').value, n);
+      } else {
+        partes = []; for (let i = 0; i < n; i++) partes.push({ label: 'pagina_' + (i + 1), idx: [i] });
+      }
+      const JSZip = await ensureJSZip();
+      const zip = new JSZip();
+      const base = (pdfSplitFile.name || 'documento').replace(/\.pdf$/i, '');
+      for (let k = 0; k < partes.length; k++) {
+        const nd = await PDFLib.PDFDocument.create();
+        const pages = await nd.copyPages(src, partes[k].idx);
+        pages.forEach(p => nd.addPage(p));
+        const bytes = await nd.save();
+        zip.file(base + '_' + partes[k].label.replace(/[^0-9a-zA-Z_-]+/g, '-') + '.pdf', bytes);
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      downloadBlob(blob, base + '_separado_' + stamp() + '.zip');
+      showInline($('#splitMsg'), 'ok', '✓ Generados ' + partes.length + ' PDF en un .zip. Descarga iniciada.');
+    } catch (e) {
+      showInline($('#splitMsg'), 'err', '❌ ' + (e.message || e));
+    } finally { btn.textContent = orig; btn.disabled = !pdfSplitFile; }
+  }
+
   // ---- Conexión de eventos de UI -----------------------------------------
   // Navegación del panel lateral (vistas + inventario por estado)
   document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => goTab(btn.dataset.tab)));
@@ -1559,6 +1691,14 @@
   $('#registryFilter').addEventListener('input', renderRegistry);
   $('#correctivosFilter').addEventListener('input', renderCorrectivos);
   $('#inventarioFilter').addEventListener('input', renderInventario);
+
+  // Utilidades PDF
+  $('#mergeFiles').addEventListener('change', e => { addMergeFiles(e.target.files); e.target.value = ''; });
+  $('#mergeBtn').addEventListener('click', doMerge);
+  $('#mergeClear').addEventListener('click', () => { pdfMerge.length = 0; renderMergeList(); showInline($('#mergeMsg'), '', ''); });
+  $('#splitFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; showInline($('#splitMsg'), '', ''); onSplitFile(f); });
+  $('#splitMode').addEventListener('change', () => { $('#splitRangesField').style.display = $('#splitMode').value === 'ranges' ? 'block' : 'none'; });
+  $('#splitBtn').addEventListener('click', doSplit);
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(ev =>
