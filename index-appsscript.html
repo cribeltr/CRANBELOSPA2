@@ -686,6 +686,7 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
+var APP_VERSION = 'v8-equipos-split';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
 function appPullEquipos() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -931,7 +932,7 @@ function readAll(includeEquipos) {
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
   var out = {
-    ok: true, count: n, data: data,
+    ok: true, ver: APP_VERSION, count: n, data: data,
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
@@ -2523,7 +2524,7 @@ function json(obj) {
       if (GAS) { j = await gasCall('appPull'); }
       else { const res = await fetch(apiUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
       if (!j) { showInline($('#sheetsStatus'), 'warn', '⚠️ Conecta pero el <b>Código.gs</b> publicado es antiguo. Pégalo de nuevo y haz <b>Implementar → Nueva versión</b>.'); return; }
-      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
+      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Versión del script: <b>' + (j.ver || '(antigua, actualízala)') + '</b>. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
     } catch (e) {
       showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el envío suele funcionar; pulsa Enviar y revisa la planilla.');
     } finally { btn.textContent = orig; btn.disabled = false; }

@@ -477,7 +477,7 @@
       if (GAS) { j = await gasCall('appPull'); }
       else { const res = await fetch(apiUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
       if (!j) { showInline($('#sheetsStatus'), 'warn', '⚠️ Conecta pero el <b>Código.gs</b> publicado es antiguo. Pégalo de nuevo y haz <b>Implementar → Nueva versión</b>.'); return; }
-      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
+      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Versión del script: <b>' + (j.ver || '(antigua, actualízala)') + '</b>. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
     } catch (e) {
       showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el envío suele funcionar; pulsa Enviar y revisa la planilla.');
     } finally { btn.textContent = orig; btn.disabled = false; }

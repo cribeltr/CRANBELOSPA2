@@ -54,6 +54,7 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
+var APP_VERSION = 'v8-equipos-split';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
 function appPullEquipos() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -299,7 +300,7 @@ function readAll(includeEquipos) {
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
   var out = {
-    ok: true, count: n, data: data,
+    ok: true, ver: APP_VERSION, count: n, data: data,
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
