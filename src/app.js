@@ -688,6 +688,17 @@
       const wb = MPOUT.buildOutputWorkbook(ExcelJS, MP, events, { equipos: state.equipos.length, correctivos: state.correctivos, pendientes: decoratedPendientes(), archivos: state.archivos });
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      if (GAS) {
+        // Dentro de Apps Script el iframe bloquea la descarga directa de un Blob:
+        // guardamos el Excel en Drive y entregamos un enlace de descarga.
+        btn.textContent = 'Guardando en Drive…';
+        const dataBase64 = await readFileB64(blob);
+        const j = await gasCall('appSaveXlsx', { dataBase64, nombre: fname });
+        if (!j || !j.ok) throw new Error((j && j.error) || 'No se pudo guardar en Drive.');
+        setStatus('✅ Excel generado en tu Drive: <a href="' + esc(j.download) + '" target="_blank" rel="noopener"><b>⬇️ Descargar ' + esc(j.name) + '</b></a> · <a href="' + esc(j.url) + '" target="_blank" rel="noopener">ver en Drive</a>.', 'info');
+        try { window.open(j.download, '_blank'); } catch (e) { }
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = fname;

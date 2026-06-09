@@ -54,7 +54,7 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-var APP_VERSION = 'v8-equipos-split';   // para confirmar qué versión está publicada (Probar conexión)
+var APP_VERSION = 'v9-descarga-drive';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
 function appPullEquipos() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -104,6 +104,20 @@ function appUpload(body) {
   lock.waitLock(60000);
   try { return uploadArchivo(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
+}
+// Guarda el Excel generado por la app en Drive y devuelve enlaces de descarga.
+// (Dentro del iframe de Apps Script no se puede descargar un Blob directamente.)
+function appSaveXlsx(body) {
+  var p = (typeof body === 'string') ? JSON.parse(body) : body;
+  if (!p || !p.dataBase64) return { ok: false, error: 'Sin datos del Excel.' };
+  var root = getOrCreateFolder(DriveApp.getRootFolder(), ARCHIVOS_ROOT);
+  var folder = getOrCreateFolder(root, 'Descargas');
+  var nombre = sanitizeName(p.nombre || 'Eventos_MP_2026.xlsx');
+  var blob = Utilities.newBlob(Utilities.base64Decode(p.dataBase64),
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', nombre);
+  var file = folder.createFile(blob);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  return { ok: true, name: nombre, url: file.getUrl(), download: 'https://drive.google.com/uc?export=download&id=' + file.getId() };
 }
 
 /* ------------------------- Subida de archivos a Drive -------------------------
