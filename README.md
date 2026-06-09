@@ -108,23 +108,23 @@ navegador** (los archivos no se envían a ningún servidor):
 > las usas, así que requieren **internet** (a diferencia del resto de la app, que el
 > `index.html` puede usar sin conexión).
 
-## Archivos del equipo (Drive)
+## Adjuntar archivos a los eventos (Drive)
 
-En la ficha de cada equipo hay una sección **📎 Archivos del equipo (Drive)**.
-Estando **conectado a Google Sheets/Apps Script**, puedes **subir un archivo**
-(informe, foto, guía de despacho, cotización, etc.) con una **categoría** y una
-**descripción opcional**: se guarda en tu Drive en `MP 2026 - Archivos` →
-*carpeta del equipo*, y su **enlace** (con la descripción) queda en la hoja
-**Archivos** de la planilla (y en la hoja *Archivos* del Excel descargado).
+Los archivos se adjuntan **al registrar cada evento**. Los formularios de
+**mantención preventiva**, **evento correctivo** y **pendiente** incluyen
+(cuando estás conectado a Apps Script) un campo **📎 Adjuntar archivo (opcional)**
+con una **breve descripción**. Al guardar el evento:
+
+- El archivo se sube a tu Drive en `MP 2026 - Archivos` → *carpeta del equipo*.
+- Junto al archivo se crea un **`.txt` con la descripción** y el **mismo nombre**
+  (p. ej. `reporte.pdf` → `reporte.txt`).
+- El **enlace** queda enlazado al equipo: se muestra un **📎** en la fila del
+  evento (tablas de Registros / Correctivos / Pendientes), en una columna
+  **Adjunto** de las hojas **Eventos**, **Correctivos** y **Pendientes**, y en la
+  hoja **Archivos** (con su categoría = tipo de evento y la descripción).
+
 La primera subida pide un **permiso de Drive**; vuelve a *Implementar → Nueva
 versión* y autoriza.
-
-**Adjuntar al registrar cada evento:** los formularios de **mantención
-preventiva**, **evento correctivo** y **pendiente** incluyen un campo
-*📎 Adjuntar archivo (opcional)* (visible cuando estás conectado). Al guardar, el
-archivo se sube a Drive con **categoría = tipo de evento** (p. ej. *Correctivo:
-Recepción*), queda enlazado al equipo y se muestra un **📎** en la fila del evento
-(tablas de Registros / Correctivos / Pendientes) y en la hoja *Archivos*.
 
 ## Registrar mantención (modo interactivo)
 

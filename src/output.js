@@ -29,6 +29,12 @@
   const solid = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
   const thin = { style: 'thin', color: { argb: 'FFD0D7DE' } };
   const borderAll = { top: thin, left: thin, bottom: thin, right: thin };
+  // Convierte una celda en hipervínculo clicable (texto = nombre, destino = url)
+  function linkCell(cell, url, name) {
+    if (!url) return;
+    cell.value = { text: name || url, hyperlink: url };
+    cell.font = { size: 10, name: 'Calibri', color: { argb: 'FF0B61A4' }, underline: true };
+  }
 
   // Definición de columnas de la hoja Eventos
   const COLS = [
@@ -62,7 +68,8 @@
     { key: 'regla',            header: 'Regla de Reprogramación', w: 42, t: 's' },
     { key: 'estado',           header: 'Estado',                  w: 22, t: 's' },
     { key: 'estadoFinal',      header: 'Estado Final del Equipo', w: 20, t: 's' },
-    { key: 'ejecutor',         header: 'Ejecutor',                w: 24, t: 's' }
+    { key: 'ejecutor',         header: 'Ejecutor',                w: 24, t: 's' },
+    { key: 'archivoUrl',       header: 'Adjunto',                 w: 28, t: 's' }
   ];
   const TEXT_KEYS = new Set(['carpeta', 'inv', 'serie', 'observacion']); // conservar tal cual (ceros a la izq. / texto)
   const NUM_KEYS = new Set(['id', 'anio', 'vur', 'nMes']);
@@ -202,6 +209,8 @@
         row.getCell(cCol).fill = solid(COLOR.reprogramada);
         row.getCell(cCol).font = { size: 10, bold: true, name: 'Calibri' };
       }
+      // Enlace al archivo adjunto del evento
+      if (e.archivoUrl) linkCell(row.getCell(COLS.findIndex(c => c.key === 'archivoUrl') + 1), e.archivoUrl, e.archivoNombre);
     });
 
     // Autofiltro + congelado ya aplicado
@@ -320,7 +329,7 @@
       ['folioSolicitud', 'Folio Solicitud', 16, 's'], ['nEnvio', 'N° Envío', 12, 's'],
       ['folioGuia', 'Folio Guía Despacho', 18, 's'], ['empresa', 'Empresa', 22, 's'],
       ['ejecutor', 'Ejecutor', 24, 's'], ['descripcion', 'Descripción', 44, 's'],
-      ['estadoFinal', 'Estado Final del Equipo', 20, 's']
+      ['estadoFinal', 'Estado Final del Equipo', 20, 's'], ['archivoUrl', 'Adjunto', 28, 's']
     ];
     const correctivos = meta.correctivos || [];
     const cs = wb.addWorksheet('Correctivos', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -345,6 +354,7 @@
         const efCell = row.getCell(CORR_COLS.findIndex(c => c[0] === 'estadoFinal') + 1);
         efCell.fill = solid(f); efCell.font = { size: 10, bold: true, name: 'Calibri' };
       }
+      if (ev.archivoUrl) linkCell(row.getCell(CORR_COLS.findIndex(c => c[0] === 'archivoUrl') + 1), ev.archivoUrl, ev.archivoNombre);
     });
     cs.autoFilter = { from: 'A1', to: cs.getColumn(CORR_COLS.length).letter + '1' };
     const corrLast = correctivos.length + 1;
@@ -372,7 +382,8 @@
       ['ultimaAct', 'Última actualización', 46, 's'],
       ['cuadrante', 'Cuadrante (Eisenhower)', 18, 's'],
       ['urgencia', 'Urgencia', 12, 's'],
-      ['importancia', 'Importancia', 13, 's']
+      ['importancia', 'Importancia', 13, 's'],
+      ['archivoUrl', 'Adjunto', 28, 's']
     ];
     const pendientes = meta.pendientes || [];
     const ps = wb.addWorksheet('Pendientes', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -390,6 +401,7 @@
         else if (def[3] === 'n') { const n = MP.toNum(cell.value); if (n !== null) cell.value = n; }
         else if (def[3] === 'd') { if (cell.value === '' || cell.value === null) cell.value = null; cell.numFmt = DATE_FMT; }
       });
+      if (p.archivoUrl) linkCell(row.getCell(PEND_COLS.findIndex(c => c[0] === 'archivoUrl') + 1), p.archivoUrl, p.archivoNombre);
     });
     ps.autoFilter = { from: 'A1', to: ps.getColumn(PEND_COLS.length).letter + '1' };
     const pendLast = pendientes.length + 1;

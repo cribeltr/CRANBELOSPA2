@@ -150,6 +150,7 @@
     if (v instanceof Date) return fmtDate(v);
     if (typeof v === 'object') {
       if (v.richText) return v.richText.map(t => t.text).join('');
+      if ('hyperlink' in v) return v.hyperlink;   // celda con enlace -> URL (clicable en Sheets)
       if ('result' in v) return v.result == null ? '' : v.result;
       if ('text' in v) return v.text;
       return '';
@@ -865,53 +866,6 @@
     }));
   }
 
-  // ---- Archivos adjuntos del equipo (enlaces a Drive) --------------------
-  function archivosDe(eq) {
-    const idn = sid(eq.id), invn = sid(eq.inv), sern = sid(eq.serie);
-    return state.archivos.filter(a => (idn && sid(a.id) === idn) || (invn && sid(a.inv) === invn) || (sern && sid(a.serie) === sern));
-  }
-  function archivosSectionHTML(eq) {
-    const list = archivosDe(eq);
-    const items = list.length ? list.map(a =>
-      '<div class="arch-item"><span class="ac">' + esc(a.categoria || 'Archivo') + '</span>' +
-      '<span class="ab"><a href="' + esc(a.enlace) + '" target="_blank" rel="noopener">' + esc(a.nombre || a.enlace) + '</a>' +
-      (a.descripcion ? '<span class="ad">' + esc(a.descripcion) + '</span>' : '') + '</span>' +
-      '<span class="am">' + esc(a.fecha || '') + '</span></div>').join('')
-      : '<div class="muted" style="font-size:12.5px">Sin archivos adjuntos.</div>';
-    let form;
-    if (sheetsReady()) {
-      form = '<div class="arch-up">' +
-        '<div class="fld"><label>Categoría</label><select id="archCat">' + MP.ARCHIVO_CATEGORIAS.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('') + '</select></div>' +
-        '<div class="fld" style="flex:2"><label>Descripción (opcional)</label><input id="archDesc" type="text" autocomplete="off" placeholder="Ej: Informe MP de junio, foto del equipo…"></div>' +
-        '<div class="fld" style="flex:1"><label>Archivo</label><input id="archFile" type="file"></div>' +
-        '<button id="archUp" class="btn btn-primary btn-sm" type="button" style="margin-top:0">⬆️ Subir a Drive</button>' +
-        '</div><div id="archMsg" class="inline-msg"></div>';
-    } else {
-      form = '<div class="muted" style="font-size:12.5px;margin-top:6px">📎 Para subir archivos a Drive, conéctate primero en <b>☁️ Google Sheets</b> (o abre la app desde Apps Script).</div>';
-    }
-    return '<div class="arch-sec"><div class="section-title" style="font-size:14px">📎 Archivos del equipo (Drive)</div>' +
-      '<div class="arch-list">' + items + '</div>' + form + '</div>';
-  }
-  function wireArchivos(eq) {
-    const up = $('#archUp'); if (!up) return;
-    up.addEventListener('click', async () => {
-      const fi = $('#archFile'); const f = fi && fi.files && fi.files[0];
-      if (!f) { showInline($('#archMsg'), 'err', 'Selecciona un archivo.'); return; }
-      const cat = $('#archCat') ? $('#archCat').value : '';
-      const desc = $('#archDesc') ? $('#archDesc').value.trim() : '';
-      up.disabled = true; const orig = up.textContent; up.textContent = 'Subiendo…';
-      showInline($('#archMsg'), 'info', 'Subiendo a Drive… (puede tardar unos segundos)');
-      try {
-        const j = await uploadArchivoFile(eq, f, cat, desc);
-        setStatus('✅ Archivo subido a Drive: <b>' + esc(j.name || f.name) + '</b>.', 'ok');
-        if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
-      } catch (e) {
-        showInline($('#archMsg'), 'err', '❌ ' + (e.message || e));
-        up.disabled = false; up.textContent = orig;
-      }
-    });
-  }
-
   function renderDetalle(eq) {
     const hist = consolidatedEvents().filter(e => e.id === eq.id).sort((a, b) => a.nMes - b.nMes);
     const pm = MP.programmedMonths(eq);
@@ -974,7 +928,7 @@
       pendBody = '<div class="muted" style="margin:10px 0 4px">Pendientes registrados</div>' +
         '<div class="tablewrap"><table class="prev">' + ph + pr + '</table></div>';
     }
-    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody + archivosSectionHTML(eq) +
+    $('#equipoDetalle').innerHTML = efBanner + head + body + corrBody + pendBody +
       '<div class="actions" style="margin-top:10px">' +
         '<button id="detRegistrar" class="btn btn-accent btn-sm" type="button">🔧 Registrar mantención preventiva</button>' +
         '<button id="detCorrectivo" class="btn btn-primary btn-sm" type="button">🛠️ Registrar evento correctivo</button>' +
@@ -984,7 +938,6 @@
     $('#detRegistrar').addEventListener('click', () => openModal(eq));
     $('#detCorrectivo').addEventListener('click', () => openCModal(eq));
     $('#detPendiente').addEventListener('click', () => openPModal(eq));
-    wireArchivos(eq);
   }
 
   // Botón Buscar / Enter: selecciona la primera coincidencia
@@ -1024,7 +977,7 @@
     $('#mFecha').value = '';
     $('#mObs').value = '';
     $('#mResultado').value = ''; $('#mEjecutor').value = ''; $('#mEstadoFinal').value = '';
-    $('#mFile').value = ''; $('#mAttachField').style.display = sheetsReady() ? 'block' : 'none';
+    $('#mFile').value = ''; $('#mFileDesc').value = ''; $('#mAttachField').style.display = sheetsReady() ? 'block' : 'none';
     updateEstadoFinal();
     $('#mTipo').style.display = 'none';
     $('#mFields').disabled = true;
@@ -1089,6 +1042,7 @@
       estadoFinal: $('#mEstadoFinal').value
     });
     const attFile = $('#mFile') ? $('#mFile').files[0] : null;   // capturar antes de cerrar
+    const attDesc = $('#mFileDesc') ? $('#mFileDesc').value.trim() : '';
     state.registros.push(reg);
     saveRegistros();   // persistir en el navegador
     closeModal();
@@ -1099,7 +1053,7 @@
     setStatus('✅ Mantención registrada: <b>' + esc(eq.equipo) + '</b> — ' + esc(reg.mes) +
       ' (' + esc(fmtDate(fecha)) + '). Quedará incluida al descargar el Excel.', 'ok');
     autoExportSheets();   // actualizar Google Sheets si está activado
-    if (attFile) attachToEvent('reg', reg, attFile, 'Mantención preventiva', reg.mes + ' · ' + reg.resultado + ' · ' + fmtDate(fecha));
+    if (attFile) attachToEvent('reg', reg, attFile, 'Mantención preventiva', attDesc || (reg.mes + ' · ' + reg.resultado + ' · ' + fmtDate(fecha)));
   }
 
   // ---- Comparación: registrado vs. archivo cargado -----------------------
@@ -1263,7 +1217,7 @@
       esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
     $('#cTipo').value = '';
     $('#cFields').innerHTML = '';
-    $('#cFile').value = ''; $('#cAttachField').style.display = sheetsReady() ? 'block' : 'none';
+    $('#cFile').value = ''; $('#cFileDesc').value = ''; $('#cAttachField').style.display = sheetsReady() ? 'block' : 'none';
     showInline($('#cmodalMsg'), '', '');
     $('#cSave').disabled = true;
     $('#cmodal').classList.add('show');
@@ -1283,6 +1237,7 @@
     }
     const corr = MP.buildCorrectivo(eq, data);
     const attFile = $('#cFile') ? $('#cFile').files[0] : null;
+    const attDesc = $('#cFileDesc') ? $('#cFileDesc').value.trim() : '';
     state.correctivos.push(corr);
     saveCorrectivos();
     closeCModal();
@@ -1291,10 +1246,10 @@
     setStatus('✅ Evento correctivo registrado: <b>' + esc(eq.equipo) + '</b> — ' + esc(tipo) + '.', 'ok');
     autoExportSheets();
     if (attFile) {
-      const desc = tipo + (corr.fecha ? ' · ' + fmtDate(corr.fecha) : '') +
+      const auto = tipo + (corr.fecha ? ' · ' + fmtDate(corr.fecha) : '') +
         (corr.folioSolicitud ? ' · Folio ' + corr.folioSolicitud : corr.folioGuia ? ' · Guía ' + corr.folioGuia : '') +
         (corr.empresa ? ' · ' + corr.empresa : '');
-      attachToEvent('corr', corr, attFile, 'Correctivo: ' + tipo, desc);
+      attachToEvent('corr', corr, attFile, 'Correctivo: ' + tipo, attDesc || auto);
     }
   }
 
@@ -1471,7 +1426,7 @@
     $('#pmodalEq').innerHTML = '<b>' + esc(eq.equipo) + '</b> (ID ' + esc(eq.id) + ') · Serie: <b>' +
       esc(eq.serie || '—') + '</b> · Inv: <b>' + esc(eq.inv || '—') + '</b>';
     $('#pTipo').value = ''; $('#pFecha').value = ''; $('#pRespAdmin').value = ''; $('#pRespEjec').value = ''; $('#pObs').value = '';
-    $('#pFile').value = ''; $('#pAttachField').style.display = sheetsReady() ? 'block' : 'none';
+    $('#pFile').value = ''; $('#pFileDesc').value = ''; $('#pAttachField').style.display = sheetsReady() ? 'block' : 'none';
     showInline($('#pmodalMsg'), '', '');
     $('#pSave').disabled = true;
     $('#pmodal').classList.add('show');
@@ -1496,6 +1451,7 @@
       observacion: $('#pObs').value.trim()
     });
     const attFile = $('#pFile') ? $('#pFile').files[0] : null;
+    const attDesc = $('#pFileDesc') ? $('#pFileDesc').value.trim() : '';
     state.pendientes.push(pend);
     savePendientes();
     closePModal();
@@ -1503,7 +1459,7 @@
     if (state.selDetalleEq) renderDetalle(state.selDetalleEq);
     setStatus('✅ Pendiente registrado: <b>' + esc(eq.equipo) + '</b>.', 'ok');
     autoExportSheets();
-    if (attFile) attachToEvent('pend', pend, attFile, 'Pendiente: ' + pTipo, pTipo + ' · ' + fmtDate(pend.fechaCompromiso));
+    if (attFile) attachToEvent('pend', pend, attFile, 'Pendiente: ' + pTipo, attDesc || (pTipo + ' · ' + fmtDate(pend.fechaCompromiso)));
   }
 
   // ---- Gestión de un pendiente (estado, bitácora, tareas) ----------------

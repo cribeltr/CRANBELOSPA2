@@ -94,6 +94,13 @@ function uploadArchivo(p) {
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e2) {}
   var url = file.getUrl();
 
+  // Además del archivo, generar un .txt con la descripción y el MISMO nombre base.
+  if (p.descripcion) {
+    var txtName = nombre.replace(/\.[^.]+$/, '') + '.txt';
+    var txtFile = folder.createFile(Utilities.newBlob(p.descripcion, 'text/plain', txtName));
+    try { txtFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e4) {}
+  }
+
   // Registrar el enlace en la hoja "Archivos"
   var HEADERS = ['ID', 'N° Inventario', 'N° Serie', 'Equipo', 'Servicio', 'Categoría', 'Descripción', 'Nombre del archivo', 'Enlace', 'Fecha de carga'];
   var ss = SpreadsheetApp.getActiveSpreadsheet();
