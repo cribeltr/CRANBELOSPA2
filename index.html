@@ -644,7 +644,8 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-function appPull() { return readAll(); }
+function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
+function appPullEquipos() { return { ok: true, equipos: sheetVals(SpreadsheetApp.getActiveSpreadsheet(), '_equipos') }; }
 // Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
 function appUpload(body) {
   var lock = LockService.getScriptLock();
@@ -840,15 +841,14 @@ function sheetVals(ss, name) {
   var lr = sh.getLastRow(), lc = sh.getLastColumn();
   return (lr &gt;= 1 &amp;&amp; lc &gt;= 1) ? sh.getRange(1, 1, lr, lc).getValues() : [];
 }
-function readAll() {
+function readAll(includeEquipos) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Eventos');
   var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
-  return {
+  var out = {
     ok: true, count: n, data: data,
-    equipos: sheetVals(ss, '_equipos'),
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
@@ -857,10 +857,15 @@ function readAll() {
       Archivos: sheetVals(ss, 'Archivos')
     }
   };
+  // El inventario puede ser grande; solo se incluye cuando se pide explícitamente
+  // (por HTTP no hay problema; con google.script.run se pide por separado).
+  if (includeEquipos) out.equipos = sheetVals(ss, '_equipos');
+  return out;
 }
-// doGet: con ?api=1 devuelve los datos (JSON); sin parámetros sirve la app.
+// doGet: ?api=equipos -&gt; inventario; ?api=1 -&gt; datos (JSON); sin parámetros -&gt; la app.
 function doGet(e) {
-  if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api) return json(readAll());
+  if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api === 'equipos') return json(appPullEquipos());
+  if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api) return json(readAll(true));
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Gestión MP 2026')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -2450,13 +2455,26 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     try {
       let j;
       if (GAS) { j = await gasCall('appPull'); }
-      else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
-      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
+      else { const res = await fetch(apiUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
+      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j && j.count != null ? j.count : '—') + '.');
     } catch (e) {
       showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el envío suele funcionar; pulsa Enviar y revisa la planilla.');
     } finally { btn.textContent = orig; btn.disabled = false; }
   }
 
+  // URL de lectura de la app web (añade ?api). extra='equipos' para el inventario.
+  function apiUrl(extra) {
+    const u = sheetsUrl(); const q = extra ? 'api=' + extra : 'api=1';
+    return u + (u.indexOf('?') >= 0 ? '&' : '?') + q;
+  }
+  // Trae el inventario por separado (puede ser grande). Devuelve la grilla o null.
+  async function pullEquiposGrid() {
+    try {
+      if (GAS) { const je = await gasCall('appPullEquipos'); return je && je.equipos ? je.equipos : null; }
+      const res = await fetch(apiUrl('equipos'), { method: 'GET', redirect: 'follow' });
+      const je = JSON.parse(await res.text()); return je && je.equipos ? je.equipos : null;
+    } catch (e) { return null; }
+  }
   // Lee de Google Sheets el snapshot de datos y lo carga en la app
   async function pullFromSheets(silent) {
     if (!sheetsReady()) { if (!silent) showInline($('#sheetsStatus'), 'err', 'Primero pega y guarda la URL de la app web.'); return; }
@@ -2465,14 +2483,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     try {
       let j;
       if (GAS) { j = await gasCall('appPull'); }
-      else { const res = await fetch(sheetsUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
+      else { const res = await fetch(apiUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
+      if (!j) { if (!silent) showInline($('#sheetsStatus'), 'warn', '⚠️ La planilla no devolvió datos. Reimplementa la última versión del script (Implementar → Nueva versión) e inténtalo otra vez.'); return; }
       // Archivos: siempre desde la hoja "Archivos" (la gestiona Apps Script)
       if (j.tablas && j.tablas.Archivos) { state.archivos = archivosFromTabla(j.tablas.Archivos); saveArchivos(); }
-      // Inventario de equipos: si no hay uno cargado en esta sesión, restaurarlo
+      // Inventario de equipos: si no hay uno cargado, traerlo (por separado; best-effort)
       let equiposCargados = 0;
-      if (!state.equipos.length && j.equipos) {
-        const eqs = equiposFromRows(j.equipos);
-        if (eqs.length) { applyEquipos(eqs); equiposCargados = eqs.length; }
+      if (!state.equipos.length) {
+        const grid = j.equipos || await pullEquiposGrid();
+        if (grid) { const eqs = equiposFromRows(grid); if (eqs.length) { applyEquipos(eqs); equiposCargados = eqs.length; } }
       }
       const eqMsg = equiposCargados ? equiposCargados + ' equipos, ' : '';
       let obj = null;

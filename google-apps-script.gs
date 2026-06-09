@@ -54,7 +54,8 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-function appPull() { return readAll(); }
+function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
+function appPullEquipos() { return { ok: true, equipos: sheetVals(SpreadsheetApp.getActiveSpreadsheet(), '_equipos') }; }
 // Subir archivo a Drive desde la app servida en Apps Script (google.script.run)
 function appUpload(body) {
   var lock = LockService.getScriptLock();
@@ -250,15 +251,14 @@ function sheetVals(ss, name) {
   var lr = sh.getLastRow(), lc = sh.getLastColumn();
   return (lr >= 1 && lc >= 1) ? sh.getRange(1, 1, lr, lc).getValues() : [];
 }
-function readAll() {
+function readAll(includeEquipos) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('Eventos');
   var n = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
   var ds = ss.getSheetByName('_datos');
   var data = ds ? ds.getRange(1, 1).getValue() : '';
-  return {
+  var out = {
     ok: true, count: n, data: data,
-    equipos: sheetVals(ss, '_equipos'),
     tablas: {
       Pendientes: sheetVals(ss, 'Pendientes'),
       Correctivos: sheetVals(ss, 'Correctivos'),
@@ -267,10 +267,15 @@ function readAll() {
       Archivos: sheetVals(ss, 'Archivos')
     }
   };
+  // El inventario puede ser grande; solo se incluye cuando se pide explícitamente
+  // (por HTTP no hay problema; con google.script.run se pide por separado).
+  if (includeEquipos) out.equipos = sheetVals(ss, '_equipos');
+  return out;
 }
-// doGet: con ?api=1 devuelve los datos (JSON); sin parámetros sirve la app.
+// doGet: ?api=equipos -> inventario; ?api=1 -> datos (JSON); sin parámetros -> la app.
 function doGet(e) {
-  if (e && e.parameter && e.parameter.api) return json(readAll());
+  if (e && e.parameter && e.parameter.api === 'equipos') return json(appPullEquipos());
+  if (e && e.parameter && e.parameter.api) return json(readAll(true));
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Gestión MP 2026')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
