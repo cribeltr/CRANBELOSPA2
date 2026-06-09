@@ -476,7 +476,8 @@
       let j;
       if (GAS) { j = await gasCall('appPull'); }
       else { const res = await fetch(apiUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
-      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j && j.count != null ? j.count : '—') + '.');
+      if (!j) { showInline($('#sheetsStatus'), 'warn', '⚠️ Conecta pero el <b>Código.gs</b> publicado es antiguo. Pégalo de nuevo y haz <b>Implementar → Nueva versión</b>.'); return; }
+      showInline($('#sheetsStatus'), 'ok', '✓ Conexión correcta. Filas en "Eventos": ' + (j.count != null ? j.count : '—') + '.');
     } catch (e) {
       showInline($('#sheetsStatus'), 'warn', '⚠️ No se pudo confirmar la conexión (puede ser CORS). Aun así el envío suele funcionar; pulsa Enviar y revisa la planilla.');
     } finally { btn.textContent = orig; btn.disabled = false; }
@@ -504,7 +505,7 @@
       let j;
       if (GAS) { j = await gasCall('appPull'); }
       else { const res = await fetch(apiUrl(), { method: 'GET', redirect: 'follow' }); j = JSON.parse(await res.text()); }
-      if (!j) { if (!silent) showInline($('#sheetsStatus'), 'warn', '⚠️ La planilla no devolvió datos. Reimplementa la última versión del script (Implementar → Nueva versión) e inténtalo otra vez.'); return; }
+      if (!j) { if (!silent) showInline($('#sheetsStatus'), 'warn', '⚠️ El script publicado está desactualizado. Pega el <b>Código.gs</b> más reciente y haz <b>Implementar → Gestionar implementaciones → ✏️ (lápiz) → Versión: Nueva versión → Implementar</b>. Luego recarga el link.'); return; }
       // Archivos: siempre desde la hoja "Archivos" (la gestiona Apps Script)
       if (j.tablas && j.tablas.Archivos) { state.archivos = archivosFromTabla(j.tablas.Archivos); saveArchivos(); }
       // Inventario de equipos: si no hay uno cargado, traerlo (por separado; best-effort)
