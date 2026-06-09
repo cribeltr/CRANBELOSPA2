@@ -1,5 +1,5 @@
 /****************************************************************************
- *  ===>  VERSIÓN: v10-equipos-paginado  <===  (debe coincidir con "Probar conexión")
+ *  ===>  VERSIÓN: v11-html-flexible  <===  (debe coincidir con "Probar conexión")
  *  Puente Google Sheets — Programación MP 2026
  *  --------------------------------------------------------------------------
  *  Crea/actualiza en tu planilla las MISMAS hojas que el Excel:
@@ -55,7 +55,7 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-var APP_VERSION = 'v10-equipos-paginado';   // para confirmar qué versión está publicada (Probar conexión)
+var APP_VERSION = 'v11-html-flexible';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
 // Inventario completo (de _equipos o, si no existe, reconstruido desde Eventos).
 function allEquipos(ss) {
@@ -342,9 +342,15 @@ function readAll(includeEquipos) {
 function doGet(e) {
   if (e && e.parameter && e.parameter.api === 'equipos') return json({ ok: true, equipos: allEquipos(SpreadsheetApp.getActiveSpreadsheet()) });
   if (e && e.parameter && e.parameter.api) return json(readAll(true));
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('Gestión MP 2026')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // Sirve el HTML sin importar cómo se llame el archivo (index / index-appsscript / etc.)
+  var names = ['index', 'index-appsscript', 'indexappsscript', 'index_appsscript', 'appsscript'];
+  for (var i = 0; i < names.length; i++) {
+    try {
+      return HtmlService.createHtmlOutputFromFile(names[i])
+        .setTitle('Gestión MP 2026').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    } catch (err) { /* probar el siguiente nombre */ }
+  }
+  return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:20px">Falta el archivo HTML de la app. Crea un archivo <b>HTML</b> llamado <b>index</b> y pega dentro el contenido de <b>index-appsscript.html</b>.</p>');
 }
 
 function json(obj) {

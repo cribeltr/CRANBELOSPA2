@@ -637,7 +637,7 @@
       <div class="actions" style="margin-top:0"><button id="copyScript" class="btn btn-ghost btn-sm" type="button">📋 Copiar script</button></div>
       <p class="muted" style="margin:8px 0 0">⚠️ Si <b>Probar conexión</b> dice que el script está desactualizado, <b>no copies de aquí</b> (esta copia se sirve desde la misma versión publicada, así que también sería vieja): usa el archivo <code>Code.gs</code> que te entregaron y publica <b>Versión nueva</b>.</p>
       <pre id="gsScript" class="code">/****************************************************************************
- *  ===&gt;  VERSIÓN: v10-equipos-paginado  &lt;===  (debe coincidir con "Probar conexión")
+ *  ===&gt;  VERSIÓN: v11-html-flexible  &lt;===  (debe coincidir con "Probar conexión")
  *  Puente Google Sheets — Programación MP 2026
  *  --------------------------------------------------------------------------
  *  Crea/actualiza en tu planilla las MISMAS hojas que el Excel:
@@ -693,7 +693,7 @@ function appPush(body) {
   try { return writeAll(typeof body === 'string' ? JSON.parse(body) : body); }
   finally { lock.releaseLock(); }
 }
-var APP_VERSION = 'v10-equipos-paginado';   // para confirmar qué versión está publicada (Probar conexión)
+var APP_VERSION = 'v11-html-flexible';   // para confirmar qué versión está publicada (Probar conexión)
 function appPull() { return readAll(false); }   // sin equipos (evita el límite de tamaño de google.script.run)
 // Inventario completo (de _equipos o, si no existe, reconstruido desde Eventos).
 function allEquipos(ss) {
@@ -980,9 +980,15 @@ function readAll(includeEquipos) {
 function doGet(e) {
   if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api === 'equipos') return json({ ok: true, equipos: allEquipos(SpreadsheetApp.getActiveSpreadsheet()) });
   if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.api) return json(readAll(true));
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('Gestión MP 2026')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // Sirve el HTML sin importar cómo se llame el archivo (index / index-appsscript / etc.)
+  var names = ['index', 'index-appsscript', 'indexappsscript', 'index_appsscript', 'appsscript'];
+  for (var i = 0; i &lt; names.length; i++) {
+    try {
+      return HtmlService.createHtmlOutputFromFile(names[i])
+        .setTitle('Gestión MP 2026').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    } catch (err) { /* probar el siguiente nombre */ }
+  }
+  return HtmlService.createHtmlOutput('&lt;p style="font-family:sans-serif;padding:20px"&gt;Falta el archivo HTML de la app. Crea un archivo &lt;b&gt;HTML&lt;/b&gt; llamado &lt;b&gt;index&lt;/b&gt; y pega dentro el contenido de &lt;b&gt;index-appsscript.html&lt;/b&gt;.&lt;/p&gt;');
 }
 
 function json(obj) {
